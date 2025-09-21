@@ -47,14 +47,14 @@ A. Preprocessing
 12. **AFQ Prep - BIDS Conversion**
 13. **ICV Calculation**
 
-B. Add steps as they are completed...(PYAFQ,ProbTact, Analyese)
+B. Add steps as they are completed...(PYAFQ,ProbTact, Analyses)
 
 
 # DTI PREPROCESSING: 
 
 ## Step 1 — DICOM to NIfTI Conversion
 
-Before we we beging conversion, lets quickly check which participants have the necessary DTI and anatomical DICOM Runs?
+Before we we begin conversion, lets quickly check which participants have the necessary DTI and anatomical DICOM Runs?
 
 For a subject to be *DTI-clear*, it must include all four required scan types inside its DICOM folder:
 
