@@ -1,0 +1,16 @@
+[files]
+bids_path = "/Volumes/DTI/DTI/Wave1/pyAFQ_complement8"
+brain_mask_definition = "ImageFile(suffix='mask', filters={'desc': 'brain'})"
+
+[BIDS_PARAMS]
+parallel_params = {n_jobs = -1, engine = "joblib", backend = "loky"}
+
+[tracking_params]
+n_seeds = 1000
+random_seeds = true
+
+
+
+
+
+
