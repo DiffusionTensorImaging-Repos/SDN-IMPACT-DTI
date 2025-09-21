@@ -111,7 +111,7 @@ Incomplete subjects include:
 * s820  
 * s999-pilot
 
-### Next, we will batch convert the DICOM to NIFTI conversion
+**Next, we will batch convert the DICOM to NIFTI conversion**
 
 - We use **dcm2niix**, a widely adopted command-line tool that converts DICOM medical imaging files into the NIfTI format.  
 
@@ -945,7 +945,8 @@ derivatives/TOPUP/<subj>/topup_output/
 ├── <subj>_topup_Tmean.nii.gz        # NEW mean B0 image
 ```
 
-### Audit Step 8: Mean B0 Image (_Tmean.nii.gz). Checking that all the files were run propely. 
+**Audit Step 8: Mean B0 Image (_Tmean.nii.gz). Checking that all the files were run propely.**
+
 ```bash
 #!/bin/bash
 # Audit Step 8: Mean B0 Image (_Tmean.nii.gz)
@@ -972,7 +973,7 @@ done
 
 ## Step 9 — Brain Extraction on Mean B0
 
-### What this step accomplishes  
+
 After creating the mean B0 image in Step 8, we need to generate a **brain mask**. This mask is critical for later MRtrix preprocessing steps (e.g., `dwidenoise`, `mrdegibbs`) because it ensures operations are limited to brain tissue, avoiding noise from skull and neck regions.  
 
 We use **FSL BET (Brain Extraction Tool)** on the mean B0 (`*_Tmean.nii.gz`) to create a skull-stripped volume and a binary brain mask.  
@@ -982,10 +983,7 @@ We use **FSL BET (Brain Extraction Tool)** on the mean B0 (`*_Tmean.nii.gz`) to 
   - `<subj>_topup_Tmean_brain.nii.gz` → skull-stripped b0  
   - `<subj>_topup_Tmean_brain_mask.nii.gz` → binary mask  
 
----
-
-
-### Why this step is important  
+**Why this step is important**:
 - Provides a **clean mask** for denoising and Gibbs ringing removal.  
 - Prevents non-brain voxels from skewing noise estimation.  
 - Ensures consistency across subjects during diffusion preprocessing.  
@@ -998,7 +996,7 @@ We allow up to 60 parallel jobs at once (all participants simultaniously)
 Thiss step is safe to run fully parallel without worrying about SSH disconnects. So we'll just paste this right in the terminal. This step will be completed instantly.
 
 
-### The Bash Code
+**The Bash Code**
 ```bash
 #!/bin/bash
 # Step 8b: Brain extraction on mean b0 (parallelized)
@@ -1262,3 +1260,156 @@ for subj in $(ls -1 "$nifti_base"); do
     printf "%s\t%s\t%s\t%s\t%s\t%s\n" "$subj" "$noise_stat" "$degibbs_stat" "$nob250_stat" "$bvec_stat" "$bval_stat"
 done
 ```
+---
+## Step 11 — Eddy Current & Motion Correction
+
+FSL EDDY corrects for subject head motion during diffusion scans, Eddy current–induced geometric distortions, and uses TOPUP fieldmap outputs (Step 7) to further correct susceptibility distortions.
+
+Without this step, head motion and distortions can bias tensor fitting and tractography.
+
+**Inputs (per subject)**
+1. From denoise step:
+- <subj>_dwi_no_b250.nii.gz 
+- <subj>_dwi_no_b250.bvec
+- <subj>_dwi_no_b250.bval
+2. From TOPUP step:
+- <subj>_topup_Tmean_brain_mask.nii.gz
+- <subj>_topup (field coefficients, fieldmap, corrected b0s)
+3. From config:
+- acqp.txt (phase encoding info) - same file we used in the TOPUP step
+- index_no_b250.txt (volume index file)
+![acqp](images/indexn250.png)
+
+**Outputs (per subject)**
+/data/projects/STUDIES/IMPACT/DTI/derivatives/eddyoutput/<subj>/
+- data.nii.gz → corrected DWI
+- bvals, bvecs → gradients, updated & rotated
+- nodif_brain_mask.nii.gz → brain mask from Step 9
+- cnr_maps.nii.gz → contrast-to-noise maps
+-  eddy QC files (.eddy_rotated_bvecs, .eddy_outlier_report, etc.)
+
+Our code will use the FSL ```eddy``` function, and it will use the following call
+```bash
+eddy --imain="$mrdegibbs_dir/${subj}_dwi_no_b250.nii.gz" \   # input 4D DWI
+     --mask="$topup_dir/${subj}_topup_Tmean_brain_mask.nii.gz" \   # brain mask
+     --acqp="$acq_params_file" \   # acq params (phase-encoding)
+     --index="$index_file" \       # index file mapping vols → acq lines
+     --bvecs="$mrdegibbs_dir/${subj}_dwi_no_b250.bvec" \   # input bvecs
+     --bvals="$mrdegibbs_dir/${subj}_dwi_no_b250.bval" \   # input bvals
+     --topup="$topup_dir/${subj}_topup" \   # TOPUP field estimate prefix
+     --out="$out_dir/${subj}_eddy" \        # eddy output prefix
+     --cnr_maps \   # write CNR maps
+     --repol \      # replace outlier slices - very important!
+     -v             # verbose output
+```
+
+
+Eddy is very computationally intensive and will take a few hours, so we will again run with nohup. For each participant it will try to use all available cores so it is best to run sequentially. 
+
+**Running Eddy in Nohup**: 
+1. **Creat script in Nano**
+```bash
+nano run_eddy.sh**
+```
+2. **Paste the following code into Nano**: 
+```bash
+#!/bin/bash
+
+# Base directories
+nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
+denoise_dir="/data/projects/STUDIES/IMPACT/DTI/derivatives/denoise"
+topup_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/TOPUP"
+eddy_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/EDDY"
+
+acq_params_file="/data/projects/STUDIES/IMPACT/DTI/config/acqp.txt"
+index_file="/data/projects/STUDIES/IMPACT/DTI/config/index_no_b250.txt"
+
+for subj in $(ls -1 "$nifti_base"); do
+    echo ">>> [$subj] Running EDDY"
+
+    mrdegibbs_dir="$denoise_dir/$subj/mrdegibbs_no_b250"
+    topup_dir="$topup_base/$subj/topup_output"
+    out_dir="$eddy_base/$subj"
+    mkdir -p "$out_dir"
+
+    eddy \
+        --imain="$mrdegibbs_dir/${subj}_dwi_no_b250.nii.gz" \
+        --mask="$topup_dir/${subj}_topup_Tmean_brain_mask.nii.gz" \
+        --acqp="$acq_params_file" \
+        --index="$index_file" \
+        --bvecs="$mrdegibbs_dir/${subj}_dwi_no_b250.bvec" \
+        --bvals="$mrdegibbs_dir/${subj}_dwi_no_b250.bval" \
+        --topup="$topup_dir/${subj}_topup" \
+        --out="$out_dir/${subj}_eddy" \
+        --cnr_maps \
+        --repol \
+        -v
+
+    echo ">>> [$subj] Done"
+done
+```
+
+3. **Save and exit nano:**
+Press Ctrl+O then Enter to save
+Press Ctrl+X to close
+
+4. **Make the script runnable**
+```bash
+ chmod +x run_eddy.sh
+ ```
+5. **Run with nohup so it survives SSH disconnects**
+```bash
+ nohup ./run_eddy.sh >eddy.log 2>&1 & 
+ ```
+6. **Watch progress in real time**
+We can still watch the progress even though it is running outside of the ssh!
+```bash
+tail -f eddy.log
+```
+- Even if you disconnect, the job keeps running. When you reconnect later, you can just run the same tail -f topup.log command to pick up the log again.
+
+**Expected File Output (Per Subject):**
+```
+derivatives/EDDY/s1000/
+│
+├── s1000_eddy.nii.gz          # corrected diffusion data
+├── s1000_eddy.eddy_parameters # motion + eddy current params
+├── s1000_eddy.eddy_cnr_maps.nii.gz  # contrast-to-noise ratio maps (from --cnr_maps)
+├── s1000_eddy.eddy_outlier_map  # outlier replacement info (from --repol)
+├── s1000_eddy.eddy_outlier_n_stdev_map  # stdev map of outlier replacement
+├── s1000_eddy.eddy_outlier_report  # text report of outlier volumes
+├── s1000_eddy.eddy_post_eddy_shell_alignment_parameters  # shell alignment
+├── s1000_eddy.eddy_post_eddy_shell_PE_translation_parameters
+├── s1000_eddy.eddy_movement_rms  # motion summary (RMS displacement)
+├── s1000_eddy.eddy_restricted_movement_rms
+└── s1000_eddy.eddy_command_txt   # record of the full eddy command used
+```
+**Audit script to make sure eddy was run succesfuly**:
+```bash
+#!/bin/bash
+# Audit Step: EDDY outputs
+
+nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
+eddy_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/EDDY"
+
+printf "Subject\tNII\tParams\tCNR\tOutlierMap\n"
+
+for subj in $(ls -1 "$nifti_base"); do
+    out_dir="$eddy_base/$subj"
+
+    nii="$out_dir/${subj}_eddy.nii.gz"
+    params="$out_dir/${subj}_eddy.eddy_parameters"
+    cnr="$out_dir/${subj}_eddy.eddy_cnr_maps.nii.gz"
+    outmap="$out_dir/${subj}_eddy.eddy_outlier_map"
+
+    [[ -f "$nii" ]] && niistat="✅" || niistat="❌"
+    [[ -f "$params" ]] && pstat="✅" || pstat="❌"
+    [[ -f "$cnr" ]] && cnrstat="✅" || cnrstat="❌"
+    [[ -f "$outmap" ]] && omapstat="✅" || omapstat="❌"
+
+    printf "%s\t%s\t%s\t%s\t%s\n" "$subj" "$niistat" "$pstat" "$cnrstat" "$omapstat"
+done
+
+echo -e "\n=== EDDY audit finished ==="
+```
+
