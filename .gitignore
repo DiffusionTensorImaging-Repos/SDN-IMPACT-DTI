@@ -1,1 +1,10 @@
+# macOS junk
 .DS_Store
+
+# R session history
+.Rhistory
+
+
+# Ignore git attributes file if you don’t want it tracked
+.gitattributes
+
