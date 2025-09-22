@@ -230,7 +230,7 @@ For each subject, it confirms the presence of:
 
 The script prints a table of subjects with a ✅/**NIFTI-clear** flag if all required files exist, or ❌ if anything is missing. It also provides a final summary count of complete vs. incomplete subjects.
 
-**Paste the following directly into the SSH terminal: 
+**Paste the following directly into the SSH terminal:**
 
 ```bash
 #!/bin/bash
@@ -1085,7 +1085,7 @@ echo -e "\n=== BET audit finished ==="
 # Step 10 — Gibbs Ringing Removal + b=250 Cleanup
 
 This step does two things:  reduces oscillation artifacts in diffusion MRI caused by Fourier sampling. Additionaly, we remove volumes with b=250 from the `.bvec` and `.bval` files. These volumes can cause instability in downstream tensor modeling.  
-   The Olson Lab (and others at Temple) have regularly excluded these volumes, and doing so will not interfere with analyses.
+   The Olson Lab (and others at Temple) have regularly excluded these volumes, and doing so will not interfere with analyses. (Many labs don't even ***collect*** b=250 for DTI anymore, so this is a safe bet.)
 
 **! Required Software**:
 
@@ -1279,6 +1279,7 @@ Without this step, head motion and distortions can bias tensor fitting and tract
 - acqp.txt (phase encoding info) - same file we used in the TOPUP step
 - index_no_b250.txt (volume index file)
 ![acqp](images/indexn250.png)
+Each 1 in index_no_b250.txt points to line 1 of acqp.txt, telling eddy to use that set of phase-encoding parameters for the corresponding volume. Because the b=250 volumes were dropped earlier, only the remaining shells are listed, all mapped to the same acquisition direction.
 
 **Outputs (per subject)**
 /data/projects/STUDIES/IMPACT/DTI/derivatives/eddyoutput/<subj>/
@@ -1316,7 +1317,7 @@ Swap:         2.0Gi       5.0Mi       2.0Gi
 ```
 We cap eddy at 8 parallel jobs because each run typically uses ~6–10 GB of memory, and with ~113 GB free this keeps total usage well within safe limits. This balance avoids overloading the system while still speeding up processing by running multiple participants at once.
 
-
+(We likely could have run more than 8 in parallel, but chose a conservative cap.)
 
 **Running Eddy in Nohup**: 
 1. **Creat script in Nano**
@@ -1405,7 +1406,7 @@ We can still watch the progress even though it is running outside of the ssh!
 ```bash
 tail -f eddy.log
 ```
-- Even if you disconnect, the job keeps running. When you reconnect later, you can just run the same tail -f topup.log command to pick up the log again.
+- Even if you disconnect, the job keeps running. When you reconnect later, you can just run the same tail -f eddy.log command to pick up the log again.
 
 **Expected File Output (Per Subject):**
 ```
