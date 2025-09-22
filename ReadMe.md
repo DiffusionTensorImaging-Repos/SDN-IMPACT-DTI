@@ -1304,7 +1304,19 @@ eddy --imain="$mrdegibbs_dir/${subj}_dwi_no_b250.nii.gz" \   # input 4D DWI
 ```
 
 
-Eddy is very computationally intensive and will take a few hours, so we will again run with nohup. For each participant it will try to use all available cores so it is best to run sequentially. 
+Eddy is computationally intensive and can take a few hours, so we will again run with nohup. In practice it does not fully use all available RAM/cores, which means it is safe and  preferable to parallelize across multiple subjects.
+
+**Before running EDDY, we will check our copmuting power**
+```bash
+free -h
+              total        used        free      shared  buff/cache   available
+Mem:          125Gi        10Gi        66Gi        60Mi        48Gi       113Gi
+Swap:         2.0Gi       5.0Mi       2.0Gi
+
+```
+We cap eddy at 8 parallel jobs because each run typically uses ~6–10 GB of memory, and with ~113 GB free this keeps total usage well within safe limits. This balance avoids overloading the system while still speeding up processing by running multiple participants at once.
+
+
 
 **Running Eddy in Nohup**: 
 1. **Creat script in Nano**
@@ -1324,7 +1336,9 @@ eddy_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/EDDY"
 acq_params_file="/data/projects/STUDIES/IMPACT/DTI/config/acqp.txt"
 index_file="/data/projects/STUDIES/IMPACT/DTI/config/index_no_b250.txt"
 
-for subj in $(ls -1 "$nifti_base"); do
+# Function to run EDDY for one subject
+process_subj() {
+    subj=$1
     echo ">>> [$subj] Running EDDY"
 
     mrdegibbs_dir="$denoise_dir/$subj/mrdegibbs_no_b250"
@@ -1346,7 +1360,32 @@ for subj in $(ls -1 "$nifti_base"); do
         -v
 
     echo ">>> [$subj] Done"
-done
+}
+
+export -f process_subj
+export denoise_dir topup_base eddy_base acq_params_file index_file
+
+subjects=$(ls -1 "$nifti_base")
+
+# Run up to 8 jobs in parallel
+if command -v parallel > /dev/null; then
+    echo "$subjects" | parallel -j 8 process_subj {}
+else
+    max_jobs=8
+    job_count=0
+    for subj in $subjects; do
+        process_subj "$subj" &
+        ((job_count++))
+        if (( job_count >= max_jobs )); then
+            wait -n
+            ((job_count--))
+        fi
+    done
+    wait
+fi
+
+echo "=== All EDDY jobs finished ==="
+
 ```
 
 3. **Save and exit nano:**
