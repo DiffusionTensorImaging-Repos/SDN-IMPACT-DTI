@@ -976,6 +976,8 @@ done
 
 After creating the mean B0 image in Step 8, we need to generate a **brain mask**. This mask is critical for later MRtrix preprocessing steps (e.g., `dwidenoise`, `mrdegibbs`) because it ensures operations are limited to brain tissue, avoiding noise from skull and neck regions.  
 
+This step will provide a **clean mask** for denoising and Gibbs ringing removal, prevent non-brain voxels from skewing noise estimation, and it ensures consistency across subjects during diffusion preprocessing.  
+
 We use **FSL BET (Brain Extraction Tool)** on the mean B0 (`*_Tmean.nii.gz`) to create a skull-stripped volume and a binary brain mask.  
 
 - **Input**: `<subj>_topup_Tmean.nii.gz` (mean b0)  
@@ -983,10 +985,8 @@ We use **FSL BET (Brain Extraction Tool)** on the mean B0 (`*_Tmean.nii.gz`) to 
   - `<subj>_topup_Tmean_brain.nii.gz` → skull-stripped b0  
   - `<subj>_topup_Tmean_brain_mask.nii.gz` → binary mask  
 
-**Why this step is important**:
-- Provides a **clean mask** for denoising and Gibbs ringing removal.  
-- Prevents non-brain voxels from skewing noise estimation.  
-- Ensures consistency across subjects during diffusion preprocessing.  
+
+
 
 ---
 
