@@ -1456,3 +1456,18 @@ done
 echo -e "\n=== EDDY audit finished ==="
 ```
 
+**For eddy, it is crucial to conduct quality assurance and outlier removal.**
+
+- **Note**: An outlier is defined as a slice whose average intensity is at least four standard deviations lower than the expected intensity, where the expectation is given by the Gaussian Process prediction.
+
+We will handle outliers in 3 ways: 
+
+1. The --repol flag, used in the EDDY code above, instructs EDDY to remove any slices deemed as movement outliers and replace them with predictions made by the Gaussian process 
+
+2. We will use the EDDY quad quality control tool to calculate avg. absolute motion per participant - so we can exclude anybody with >2mm of absolute motion.
+    
+    - Note for this step we will also calculate mean absolute motion for reporting purposes. 
+
+3. Using, FSLeyes, we will visually inspect each participant all volumes for each participant, and any participant with more than five volumes with excessive intensity artifacts were excluded.
+
+
