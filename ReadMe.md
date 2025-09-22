@@ -338,7 +338,7 @@ cp /data/projects/STUDIES/LEARN/fMRI/NM/ANTs_toolbox/NM_toolbox/ANTs_Images/NKI/
 
 **Now that the masks are set, we can execute the ANTs Skull Stripping.**
 
-Brefore running this, I conduct a System RAM check to help decide how many paritcipants we can tell ANTs to skullstrip at once. I won't need to run this before each step because it will represent a good rule of them for moving forward. 
+Brefore running this, I conduct a System RAM check to help decide how many paritcipants we can tell ANTs to skullstrip at once.
 
 Type the following into the terminal: 
 
