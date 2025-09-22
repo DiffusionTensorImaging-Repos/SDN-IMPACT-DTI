@@ -533,9 +533,11 @@ For each participant:
 6. Example of a Good Extraction -- For confidentiality this is generic example not from our data base.
 ![Good Skull Strip Example](images/skullcheck.png)
 
-7. I track each participant in the data tracker: 
+7. Here it is good to begin keeping a csv to track your progress. 
+I track each participant's progress after skullstripping. 
 ![Good Skull Strip Example](images/datatracker.png)
-**Note:** If extraction cuts off brain or pulls in spine, exclude and note. Rare issue — if common in a data set, switch template (NKI worked perfectly with IMPACT).
+
+**Note:** If extraction cuts off brain or pulls in spine, exclude and note. This should be a rare issue (~all participants should be stripped propely if you used a good mask/template), if you run into several issues,switch template (NKI worked perfectly with IMPACT).
 
 If you have found good mask and made sure it worked for ~all participants, we can move to the next step: 
 
