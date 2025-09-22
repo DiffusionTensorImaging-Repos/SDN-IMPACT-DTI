@@ -1279,6 +1279,7 @@ Without this step, head motion and distortions can bias tensor fitting and tract
 - acqp.txt (phase encoding info) - same file we used in the TOPUP step
 - index_no_b250.txt (volume index file)
 ![acqp](images/indexn250.png)
+
 Each 1 in index_no_b250.txt points to line 1 of acqp.txt, telling eddy to use that set of phase-encoding parameters for the corresponding volume. Because the b=250 volumes were dropped earlier, only the remaining shells are listed, all mapped to the same acquisition direction.
 
 **Outputs (per subject)**
