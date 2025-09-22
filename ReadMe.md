@@ -1097,7 +1097,7 @@ cd /data/tools
 git clone https://github.com/MRtrix3/mrtrix3.git
 cd mrtrix3
 ./configure
-/data/tools/mrtrix3$ ./build ##this won't add the GUI features, which depend on specific moduels (QtSvg, QtOpenGL) not in the Linux, and we won't need them. 
+/data/tools/mrtrix3$ ./build ##this won't add the GUI features, which depend on specific modules (QtSvg, QtOpenGL) not in the Linux, and we won't need them. 
 ```
 Then we added it to the PATH (so commands are globally available):
 ```
