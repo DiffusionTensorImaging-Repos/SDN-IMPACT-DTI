@@ -734,7 +734,7 @@ This file tells TOPUP how the scans were collected. Each row is one scan (AP or 
 - With both directions listed, TOPUP can figure out how the distortions flip and then fix them in the diffusion data.
 
 
-For the TOPUP code, the following input, produced by the following steps is needed: 
+For the TOPUP code, the following input, produced by the previous steps is needed: 
 
 **Expected Input (per subject)**
 - `NIFTI/<subj>/dti/<subj>_merged_b0s.nii.gz` (from Step 6)  
