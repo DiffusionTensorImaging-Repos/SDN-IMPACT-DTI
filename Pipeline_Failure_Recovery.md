@@ -70,7 +70,7 @@ nano rescue.sh
 
 subj="s4440"   # Replace with participant ID to backtrack
 
-# Base directories
+# --- Base directories ---
 nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
 denoise_dir="/data/projects/STUDIES/IMPACT/DTI/derivatives/denoise"
 topup_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/TOPUP"
@@ -78,6 +78,18 @@ eddy_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/EDDY"
 
 acq_params_file="/data/projects/STUDIES/IMPACT/DTI/config/acqp.txt"
 index_file="/data/projects/STUDIES/IMPACT/DTI/config/index_no_b250.txt"
+
+# --- MRtrix setup ---
+# Edit this path if mrtrix3 is installed somewhere else on your cluster
+export PATH=/data/tools/mrtrix3/bin:$PATH
+
+# Check for MRtrix commands
+for cmd in dwidenoise mrdegibbs dwiextract; do
+    if ! command -v $cmd &>/dev/null; then
+        echo "❌ ERROR: $cmd not found in PATH. Load MRtrix3 before running."
+        exit 1
+    fi
+done
 
 # --- Step 1: Re-run denoise + mrdegibbs + b=250 cleanup ---
 echo ">>> [$subj] Re-running denoise + mrdegibbs + b=250 cleanup"
@@ -138,6 +150,7 @@ eddy \
     -v
 
 echo ">>> [$subj] Rescue run complete"
+
 ```
 
 3. Save and exit nano
