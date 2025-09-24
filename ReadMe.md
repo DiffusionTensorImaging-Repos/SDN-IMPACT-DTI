@@ -1464,10 +1464,123 @@ We will handle outliers in 3 ways:
 
 1. The --repol flag, used in the EDDY code above, instructs EDDY to remove any slices deemed as movement outliers and replace them with predictions made by the Gaussian process 
 
-2. We will use the EDDY quad quality control tool to calculate avg. absolute motion per participant - so we can exclude anybody with >2mm of absolute motion.
+2. We will use the EDDY-quad/squad quality control tool to calculate avg. absolute motion per participant - so we can exclude anybody with >2mm of absolute motion.
     
-    - Note for this step we will also calculate mean absolute motion for reporting purposes. 
+    - **Note**- for reporting purposes -  for this step we will also calculate Mean, SD of absolute motion and of absolute outlier slices. 
 
 3. Using, FSLeyes, we will visually inspect each participant all volumes for each participant, and any participant with more than five volumes with excessive intensity artifacts were excluded.
 
 
+The repol flag step is handled in the eddy script, so let's start with 
+
+2. Eddy QUAD/SQUAD: 
+
+**The script will use the following FSL functions:**
+
+- eddy_quad — runs QC on a single subject’s EDDY outputs.
+- eddy_squad — aggregates QUAD outputs across all subjects to create group-level reports
+
+**Required input (output from EDDY step):**
+-  Eddy output prefix:
+   /data/projects/STUDIES/IMPACT/DTI/derivatives/EDDY/<subj>/<subj>_eddy
+-  Brain mask:
+   /data/projects/STUDIES/IMPACT/DTI/derivatives/EDDY/<subj>/<subj>_eddy_mask.nii.gz
+-  B-values:
+   /data/projects/STUDIES/IMPACT/DTI/NIFTI/<subj>/dti/<subj>_dwi.bval
+-  B-vectors:
+   /data/projects/STUDIES/IMPACT/DTI/NIFTI/<subj>/dti/<subj>_dwi.bvec
+- Acquisition parameters file:
+   /data/projects/STUDIES/IMPACT/DTI/config/acqp.txt
+- Index file (after dropping b=250 vols):
+   /data/projects/STUDIES/IMPACT/DTI/config/index_no_b250.txt
+
+
+```bash
+
+
+#!/bin/bash
+# ============================================================
+# IMPACT DTI QC Pipeline
+# Run EDDY QUAD for each subject, SQUAD for group,
+# and collate motion/outlier stats into qc_summary.txt
+# ============================================================
+
+# --- Paths ---
+nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
+eddy_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/EDDY"
+quad_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/QUAD"
+squad_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/SQUAD"
+
+acq_params="/data/projects/STUDIES/IMPACT/DTI/config/acqp.txt"
+index_file="/data/projects/STUDIES/IMPACT/DTI/config/index_no_b250.txt"
+
+out_txt="/data/projects/STUDIES/IMPACT/DTI/derivatives/qc_summary.txt"
+
+mkdir -p "$quad_base" "$squad_base"
+
+# --- Step 1: Run eddy_quad per subject ---
+for subj in $(ls -1 "$nifti_base"); do
+  echo ">>> Running QUAD for $subj"
+  eddy_quad "$eddy_base/$subj/${subj}_eddy" \
+    -idx "$index_file" \
+    -par "$acq_params" \
+    -m "$eddy_base/$subj/${subj}_eddy_mask.nii.gz" \
+    -b "$nifti_base/$subj/dti/${subj}_dwi.bval" \
+    -g "$nifti_base/$subj/dti/${subj}_dwi.bvec" \
+    -o "$quad_base/$subj"
+done
+
+# --- Step 2: Run eddy_squad for group ---
+echo ">>> Running SQUAD group summary"
+eddy_squad "$quad_base" -o "$squad_base"
+
+# --- Step 3: Collate into qc_summary.txt ---
+echo "QC Summary — IMPACT DTI" > "$out_txt"
+echo "Exclusion threshold: >2 mm average absolute motion" >> "$out_txt"
+echo >> "$out_txt"
+echo "Per-subject results:" >> "$out_txt"
+
+motion_vals=()
+outlier_vals=()
+exclude_list=()
+
+for subj in $(ls -1 "$quad_base"); do
+  qc_file="$quad_base/$subj/qc.csv"
+  if [[ -f "$qc_file" ]]; then
+    # NOTE: Column positions may vary by FSL version.
+    # Commonly: col2 = mean_abs_motion, col5 = % outlier slices.
+    abs_motion=$(awk -F, 'NR==2 {print $2}' "$qc_file")
+    outlier_pct=$(awk -F, 'NR==2 {print $5}' "$qc_file")
+
+    echo "$subj    avg_abs_motion=${abs_motion}mm    outlier_slices=${outlier_pct}%" >> "$out_txt"
+
+    motion_vals+=("$abs_motion")
+    outlier_vals+=("$outlier_pct")
+
+    awk -v m="$abs_motion" -v s="$subj" 'BEGIN{if(m>2) print s}' >> /tmp/exclusions.tmp
+  fi
+done
+
+echo >> "$out_txt"
+echo "Exclusions (>2 mm):" >> "$out_txt"
+if [[ -s /tmp/exclusions.tmp ]]; then
+  cat /tmp/exclusions.tmp >> "$out_txt"
+else
+  echo "None" >> "$out_txt"
+fi
+rm -f /tmp/exclusions.tmp
+
+motion_mean=$(printf "%s\n" "${motion_vals[@]}" | awk '{sum+=$1; n++} END{if(n>0) print sum/n}')
+motion_sd=$(printf "%s\n" "${motion_vals[@]}" | awk -v m="$motion_mean" '{sum+=($1-m)^2; n++} END{if(n>1) print sqrt(sum/(n-1))}')
+outlier_mean=$(printf "%s\n" "${outlier_vals[@]}" | awk '{sum+=$1; n++} END{if(n>0) print sum/n}')
+outlier_sd=$(printf "%s\n" "${outlier_vals[@]}" | awk -v m="$outlier_mean" '{sum+=($1-m)^2; n++} END{if(n>1) print sqrt(sum/(n-1))}')
+
+echo >> "$out_txt"
+echo "Group-level metrics:" >> "$out_txt"
+echo "Mean (SD) average absolute motion = ${motion_mean} (${motion_sd}) mm" >> "$out_txt"
+echo "Mean (SD) outlier slice frequency = ${outlier_mean}% (${outlier_sd}%)" >> "$out_txt"
+
+echo "=== QC summary written to $out_txt ==="
+
+
+```
