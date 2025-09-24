@@ -128,14 +128,30 @@ As a reminder, we require the following four scan types for each subject:
 
 This step will use the basic dc2niix function. 
 
-**Note** — This step is lightweight and will be completed quickly, so we just paste it directly into the SSH terminal. Unlike later steps, there’s no need to save or run it as a background script at risk of ssh disruptions. 
+**Note** — This step is lightweight and will be completed quickly, so we just paste it directly into the SSH terminal and run it for all participants at once. 
 
+I quickly check available system RAM to decide how many participants we can process at once, by pasting this in the SSH terminal: 
+```
+free -h
+```
+
+Example output:
+
+              total        used        free      shared  buff/cache   available
+Mem:          125Gi       9.7Gi        54Gi        60Mi        61Gi       114Gi
+Swap:         2.0Gi          0B       2.0Gi
+
+
+dcm2niix is very lightweight, using only ~100–300 MB per subject. With 114 GB available, even 60 subjects in parallel is well within limits.
+→ Safe to set max_jobs=60.
+
+To run the code, 
 **Paste the following directly into the SSH terminal**
 ```bash
 #!/bin/bash
 # ============================================================
 # DICOM → NIfTI conversion for IMPACT (DTI pipeline)
-# With subject-prefixed filenames
+# With subject-prefixed filenames + logging
 # ============================================================
 
 base_dir="/data/projects/STUDIES/IMPACT/fMRI/dicoms"
@@ -150,24 +166,31 @@ scan_types=(
     "cmrr_fieldmapse_pa:dti:fmapPA"
 )
 
-echo "=== Starting DICOM → NIfTI conversion ==="
+# Log file (always overwrite dcm2niix.log)
+logfile="dcm2niix.log"
+: > "$logfile"
+
+# Simple logger: prints to screen AND appends to logfile
+log() { echo "$*" | tee -a "$logfile" ; }
+
+log "=== Starting DICOM → NIfTI conversion ==="
 
 for subj in "$base_dir"/*; do
     [ -d "$subj" ] || continue
     subj_id=$(basename "$subj")
-    echo -e "\n--- Checking subject: $subj_id ---"
+    log "--- Checking subject: $subj_id ---"
 
     # Check completeness
     complete=true
     for scan in "${scan_types[@]}"; do
         pattern="${scan%%:*}"
         if ! find "$subj" -maxdepth 1 -type d -regex ".*/[0-9]+-$pattern.*" | grep -q .; then
-            echo "  ❌ Missing required scan: $pattern"
+            log "  ❌ Missing required scan: $pattern"
             complete=false
         fi
     done
     if [ "$complete" = false ]; then
-        echo "  ⚠️ Skipping $subj_id (not DTI-clear)"
+        log "  ⚠️ Skipping $subj_id (not DTI-clear)"
         continue
     fi
 
@@ -179,15 +202,22 @@ for subj in "$base_dir"/*; do
     for scan in "${scan_types[@]}"; do
         IFS=":" read -r pattern target label <<< "$scan"
         scan_dir=$(find "$subj" -maxdepth 1 -type d -regex ".*/[0-9]+-$pattern.*" | head -n 1)
-        echo "  ✅ Converting $pattern → $target/"
-        
-        # Run conversion with subject-prefixed filenames
-        $dcm2niix_bin -o "$subj_out/$target" -f "${subj_id}_${label}" "$scan_dir"
+        log "  ✅ Converting $pattern → $target/"
+
+        {
+            echo "----- [$subj_id $label] dcm2niix start"
+            $dcm2niix_bin -o "$subj_out/$target" -f "${subj_id}_${label}" "$scan_dir"
+            echo "----- [$subj_id $label] dcm2niix end"
+            echo
+        } >>"$logfile" 2>&1
     done
 done
 
-echo -e "\n=== Conversion finished. Output saved to: $out_base ==="
+log "=== Conversion finished. Output saved to: $out_base ==="
+
+
 ```
+Note: All coding output from this script is recorded in dcm2niix.log.
 
 The output data will look like this: 
 ```bash
@@ -309,7 +339,7 @@ export PATH="$ANTSPATH:$PATH"
 
 **What to check as an RA:**  
 - Confirm whether the lab already has suitable templates downloaded (saves time and ensures consistency across projects).  
-- Look for a pair:  
+- Look for a pair within the SAME TEMPLATE (eg., NKI):  
   - `T_template.nii.gz` → the actual template brain.  
   - `T_template_BrainCerebellumMask.nii.gz` → the brain + cerebellum mask.  
   - Type the following into the terminal to conduct this search to see if masks already exist on the Linux: 
@@ -544,7 +574,7 @@ If you have found good mask and made sure it worked for ~all participants, we ca
 ---
 ## Step 6 — B0 Concatenation
 
-- This is a step that is used to prep our data before we run  **topup** for susceptibility distortion correction in the next. This step  step we need to build a combined baseline (b0) image. 
+- This is a step that is neccesary to prep our data before we run  **topup** for susceptibility distortion correction! This step will build a combined baseline (b0) image. 
 
 This step extracts the first volume (the b0) from each subject’s AP and PA fieldmaps and merges them into a single 4D file. This merged file is the required input for topup.
 
@@ -634,7 +664,9 @@ echo "=== All B0 concatenation jobs finished ==="
 
 ```
 
-**Expected Output:**
+* Note -  All coding output from this script is recorded in b0_concat.log
+
+**Expected File Output (Per participant):**
 ```
 /data/projects/STUDIES/IMPACT/DTI/derivatives/b0_concat/
 │
@@ -825,7 +857,7 @@ We can still watch the progress even though it is running outside of the ssh!
 ```bash
 tail -f topup.log
 ```
-Even if you disconnect, the job keeps running. When you reconnect later, you can just run the same tail -f topup.log command to pick up the log again.
+Even if you disconnect, the job keeps running. When you reconnect later, you can just run the same tail -f topup.log command to pick up the log again. **This log will also be SAVED and can be checked later if you encounter errors**
 
 **Expected Output**:
 ```
@@ -899,9 +931,16 @@ We allow up to 60 parallel jobs at once because it’s just I/O + averaging. We'
 
 ```bash
 #!/bin/bash
-# Step 8: Mean B0 Image (collapse across time)
+# Step 8: Mean B0 Image (collapse across time, with logging)
 
 deriv_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/TOPUP"
+logfile="mean_b0.log"
+
+# Initialize/clear log
+: > "$logfile"
+
+# Logger function
+log() { printf '%s %s\n' "$(date '+%F %T')" "$*" | tee -a "$logfile" ; }
 
 # Source FSL environment once
 source /usr/local/fsl/etc/fslconf/fsl.sh
@@ -913,11 +952,17 @@ process_subj() {
     output_file="${deriv_base}/${subj}/topup_output/${subj}_topup_Tmean.nii.gz"
 
     if [[ -f "$input_file" ]]; then
-        echo ">>> [$subj] Averaging B0 across time"
-        fslmaths "$input_file" -Tmean "$output_file"
-        echo ">>> [$subj] Done"
+        log ">>> [$subj] Averaging B0 across time"
+        {
+            echo "----- [$subj] fslmaths start"
+            echo "cmd: fslmaths \"$input_file\" -Tmean \"$output_file\""
+            fslmaths "$input_file" -Tmean "$output_file"
+            echo "----- [$subj] fslmaths end"
+            echo
+        } >>"$logfile" 2>&1
+        log ">>> [$subj] Done"
     else
-        echo "!!! [$subj] Missing input: $input_file"
+        log "!!! [$subj] Missing input: $input_file"
     fi
 }
 
@@ -936,10 +981,12 @@ for subj in $(ls -1 "$deriv_base"); do
 done
 
 wait
-echo "=== Mean B0 collapse finished for all subjects ==="
-
+log "=== Mean B0 collapse finished for all subjects ==="
 ```
-Expected Output (per subject)
+Note: All coding output from this script is recorded in mean_b0.log.
+
+
+Expected file Output (per subject)
 ```bash
 derivatives/TOPUP/<subj>/topup_output/
 │
@@ -989,9 +1036,6 @@ We use **FSL BET (Brain Extraction Tool)** on the mean B0 (`*_Tmean.nii.gz`) to 
 
 
 
-
----
-
 This step is computationally light — averaging is fast and memory-safe.
 We allow up to 60 parallel jobs at once (all participants simultaniously)
 
@@ -1000,60 +1044,61 @@ Thiss step is safe to run fully parallel without worrying about SSH disconnects.
 
 **The Bash Code**
 ```bash
-#!/bin/bash
-# Step 8b: Brain extraction on mean b0 (parallelized)
-# All output will be logged to bet.log
+# Step 8: Brain extraction on mean b0 (parallelized, Bash-only, safe logging)
 
 deriv_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/TOPUP"
 
-# Set log file
+# One shared log file (always overwrite bet.log)
 logfile="bet.log"
-exec > >(tee -a "$logfile") 2>&1
+: > "$logfile"   # create/clear
+
+# Simple logger: prints to screen AND appends to logfile
+log() { echo "$*" | tee -a "$logfile" ; }
 
 # Source FSL environment once
 source /usr/local/fsl/etc/fslconf/fsl.sh
 export FSLOUTPUTTYPE=NIFTI_GZ
 
 process_subj() {
-    subj=$1
-    input="${deriv_base}/${subj}/topup_output/${subj}_topup_Tmean.nii.gz"
-    output="${deriv_base}/${subj}/topup_output/${subj}_topup_Tmean_brain.nii.gz"
+    local subj="$1"
+    local input="${deriv_base}/${subj}/topup_output/${subj}_topup_Tmean.nii.gz"
+    local output="${deriv_base}/${subj}/topup_output/${subj}_topup_Tmean_brain.nii.gz"
 
     if [[ -f "$input" ]]; then
-        echo ">>> [$subj] Running BET on mean b0"
-        bet "$input" "$output" -m -f 0.2 -g 0.1 -R -v
-        echo ">>> [$subj] Brain mask created"
+        log ">>> [$subj] Running BET on mean b0"
+        {
+            echo "----- [$subj] BET start"
+            echo "cmd: bet \"$input\" \"$output\" -m -f 0.2 -g 0.1 -R -v"
+            bet "$input" "$output" -m -f 0.2 -g 0.1 -R -v
+            echo "----- [$subj] BET end"
+            echo
+        } >>"$logfile" 2>&1
+        log ">>> [$subj] Brain mask created"
     else
-        echo "!!! [$subj] Missing input: $input"
+        log "!!! [$subj] Missing input: $input"
     fi
 }
 
-export -f process_subj
-export deriv_base
-
 subjects=$(ls -1 "$deriv_base")
+max_jobs=60
+job_count=0
 
-# Run up to 60 jobs at once (adjust -j if needed)
-if command -v parallel > /dev/null; then
-    echo "$subjects" | parallel -j 60 process_subj {}
-else
-    max_jobs=60
-    job_count=0
-    for subj in $subjects; do
-        process_subj "$subj" &
-        ((job_count++))
-        if (( job_count >= max_jobs )); then
-            wait -n
-            ((job_count--))
-        fi
-    done
-    wait
-fi
+for subj in $subjects; do
+    process_subj "$subj" &
+    ((job_count++))
+    if (( job_count >= max_jobs )); then
+        wait -n   # wait for one to finish, then continue launching
+        ((job_count--))
+    fi
+done
 
-echo "=== Brain extraction finished for all subjects ==="
-
-
+wait  # ensure all background jobs are finished
+log "=== Brain extraction finished for all subjects ==="
 ```
+
+Note: All coding output from this script is recorded in bet.log.
+
+
 **Expected Output (per subject)**
 ```
 derivatives/TOPUP/<subj>/topup_output/
