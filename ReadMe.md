@@ -1002,8 +1002,13 @@ Thiss step is safe to run fully parallel without worrying about SSH disconnects.
 ```bash
 #!/bin/bash
 # Step 8b: Brain extraction on mean b0 (parallelized)
+# All output will be logged to bet.log
 
 deriv_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/TOPUP"
+
+# Set log file
+logfile="bet.log"
+exec > >(tee -a "$logfile") 2>&1
 
 # Source FSL environment once
 source /usr/local/fsl/etc/fslconf/fsl.sh
@@ -1046,6 +1051,7 @@ else
 fi
 
 echo "=== Brain extraction finished for all subjects ==="
+
 
 ```
 **Expected Output (per subject)**
@@ -1455,12 +1461,16 @@ done
 
 echo -e "\n=== EDDY audit finished ==="
 ```
+**NOTE:** If EDDY fails to complete for one or more participants, see the guide linked here: Pipeline_Failure_Recovery.md. It provides code for auditing the issue and instructions for re-running earlier steps for that participant if necessary.
+
+
+### Post EDDY Outlier Checks 
 
 **For eddy, it is crucial to conduct quality assurance and outlier removal.**
 
 - **Note**: An outlier is defined as a slice whose average intensity is at least four standard deviations lower than the expected intensity, where the expectation is given by the Gaussian Process prediction.
 
-We will handle outliers in 3 ways: 
+**We will handle outliers in 3 ways:**
 
 1. The --repol flag, used in the EDDY code above, instructs EDDY to remove any slices deemed as movement outliers and replace them with predictions made by the Gaussian process 
 
