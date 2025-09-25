@@ -1520,13 +1520,13 @@ echo -e "\n=== EDDY audit finished ==="
 1. The --repol flag, used in the EDDY code above, instructs EDDY to remove any slices deemed as movement outliers and replace them with predictions made by the Gaussian process 
 
 2. We will use the EDDY-quad/squad quality control tool to calculate avg. absolute motion per participant - so we can exclude anybody with >2mm of absolute motion.
-    - **Note**- for reporting purposes -  for this step we will also calculate Mean, SD of absolute motion and of absolute outlier slices. 
+    - **Note**- for reporting purposes -  for this step we will also calculate Mean, SD of absolute motion, and of absolute outlier slices. 
 
-3. Using, FSLeyes, we will visually inspect each participant all volumes for each participant, and any participant with more than five volumes with excessive intensity artifacts were excluded.
+3. Using FSLeyes, we will visually inspect all volumes for each participant, and any participant with more than five volumes with excessive intensity artifacts were excluded.
 
 To run these scripts: 
 
-1. The repol flag step is handled in the eddy script, so let's start with 
+1. The repol flag step is handled in the eddy script, so let's start with ...
 
 2. Eddy QUAD/SQUAD: 
 
@@ -1746,3 +1746,5 @@ Here is what our combine qc summary looks like:
 **Fsl squad** will also produce a pdf with this output: 
 
 ![squadsum](images/squad_summary.png)
+
+3. Lastly, we will visuall inspect the eddy output for each participant to exlcude those with >5 volumes with visible eddy motion artifacts. 
