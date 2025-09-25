@@ -1741,7 +1741,7 @@ Here is what our combine qc summary looks like:
 
 ![qcsum](images/qc_summary.png)
 
-**Interpretation:** We found that head motion was low across participants, with mean average absolute motion of 0.27 mm (SD = 0.13), and no subjects exceeded the 2 mm exclusion threshold. Mean frequency of outlier slices was 1.42% (SD = 2.23%), though some scans show inflated percentages—this can happen when a single bad volume marks many slices as outliers, which we will handle during manual FSLEYES visual check.
+**Interpretation:** We found that head motion was low across participants, with mean average absolute motion of 0.27 mm (SD = 0.13), and no subjects exceeded the 2 mm exclusion threshold. Mean frequency of outlier slices was 1.42% (SD = 2.23%). Quad output for some participants scans show inflated outlier percentages despite low movement—this can happen when a single bad volume marks many slices as outliers, which we will handle during manual FSLEYES visual check.
 
 **Fsl squad** will also produce a pdf with this output: 
 
