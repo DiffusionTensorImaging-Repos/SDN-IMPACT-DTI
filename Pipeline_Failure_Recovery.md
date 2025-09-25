@@ -177,3 +177,7 @@ tail -f rescue.log
 ## 5. Auditing
 
 Once the re-run is complete, use the same audit scripts provided in the full pipeline guide (for denoise, eddy, topup, etc.) to confirm. 
+
+For example, here I re run the eddy audit, and now this participant is checked off, where before it was X'd off. 
+
+![eddy check](images/eddyaudit.png)
