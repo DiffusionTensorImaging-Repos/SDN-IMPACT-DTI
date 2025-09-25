@@ -1520,13 +1520,13 @@ echo -e "\n=== EDDY audit finished ==="
 1. The --repol flag, used in the EDDY code above, instructs EDDY to remove any slices deemed as movement outliers and replace them with predictions made by the Gaussian process 
 
 2. We will use the EDDY-quad/squad quality control tool to calculate avg. absolute motion per participant - so we can exclude anybody with >2mm of absolute motion.
-    
     - **Note**- for reporting purposes -  for this step we will also calculate Mean, SD of absolute motion and of absolute outlier slices. 
 
 3. Using, FSLeyes, we will visually inspect each participant all volumes for each participant, and any participant with more than five volumes with excessive intensity artifacts were excluded.
 
+To run these scripts: 
 
-The repol flag step is handled in the eddy script, so let's start with 
+1. The repol flag step is handled in the eddy script, so let's start with 
 
 2. Eddy QUAD/SQUAD: 
 
@@ -1549,17 +1549,26 @@ The repol flag step is handled in the eddy script, so let's start with
 - Index file (after dropping b=250 vols):
 /data/projects/STUDIES/IMPACT/DTI/config/index_no_b250.txt
 
- These jobs are all low-intensity (mainly file I/O and small FSL utilities), so it’s safe to parallelize them. We cap at 60 concurrent runs which covered all participants in impact. If you have a larger sample consider checking availabe computing power first, but you should be good to go
+ These jobs are all low-intensity (mainly file I/O and small FSL utilities), so it’s safe to parallelize them. We cap at 60 concurrent runs which covered all participants in impact. If you have a larger sample consider checking availabe computing power first, but you should be good to go.
  
-  The group-level SQUAD and summary steps run only after all per-subject jobs complete.
-```bash
+  This will compile the participant movement metrics with the total absolute motion and outlier %'s from SQUAD into a text file. The group-level SQUAD and summary steps run only after all per-subject jobs complete. 
 
+* **Note**: If the outputs aren’t combining succesfuly into a single qc_summary.txt file, you can run QUAD and SQUAD manually and check each participant’s output. However, the combined QC file is much more convenient, so try to run it this way first and troubleshoot as needed 
+
+
+```bash
 #!/bin/bash
 # ============================================================
-# IMPACT DTI QC Pipeline (fixed)
-# Run EDDY QUAD per subject, then SQUAD, then summary
-# collate data into qc.summary.txt
+# IMPACT DTI QC Pipeline (QUAD -> quad_list.txt -> SQUAD -> summary)
+# Notes:
+# - SQUAD expects a text file listing QUAD subject dirs containing qc.json
+# - Do NOT pre-create $squad_base (eddy_squad will create it)
+# - "Outlier slice" = slice whose mean intensity is ≥ 4 SD below expected
 # ============================================================
+
+set -u -o pipefail
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
 
 # --- Paths ---
 nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
@@ -1574,88 +1583,166 @@ index_file="/data/projects/STUDIES/IMPACT/DTI/config/index_no_b250.txt"
 
 out_txt="/data/projects/STUDIES/IMPACT/DTI/derivatives/qc_summary.txt"
 
-mkdir -p "$quad_base" "$squad_base"
-
 quad_list="$quad_base/quad_list.txt"
 : > "$quad_list"
 
-# --- Step 1: Run eddy_quad per subject ---
-for subj in $(ls -1 "$nifti_base"); do
-  echo ">>> Running QUAD for $subj"
+# -------------------- Step 1: QUAD -------------------------
+echo ">>> Step 1: running QUAD in parallel (max 60)..."
 
-  mask_file="$topup_base/$subj/topup_output/${subj}_topup_Tmean_brain_mask.nii.gz"
-  bval_file="$denoise_base/$subj/mrdegibbs_no_b250/${subj}_dwi_no_b250.bval"
-  bvec_file="$denoise_base/$subj/mrdegibbs_no_b250/${subj}_dwi_no_b250.bvec"
-  eddy_prefix="$eddy_base/$subj/${subj}_eddy"
-  out_dir="$quad_base/$subj"
+ls -1 "$nifti_base" | xargs -n 1 -P 60 -I{} bash -c '
+  subj="{}"
+  mask_file="'"$topup_base"'/$subj/topup_output/${subj}_topup_Tmean_brain_mask.nii.gz"
+  bval_file="'"$denoise_base"'/$subj/mrdegibbs_no_b250/${subj}_dwi_no_b250.bval"
+  bvec_file="'"$denoise_base"'/$subj/mrdegibbs_no_b250/${subj}_dwi_no_b250.bvec"
+  eddy_prefix="'"$eddy_base"'/$subj/${subj}_eddy"
+  out_dir="'"$quad_base"'/$subj"
 
-  # check inputs
-  if [[ ! -f "$mask_file" || ! -f "$bval_file" || ! -f "$bvec_file" || ! -f "${eddy_prefix}.nii.gz" ]]; then
-    echo "!! Missing inputs for $subj, skipping"
-    continue
+  if [[ -f "$mask_file" && -f "$bval_file" && -f "$bvec_file" && -f "${eddy_prefix}.nii.gz" ]]; then
+    echo ">>> QUAD: $subj"
+    rm -rf "$out_dir"
+    eddy_quad "$eddy_prefix" \
+      -idx "'"$index_file"'" \
+      -par "'"$acq_params"'" \
+      -m "$mask_file" \
+      -b "$bval_file" \
+      -g "$bvec_file" \
+      -o "$out_dir"
+  else
+    echo "!! Skipping $subj (missing inputs)"
   fi
+'
 
-  eddy_quad "$eddy_prefix" \
-    -idx "$index_file" \
-    -par "$acq_params" \
-    -m "$mask_file" \
-    -b "$bval_file" \
-    -g "$bvec_file" \
-    -o "$out_dir"
+# -------------------- Step 2: SQUAD ------------------------
+echo ">>> Step 2: rebuilding quad_list (only QUADs with qc.json) and running SQUAD..."
 
-  echo "$out_dir" >> "$quad_list"
-done
+find "$quad_base" -mindepth 1 -maxdepth 1 -type d \
+  -exec test -f "{}/qc.json" \; -print | sort > "$quad_list"
 
-# --- Step 2: Run eddy_squad for group ---
-if [[ -s "$quad_list" ]]; then
-  echo ">>> Running SQUAD group summary"
-  eddy_squad "$quad_list" -o "$squad_base"
+nsubj=$(wc -l < "$quad_list" | tr -d " ")
+echo "Found $nsubj subjects for SQUAD."
+if [[ "$nsubj" -eq 0 ]]; then
+  echo "!! quad_list.txt is empty; skipping SQUAD"
+else
+  # Optional: ensure a clean SQUAD run
+  # rm -rf "$squad_base"
+
+  echo "Running eddy_squad..."
+  eddy_squad "$quad_list" -o "$squad_base" || echo "!! eddy_squad failed; continuing to summary with available data"
 fi
 
-# --- Step 3: Collate into qc_summary.txt ---
-echo "QC Summary — IMPACT DTI" > "$out_txt"
-echo "Exclusion threshold: >2 mm average absolute motion" >> "$out_txt"
-echo >> "$out_txt"
-echo "Per-subject results:" >> "$out_txt"
+# -------------------- Step 3: Summary ----------------------
+echo ">>> Step 3: collating per-subject (QUAD) + group metrics (SQUAD)..."
+{
+  echo "QC Summary — IMPACT DTI"
+  echo "Exclusion threshold: >2 mm average absolute motion"
+  echo
+  echo "Per-subject results:"
+} > "$out_txt"
 
-motion_vals=()
-outlier_vals=()
+per_subj_tmp=$(mktemp)
+excl_tmp=$(mktemp)
 
-for subj in $(ls -1 "$quad_base"); do
-  qc_file="$quad_base/$subj/qc.csv"
-  if [[ -f "$qc_file" ]]; then
-    abs_motion=$(awk -F, 'NR==2 {print $2}' "$qc_file")
-    outlier_pct=$(awk -F, 'NR==2 {print $5}' "$qc_file")
+while IFS= read -r subj_dir; do
+  subj=$(basename "$subj_dir")
+  qc_file="$subj_dir/qc.json"
+  [[ -f "$qc_file" ]] || continue
 
-    echo "$subj    avg_abs_motion=${abs_motion}mm    outlier_slices=${outlier_pct}%" >> "$out_txt"
+  abs_motion=$(python3 - <<PY "$qc_file"
+import json,sys
+d=json.load(open(sys.argv[1]))
+print(d.get('qc_mot_abs') or d.get('avg_abs_motion') or "NA")
+PY
+)
+  rel_motion=$(python3 - <<PY "$qc_file"
+import json,sys
+d=json.load(open(sys.argv[1]))
+print(d.get('qc_mot_rel') or "NA")
+PY
+)
+  out_prop=$(python3 - <<PY "$qc_file"
+import json,sys
+d=json.load(open(sys.argv[1]))
+v=d.get('qc_outliers_tot') or d.get('outlier_prop')
+print("" if v is None else v)
+PY
+)
 
-    motion_vals+=("$abs_motion")
-    outlier_vals+=("$outlier_pct")
-
-    awk -v m="$abs_motion" -v s="$subj" 'BEGIN{if(m>2) print s}' >> /tmp/exclusions.tmp
+  if [[ -n "$out_prop" ]]; then
+    if (( $(echo "$out_prop <= 1" | bc -l) )); then
+      out_pct=$(awk -v v="$out_prop" 'BEGIN{printf("%.2f",v*100)}')
+    else
+      out_pct=$(awk -v v="$out_prop" 'BEGIN{printf("%.2f",v)}')
+    fi
+  else
+    out_pct="NA"
   fi
-done
 
+  printf "%s\tavg_abs_motion=%smm\trel_motion=%smm\toutlier_slices=%s%%\n" \
+    "$subj" "$abs_motion" "$rel_motion" "$out_pct" >> "$per_subj_tmp"
+
+  awk -v m="${abs_motion:-0}" -v s="$subj" 'BEGIN{ if (m+0>2.0) print s }' >> "$excl_tmp"
+done < "$quad_list"
+
+sort "$per_subj_tmp" >> "$out_txt"
 echo >> "$out_txt"
 echo "Exclusions (>2 mm):" >> "$out_txt"
-if [[ -s /tmp/exclusions.tmp ]]; then
-  cat /tmp/exclusions.tmp >> "$out_txt"
+if [[ -s "$excl_tmp" ]]; then
+  sort "$excl_tmp" >> "$out_txt"
 else
   echo "None" >> "$out_txt"
 fi
-rm -f /tmp/exclusions.tmp
 
-motion_mean=$(printf "%s\n" "${motion_vals[@]}" | awk '{sum+=$1; n++} END{if(n>0) print sum/n}')
-motion_sd=$(printf "%s\n" "${motion_vals[@]}" | awk -v m="$motion_mean" '{sum+=($1-m)^2; n++} END{if(n>1) print sqrt(sum/(n-1))}')
-outlier_mean=$(printf "%s\n" "${outlier_vals[@]}" | awk '{sum+=$1; n++} END{if(n>0) print sum/n}')
-outlier_sd=$(printf "%s\n" "${outlier_vals[@]}" | awk -v m="$outlier_mean" '{sum+=($1-m)^2; n++} END{if(n>1) print sqrt(sum/(n-1))}')
+# --- group stats from SQUAD group_db.json ---
+group_db="$squad_base/group_db.json"
+if [[ -f "$group_db" ]]; then
+  echo >> "$out_txt"
+  echo "Group-level metrics (from SQUAD group_db.json):" >> "$out_txt"
 
-echo >> "$out_txt"
-echo "Group-level metrics:" >> "$out_txt"
-echo "Mean (SD) average absolute motion = ${motion_mean} (${motion_sd}) mm" >> "$out_txt"
-echo "Mean (SD) outlier slice frequency = ${outlier_mean}% (${outlier_sd}%)" >> "$out_txt"
+  python3 - "$group_db" >> "$out_txt" <<'PY'
+import json, sys, numpy as np
+path = sys.argv[1]
+with open(path) as f:
+    d = json.load(f)
 
-echo "=== QC summary written to $out_txt ==="
+motions = np.array(d.get("qc_motion", []), dtype=float)
+outliers = np.array(d.get("qc_outliers", []), dtype=float)
+
+if motions.size > 0:
+    print(f"Mean (SD) average absolute motion across participants = {motions.mean():.2f} ({motions.std(ddof=1):.2f}) mm")
+else:
+    print("Mean (SD) average absolute motion across participants = NA (NA) mm")
+
+if outliers.size > 0:
+    print(f"Mean (SD) frequency of outlier slices = {outliers.mean():.2f}% ({outliers.std(ddof=1):.2f}%)")
+else:
+    print("Mean (SD) frequency of outlier slices = NA (NA)%")
+PY
+else
+  echo >> "$out_txt"
+  echo "!! No group_db.json found — group metrics unavailable" >> "$out_txt"
+fi
+
+rm -f "$per_subj_tmp" "$excl_tmp"
+
+echo "=== Done. Summary written to: $out_txt ==="
+tail -n 20 "$out_txt"
 
 
 ```
+
+This will compile the participant movement metrics with the total absolute motion and outlier %'s from SQUAD into a text file. I moved this and the SQUAD output onto a local computer in order to check output: 
+
+```bash
+scp -Cp tur50045@cla19097.tu.temple.edu:/data/projects/STUDIES/IMPACT/DTI/derivatives/qc_summary.txt \
+       tur50045@cla19097.tu.temple.edu:/data/projects/STUDIES/IMPACT/DTI/derivatives/SQUAD \
+       /Users/dannyzweben/Desktop/SDN/DTI/eddyqc/
+```            
+Here is what our combine qc summary looks like:
+
+![qcsum](images/qc_summary.png)
+
+**Interpretation:** We found that head motion was low across participants, with mean average absolute motion of 0.27 mm (SD = 0.13), and no subjects exceeded the 2 mm exclusion threshold. Mean frequency of outlier slices was 1.42% (SD = 2.23%), though some scans show inflated percentages—this can happen when a single bad volume marks many slices as outliers, which we will handle during manual FSLEYES visual check.
+
+**Fsl squad** will also produce a pdf with this output: 
+
+![squadsum](images/squad_summary.png)
