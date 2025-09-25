@@ -1536,33 +1536,36 @@ The repol flag step is handled in the eddy script, so let's start with
 - eddy_squad — aggregates QUAD outputs across all subjects to create group-level reports
 
 **Required input (output from EDDY step):**
--  Eddy output prefix:
-   /data/projects/STUDIES/IMPACT/DTI/derivatives/EDDY/<subj>/<subj>_eddy
--  Brain mask:
-   /data/projects/STUDIES/IMPACT/DTI/derivatives/EDDY/<subj>/<subj>_eddy_mask.nii.gz
--  B-values:
-   /data/projects/STUDIES/IMPACT/DTI/NIFTI/<subj>/dti/<subj>_dwi.bval
--  B-vectors:
-   /data/projects/STUDIES/IMPACT/DTI/NIFTI/<subj>/dti/<subj>_dwi.bvec
+- Eddy output prefix:
+/data/projects/STUDIES/IMPACT/DTI/derivatives/EDDY/<subj>/<subj>_eddy
+- Brain mask:
+/data/projects/STUDIES/IMPACT/DTI/derivatives/TOPUP/<subj>/topup_output/<subj>_topup_Tmean_brain_mask.nii.gz
+- B-values (with b=250 removed):
+/data/projects/STUDIES/IMPACT/DTI/derivatives/denoise/<subj>/mrdegibbs_no_b250/<subj>_dwi_no_b250.bval
+- B-vectors (with b=250 removed):
+/data/projects/STUDIES/IMPACT/DTI/derivatives/denoise/<subj>/mrdegibbs_no_b250/<subj>_dwi_no_b250.bvec
 - Acquisition parameters file:
-   /data/projects/STUDIES/IMPACT/DTI/config/acqp.txt
+/data/projects/STUDIES/IMPACT/DTI/config/acqp.txt
 - Index file (after dropping b=250 vols):
-   /data/projects/STUDIES/IMPACT/DTI/config/index_no_b250.txt
+/data/projects/STUDIES/IMPACT/DTI/config/index_no_b250.txt
 
-
+ These jobs are all low-intensity (mainly file I/O and small FSL utilities), so it’s safe to parallelize them. We cap at 60 concurrent runs which covered all participants in impact. If you have a larger sample consider checking availabe computing power first, but you should be good to go
+ 
+  The group-level SQUAD and summary steps run only after all per-subject jobs complete.
 ```bash
-
 
 #!/bin/bash
 # ============================================================
-# IMPACT DTI QC Pipeline
-# Run EDDY QUAD for each subject, SQUAD for group,
-# and collate motion/outlier stats into qc_summary.txt
+# IMPACT DTI QC Pipeline (fixed)
+# Run EDDY QUAD per subject, then SQUAD, then summary
+# collate data into qc.summary.txt
 # ============================================================
 
 # --- Paths ---
 nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
+denoise_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/denoise"
 eddy_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/EDDY"
+topup_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/TOPUP"
 quad_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/QUAD"
 squad_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/SQUAD"
 
@@ -1573,21 +1576,41 @@ out_txt="/data/projects/STUDIES/IMPACT/DTI/derivatives/qc_summary.txt"
 
 mkdir -p "$quad_base" "$squad_base"
 
+quad_list="$quad_base/quad_list.txt"
+: > "$quad_list"
+
 # --- Step 1: Run eddy_quad per subject ---
 for subj in $(ls -1 "$nifti_base"); do
   echo ">>> Running QUAD for $subj"
-  eddy_quad "$eddy_base/$subj/${subj}_eddy" \
+
+  mask_file="$topup_base/$subj/topup_output/${subj}_topup_Tmean_brain_mask.nii.gz"
+  bval_file="$denoise_base/$subj/mrdegibbs_no_b250/${subj}_dwi_no_b250.bval"
+  bvec_file="$denoise_base/$subj/mrdegibbs_no_b250/${subj}_dwi_no_b250.bvec"
+  eddy_prefix="$eddy_base/$subj/${subj}_eddy"
+  out_dir="$quad_base/$subj"
+
+  # check inputs
+  if [[ ! -f "$mask_file" || ! -f "$bval_file" || ! -f "$bvec_file" || ! -f "${eddy_prefix}.nii.gz" ]]; then
+    echo "!! Missing inputs for $subj, skipping"
+    continue
+  fi
+
+  eddy_quad "$eddy_prefix" \
     -idx "$index_file" \
     -par "$acq_params" \
-    -m "$eddy_base/$subj/${subj}_eddy_mask.nii.gz" \
-    -b "$nifti_base/$subj/dti/${subj}_dwi.bval" \
-    -g "$nifti_base/$subj/dti/${subj}_dwi.bvec" \
-    -o "$quad_base/$subj"
+    -m "$mask_file" \
+    -b "$bval_file" \
+    -g "$bvec_file" \
+    -o "$out_dir"
+
+  echo "$out_dir" >> "$quad_list"
 done
 
 # --- Step 2: Run eddy_squad for group ---
-echo ">>> Running SQUAD group summary"
-eddy_squad "$quad_base" -o "$squad_base"
+if [[ -s "$quad_list" ]]; then
+  echo ">>> Running SQUAD group summary"
+  eddy_squad "$quad_list" -o "$squad_base"
+fi
 
 # --- Step 3: Collate into qc_summary.txt ---
 echo "QC Summary — IMPACT DTI" > "$out_txt"
@@ -1597,13 +1620,10 @@ echo "Per-subject results:" >> "$out_txt"
 
 motion_vals=()
 outlier_vals=()
-exclude_list=()
 
 for subj in $(ls -1 "$quad_base"); do
   qc_file="$quad_base/$subj/qc.csv"
   if [[ -f "$qc_file" ]]; then
-    # NOTE: Column positions may vary by FSL version.
-    # Commonly: col2 = mean_abs_motion, col5 = % outlier slices.
     abs_motion=$(awk -F, 'NR==2 {print $2}' "$qc_file")
     outlier_pct=$(awk -F, 'NR==2 {print $5}' "$qc_file")
 
