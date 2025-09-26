@@ -58,7 +58,7 @@ Before we we begin conversion, lets quickly check which participants have the ne
 
 For a subject to be *DTI-clear*, it must include all four required scan types inside its DICOM folder:
 
-*** Note look through your DICOMS first 
+- Note look through your DICOMS first 
 example: 
 ```bash
  ls /project/dicoms/subject/
