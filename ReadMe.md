@@ -1549,7 +1549,13 @@ To run these scripts:
 - Index file (after dropping b=250 vols):
 /data/projects/STUDIES/IMPACT/DTI/config/index_no_b250.txt
 
- These jobs are all low-intensity (mainly file I/O and small FSL utilities), so it’s safe to parallelize them. We cap at 60 concurrent runs which covered all participants in impact. If you have a larger sample consider checking availabe computing power first, but you should be good to go.
+Additionally - SQUAD expects a text file listing QUAD subject dirs containing qc.json - this script creates the creation file. 
+```
+quad_list="$quad_base/quad_list.txt"
+: > "$quad_list"
+```
+
+Quad and Squad jobs are low-intensity (mainly file I/O and small FSL utilities), so it’s safe to parallelize them. We cap at 60 concurrent runs which covered all participants in impact. If you have a larger sample consider checking availabe computing power first, but you should be good to go.
  
   This will compile the participant movement metrics with the total absolute motion and outlier %'s from SQUAD into a text file. The group-level SQUAD and summary steps run only after all per-subject jobs complete. 
 
@@ -1561,7 +1567,7 @@ To run these scripts:
 # ============================================================
 # IMPACT DTI QC Pipeline (QUAD -> quad_list.txt -> SQUAD -> summary)
 # Notes:
-# - SQUAD expects a text file listing QUAD subject dirs containing qc.json
+# - SQUAD expects a text file listing QUAD subject dirs containing qc.json - this script creates that file. 
 # - Do NOT pre-create $squad_base (eddy_squad will create it)
 # - "Outlier slice" = slice whose mean intensity is ≥ 4 SD below expected
 # ============================================================
