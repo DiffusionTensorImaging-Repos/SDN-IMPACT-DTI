@@ -353,11 +353,13 @@ export PATH="$ANTSPATH:$PATH"
   - `T_template_BrainCerebellumMask.nii.gz` → the brain + cerebellum mask.  
   - Type the following into the terminal to conduct this search to see if masks already exist on the Linux: 
 ```bash
- find / -type f -name "antsBrainExtraction.sh" 2>/dev/null | head -n 20
+ find / -type f -name "T_template.nii" 2>/dev/null | head -n 20
+ find /-type f -name "T_template_BrainCerebellumMask.nii" 2>/dev/null | head -n 20
  ```
 
 - If you don’t find both the template **and** its matching mask for the template type you’re using (e.g., NKI, OASIS, ICBM), download the correct pair from the official ANTs figshare repository:  
 https://figshare.com/articles/dataset/ANTs_ANTsR_Brain_Templates/915436
+Then save it and reference the brain and mask tamplates for your participants. 
 
 **In our case:**  
 - We already found the NKI templates (this template has worked very well on adult data) on the lab Linux under `/data/projects/STUDIES/LEARN/…/ANTs_Images/NKI`. 
