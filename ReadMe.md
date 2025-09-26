@@ -145,11 +145,11 @@ free -h
 ```
 
 Example output:
-
+```
               total        used        free      shared  buff/cache   available
 Mem:          125Gi       9.7Gi        54Gi        60Mi        61Gi       114Gi
 Swap:         2.0Gi          0B       2.0Gi
-
+```
 
 dcm2niix is very lightweight, using only ~100–300 MB per subject. With 114 GB available, even 60 subjects in parallel is well within limits.
 → Safe to set max_jobs=60.
