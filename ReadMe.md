@@ -578,7 +578,7 @@ For each participant:
 I track each participant's progress after skullstripping. 
 ![Good Skull Strip Example](images/datatracker.png)
 
-**Note:** If extraction cuts off brain or pulls in spine, exclude and note. This should be a rare issue (~all participants should be stripped propely if you used a good mask/template), if you run into several issues,switch template (NKI worked perfectly with IMPACT).
+**Note:** If extraction cuts off brain or pulls in excesive spine/scalp/neck, exclude and note. This should be a rare issue (~all participants should be stripped propely if you used a good mask/template), if you run into several issues,switch template (NKI worked perfectly with IMPACT).
 
 If you have found good mask and made sure it worked for ~all participants, we can move to the next step: 
 
