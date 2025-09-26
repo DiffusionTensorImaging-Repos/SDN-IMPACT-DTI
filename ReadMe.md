@@ -259,7 +259,7 @@ The output data will look like this:
 Next, we'll run a NIFTI AUDIT to check that conversion and file org was succesful.
 - **Note**: in following pre-processing steps I will  present the audit code without this detailed explanation. In each step, it will do the same thing: checking for the presence of all the files showed in the output data of the code. 
 
-- This script audits the **NIFTI output directory** (`/Volumes/DTI/DTI/Wave1/NIFTI`) to check which subjects have a fully generated preprocessing structure.  
+- This script audits the **NIFTI output directory** (`/Volumes/DTI/DTI/Wave1/NIFTI`) to check which subjects have proper output from this step. 
 
 For each subject, it confirms the presence of:  
 - `struct/` folder with T1 outputs (`.nii`, `.json`)  
