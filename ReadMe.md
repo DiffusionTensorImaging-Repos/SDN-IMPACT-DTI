@@ -58,6 +58,14 @@ Before we we begin conversion, lets quickly check which participants have the ne
 
 For a subject to be *DTI-clear*, it must include all four required scan types inside its DICOM folder:
 
+*** Note look through your DICOMS first 
+example: 
+```bash
+ ls /project/dicoms/subject/
+```
+To make sure your T1 and DTI runs follow this naming structure.
+If they don't, update the naming throughout this step
+
 1. Structural T1 (`anat_T1w_acq_mpgSag`)  
 2. Diffusion run (`cmrr_mb3hydi_ipat2_64ch`)  
 3. Fieldmap AP (`cmrr_fieldmapse_ap`)  
