@@ -528,7 +528,7 @@ done
 echo -e "\n=== ANTs Skull Stripping Audit Finished ==="
 ```
 
-**The next step in ANTs is to check each participant to make sure that the skull strip was successful.**
+**The next step in ANTs is to use the FSL - fsleyes- interface to check each participant to make sure that the skull strip was successful.**
 
 - You may want to use another device other than the linux to operate fsleyes. Here is how to move the files from ANTs (or any other file) onto a local computer:
 ```bash
