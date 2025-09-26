@@ -58,12 +58,13 @@ Before we we begin conversion, lets quickly check which participants have the ne
 
 For a subject to be *DTI-clear*, it must include all four required scan types inside its DICOM folder:
 
-- Note look through your DICOMS first 
-example: 
+- Note look through your DICOMS first To make sure your T1 and DTI runs follow this naming structure.
+Example:
+
 ```bash
- ls /project/dicoms/subject/
+ ls /project/dicoms/subject*/
 ```
-To make sure your T1 and DTI runs follow this naming structure.
+
 If they don't, update the naming throughout this step
 
 1. Structural T1 (`anat_T1w_acq_mpgSag`)  
