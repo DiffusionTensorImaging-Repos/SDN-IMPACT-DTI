@@ -1,0 +1,816 @@
+## Olson Lab Scripts
+
+
+
+
+#Download from XNAT and label directories to reflect scan type
+for n in 5448 5483 5470
+do
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/1 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/1-localizer
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/2 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/2-t1_mpg_07sag_iso
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/3 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/3-cmrr_mb3hydi_b0_ipat2_64ch_SBRef
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/4 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/4-cmrr_mb3hydi_b0_ipat2_64ch
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/5 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/5-cmrr_mb3hydi_ipat2_64ch_SBRef
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/6 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/6-cmrr_mb3hydi_ipat2_64ch
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/7 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/7-cmrr_mb3hydi_ipat2_64ch_TRACEW
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/8 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/8-cmrr_fieldmapse_ap_SBRef
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/9 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/9-cmrr_fieldmapse_ap
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/10 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/10-cmrr_fieldmapse_pa_SBRef
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/11 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/11-cmrr_fieldmapse_pa
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/12 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/12-ep2d_TRUST_AsymShTE
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/99 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/99-PhoenixZIPReport
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/100 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/100-MPR_Range
+
+done
+
+
+
+for n in 5470
+do
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/1 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/1-localizer
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/2 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/2-t1_mpg_07sag_iso
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/3 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/3-cmrr_mb3hydi_b0_ipat2_64ch_SBRef
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/4 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/4-cmrr_mb3hydi_b0_ipat2_64ch
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/5 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/5-cmrr_mb3hydi_ipat2_64ch_SBRef
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/6 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/6-cmrr_mb3hydi_ipat2_64ch
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/7 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/7-cmrr_mb3hydi_ipat2_64ch_TRACEW
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/8 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/8-cmrr_fieldmapse_ap_SBRef
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/9 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/9-cmrr_fieldmapse_ap
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/10 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/10-cmrr_fieldmapse_pa_SBRef
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/11 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/11-cmrr_fieldmapse_pa
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/12 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/12-ep2d_TRUST_AsymShTE
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/99 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/99-PhoenixZIPReport
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/100 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/100-MPR_Range
+
+done
+
+
+
+
+for n in 5345 5334 
+do
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/1 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/1-localizer
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/2 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/2-t1_mpg_07sag_iso
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/3 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/3-cmrr_mb3hydi_b0_ipat2_64ch_SBRef
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/4 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/4-cmrr_mb3hydi_b0_ipat2_64ch
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/5 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/5-cmrr_mb3hydi_ipat2_64ch_SBRef
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/6 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/6-cmrr_mb3hydi_ipat2_64ch
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/7 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/7-cmrr_mb3hydi_ipat2_64ch_TRACEW
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/8 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/8-cmrr_fieldmapse_ap_SBRef
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/9 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/9-cmrr_fieldmapse_ap
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/10 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/10-cmrr_fieldmapse_pa_SBRef
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/11 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/11-cmrr_fieldmapse_pa
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/12 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/12-ep2d_TRUST_AsymShTE
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/99 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/99-PhoenixZIPReport
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/100 /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/100-MPR_Range
+done
+
+
+
+
+for n in 5477 5452 3000 5498
+do
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/4-cmrr_mb3hydi_ipat2_64ch_SBRef /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/5-cmrr_mb3hydi_ipat2_64ch_SBRef
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/5-cmrr_mb3hydi_ipat2_64ch /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/6-cmrr_mb3hydi_ipat2_64ch
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/6-cmrr_mb3hydi_ipat2_64ch_TRACEW /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/7-cmrr_mb3hydi_ipat2_64ch_TRACEW
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/7-cmrr_fieldmapse_ap_SBRef /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/8-cmrr_fieldmapse_ap_SBRef
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/8-cmrr_fieldmapse_ap /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/9-cmrr_fieldmapse_ap
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/9-cmrr_fieldmapse_pa_SBRef /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/10-cmrr_fieldmapse_pa_SBRef
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/10-cmrr_fieldmapse_pa /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/11-cmrr_fieldmapse_pa
+	mv /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/11-ep2d_TRUST_AsymShTE /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/12-ep2d_TRUST_AsymShTE
+done
+
+
+
+
+
+
+
+#Transfer new data in it's entirety to the sourcedata folder on the Linux
+for n in 5477 5452 3000 5498 5470 5448 5483 5406
+do
+	mkdir /data/projects/tbi/archive/sourcedata/Olson-TBI_${n}/
+done
+
+for n in 5334 5345
+do
+	mkdir /data/projects/tbi/archive/sourcedata/Olson-TBI_${n}/
+done
+
+for n in 5477 5452 3000 5498 5470 5448 5483 5406
+do
+	rsync -r /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/ cla27562:/data/projects/tbi/archive/sourcedata/Olson-TBI_${n}/
+done
+
+
+for n in 5334 5345
+do
+	rsync -r /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/ cla27562:/data/projects/tbi/archive/sourcedata/Olson-TBI_${n}/
+done
+
+
+for n in 5406
+do
+	rsync -r /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/ cla27562:/data/projects/tbi/archive/sourcedata/Olson-TBI_${n}/
+done
+
+for n in 5452
+do
+	rsync -r /Volumes/Olson-TBI/sourcedata/Olson-TBI_${n}/ cla27562:/data/projects/tbi/archive/sourcedata/Olson-TBI_${n}/
+done
+
+
+for n in 5477 5452 3000 5498 5470 5448 5483 5406
+do
+	mkdir /data/projects/tbi/dti/${n}/
+	mkdir /data/projects/tbi/denoise/${n}/
+done
+
+for n in 5334 5345
+do
+	mkdir /data/projects/tbi/dti/${n}/
+	mkdir /data/projects/tbi/denoise/${n}/
+done
+
+for n in 5477 5452 3000 5498 5470 5448 5483 5406
+do
+for k in dtifit_output mrtrix3_1000 mrtrix3_2000 bedpostx_input topup_output eddy_output struct 11-cmrr_fieldmapse_pa 6-cmrr_mb3hydi_ipat2_64ch 9-cmrr_fieldmapse_ap fwe
+do
+	mkdir /data/projects/tbi/dti/${n}/${k}
+	mkdir /data/projects/tbi/dti/${n}/${k}
+
+done
+done
+
+
+for n in 5334 5345
+do
+for k in dtifit_output mrtrix3_1000 mrtrix3_2000 bedpostx_input topup_output eddy_output struct 11-cmrr_fieldmapse_pa 6-cmrr_mb3hydi_ipat2_64ch 9-cmrr_fieldmapse_ap fwe
+do
+	mkdir /data/projects/tbi/dti/${n}/${k}
+	mkdir /data/projects/tbi/dti/${n}/${k}
+
+done
+done
+
+
+
+
+#DCM2NIIX
+for n in 5477 5452 3000 5498 5470 5448 5483 5406
+do 
+for k in 6-cmrr_mb3hydi_ipat2_64ch 9-cmrr_fieldmapse_ap 11-cmrr_fieldmapse_pa
+do 
+	dcm2niix -o /data/projects/tbi/dti/${n}/struct/ -f '%i' /data/projects/tbi/archive/sourcedata/Olson-TBI_5498/2-t1_mpg_07sag_iso/DICOM/
+	dcm2niix -o /data/projects/tbi/dti/${n}/${k}/ -f '%i' /data/projects/tbi/archive/sourcedata/Olson-TBI_5498/${k}/DICOM/ 
+done
+done
+
+for n in 5477 5452 3000 5498 5470 5448 5483 5406
+do 
+for k in 6-cmrr_mb3hydi_ipat2_64ch 9-cmrr_fieldmapse_ap 11-cmrr_fieldmapse_pa
+do 
+	rm /data/projects/tbi/dti/${n}/${k}/*
+	rm /data/projects/tbi/dti/${n}/struct/*
+	dcm2niix -o /data/projects/tbi/dti/${n}/struct/ -f '%i' /data/projects/tbi/archive/sourcedata/Olson-TBI_${n}/2-t1_mpg_07sag_iso/DICOM/
+	dcm2niix -o /data/projects/tbi/dti/${n}/${k}/ -f '%i' /data/projects/tbi/archive/sourcedata/Olson-TBI_${n}/${k}/DICOM/ 
+done
+done
+
+for n in 5452 5477 3000 5498 5470 5448 5483 5406
+do 
+for k in 6-cmrr_mb3hydi_ipat2_64ch 9-cmrr_fieldmapse_ap 11-cmrr_fieldmapse_pa
+do 
+	dcm2niix -o /data/projects/tbi/dti/${n}/struct/ -f '%i' /data/projects/tbi/archive/sourcedata/Olson-TBI_${n}/2-t1_mpg_07sag_iso/DICOM/
+	dcm2niix -o /data/projects/tbi/dti/${n}/${k}/ -f '%i' /data/projects/tbi/archive/sourcedata/Olson-TBI_${n}/${k}/DICOM/ 
+done
+done
+
+for n in 5334 5345
+do 
+for k in 6-cmrr_mb3hydi_ipat2_64ch 9-cmrr_fieldmapse_ap 11-cmrr_fieldmapse_pa
+do 
+	dcm2niix -o /data/projects/tbi/dti/${n}/struct/ -f '%i' /data/projects/tbi/archive/sourcedata/Olson-TBI_${n}/2-t1_mpg_07sag_iso/DICOM/
+	dcm2niix -o /data/projects/tbi/dti/${n}/${k}/ -f '%i' /data/projects/tbi/archive/sourcedata/Olson-TBI_${n}/${k}/DICOM/ 
+done
+done
+
+
+#bet of T1 structural images (code retrieved from GUI terminal output)
+for n in 5452 5477 3000 5498 5470 5448 5483 5406
+do
+	bet /data/projects/tbi/dti/${n}/struct/Olson-TBI_${n}.nii /data/projects/tbi/dti/${n}/struct/Olson-TBI_${n}_brain -B -f 0.5 -g 0 -m &
+done
+
+for n in 5334 5345
+do
+	bet /data/projects/tbi/dti/${n}/struct/Olson-TBI_${n}.nii /data/projects/tbi/dti/${n}/struct/Olson-TBI_${n}_brain -B -f 0.5 -g 0 -m &
+done
+
+for n in 5477
+do
+	bet /data/projects/tbi/dti/${n}/struct/Olson_TBI_${n}.nii /data/projects/tbi/dti/${n}/struct/Olson_TBI_${n}_brain -B -f 0.5 -g 0 -m &
+done
+
+#Extract b0 from ap-pa fieldmaps
+for n in 5334 5345
+do
+	fslroi /data/projects/tbi/dti/${n}/9-cmrr_fieldmapse_ap/output.nii /data/projects/tbi/dti/${n}/9-cmrr_fieldmapse_ap/a2p_b0.nii 0 1
+	fslroi /data/projects/tbi/dti/${n}/11-cmrr_fieldmapse_pa/output.nii /data/projects/tbi/dti/${n}/11-cmrr_fieldmapse_pa/p2a_b0.nii 0 1
+done
+
+for n in 5452 5477 3000 5498 5470 5448 5483 5406
+do
+	fslroi /data/projects/tbi/dti/${n}/9-cmrr_fieldmapse_ap/output.nii /data/projects/tbi/dti/${n}/9-cmrr_fieldmapse_ap/a2p_b0.nii 0 1
+	fslroi /data/projects/tbi/dti/${n}/11-cmrr_fieldmapse_pa/output.nii /data/projects/tbi/dti/${n}/11-cmrr_fieldmapse_pa/p2a_b0.nii 0 1
+done
+
+#Concatenate AP and PA images in time
+for n in 5334 5345
+do
+	fslmerge -t /data/projects/tbi/dti/${n}/a2p_p2a_b0 /data/projects/tbi/dti/${n}/9-cmrr_fieldmapse_ap/a2p_b0.nii /data/projects/tbi/dti/${n}/11-cmrr_fieldmapse_pa/p2a_b0.nii
+done
+
+for n in 5452 5477 3000 5498 5470 5448 5483 5406
+do
+	fslmerge -t /data/projects/tbi/dti/${n}/a2p_p2a_b0 /data/projects/tbi/dti/${n}/9-cmrr_fieldmapse_ap/a2p_b0.nii /data/projects/tbi/dti/${n}/11-cmrr_fieldmapse_pa/p2a_b0.nii
+done
+
+#Topup.  Note that for volumes with odd number of slices you must used configuration file b02b0_1.cnf.  If you have an even number of slices you must use b02b0.cnf instead.  The TBI HYDI sequence has 69 slices.
+for n in 5334 5345
+do
+	topup --imain=/data/projects/tbi/dti/${n}/a2p_p2a_b0.nii.gz --datain=/data/projects/tbi/dti/acqp.txt --config=b02b0_1.cnf --out=/data/projects/tbi/dti/${n}/topup_output/topup_output --iout=/data/projects/tbi/dti/${n}/topup_output/my_hifi_b0 --fout=/data/projects/tbi/dti/${n}/topup_output/displacement &
+done
+
+for n in 5452 5477 3000 5498 5470 5448 5483 5406
+do
+	topup --imain=/data/projects/tbi/dti/${n}/a2p_p2a_b0.nii.gz --datain=/data/projects/tbi/dti/acqp.txt --config=b02b0_1.cnf --out=/data/projects/tbi/dti/${n}/topup_output/topup_output --iout=/data/projects/tbi/dti/${n}/topup_output/my_hifi_b0 --fout=/data/projects/tbi/dti/${n}/topup_output/displacement &
+done
+
+#Mean topup b0 image across time
+for n in 5334 5345
+do
+	fslmaths /data/projects/tbi/dti/${n}/topup_output/my_hifi_b0.nii.gz -Tmean /data/projects/tbi/dti/${n}/topup_output/my_hifi_b0_Tcollapsed.nii.gz
+done
+
+for n in 5452 5477 3000 5498 5470 5448 5483 5406
+do
+	fslmaths /data/projects/tbi/dti/${n}/topup_output/my_hifi_b0.nii.gz -Tmean /data/projects/tbi/dti/${n}/topup_output/my_hifi_b0_Tcollapsed.nii.gz
+done
+
+#Clean up subject directories post-topup
+for n in 5334 5345
+do
+	mv /data/projects/tbi/dti/${n}/a2p_p2a* /data/projects/tbi/dti/${n}/topup_output
+done
+
+for n in 5452 5477 3000 5498 5470 5448 5483 5406
+do
+	mv /data/projects/tbi/dti/${n}/a2p_p2a* /data/projects/tbi/dti/${n}/topup_output
+done
+
+
+#Brain extraction and creation of binary brain mask
+for n in 5334 5345
+do
+	bet /data/projects/tbi/dti/${n}/topup_output/my_hifi_b0_Tcollapsed.nii.gz /data/projects/tbi/dti/${n}/topup_output/my_hifi_b0_Tcollapsed_brain -m -f 0.2 -g 0.1 -R -v &
+done
+
+for n in 5452 5477 3000 5498 5470 5448 5483 5406
+do
+	bet /data/projects/tbi/dti/${n}/topup_output/my_hifi_b0_Tcollapsed.nii.gz /data/projects/tbi/dti/${n}/topup_output/my_hifi_b0_Tcollapsed_brain -m -f 0.2 -g 0.1 -R -v &
+done
+
+
+
+
+
+
+
+
+#EDDY
+for n in 5452 5477
+do
+eddy --imain=/data/projects/tbi/dti/${n}/6-cmrr_mb3hydi_ipat2_64ch/output.nii --mask=/data/projects/tbi/dti/${n}/topup_output/my_hifi_b0_Tcollapsed_brain_mask.nii.gz --acqp=/data/projects/tbi/dti/acqp.txt --index=/data/projects/tbi/dti/index.txt --bvecs=/data/projects/tbi/dti/${n}/6-cmrr_mb3hydi_ipat2_64ch/bvecs --bvals=/data/projects/tbi/dti/${n}/6-cmrr_mb3hydi_ipat2_64ch/bvals --topup=/data/projects/tbi/dti/${n}/topup_output/topup_output --json=/data/projects/tbi/dti/${n}/6-cmrr_mb3hydi_ipat2_64ch/output.json --cnr_maps=/data/projects/tbi/dti/${n}/eddy_output --data_is_shelled --out=/data/projects/tbi/dti/${n}/eddy_output/eddy_corrected_data -v
+done
+
+for n in 3000 5498
+do
+eddy --imain=/data/projects/tbi/dti/${n}/6-cmrr_mb3hydi_ipat2_64ch/output.nii --mask=/data/projects/tbi/dti/${n}/topup_output/my_hifi_b0_Tcollapsed_brain_mask.nii.gz --acqp=/data/projects/tbi/dti/acqp.txt --index=/data/projects/tbi/dti/index.txt --bvecs=/data/projects/tbi/dti/${n}/6-cmrr_mb3hydi_ipat2_64ch/bvecs --bvals=/data/projects/tbi/dti/${n}/6-cmrr_mb3hydi_ipat2_64ch/bvals --topup=/data/projects/tbi/dti/${n}/topup_output/topup_output --json=/data/projects/tbi/dti/${n}/6-cmrr_mb3hydi_ipat2_64ch/output.json --cnr_maps=/data/projects/tbi/dti/${n}/eddy_output --data_is_shelled --out=/data/projects/tbi/dti/${n}/eddy_output/eddy_corrected_data -v
+done
+
+for n in 5470 5448
+do
+eddy --imain=/data/projects/tbi/dti/${n}/6-cmrr_mb3hydi_ipat2_64ch/output.nii --mask=/data/projects/tbi/dti/${n}/topup_output/my_hifi_b0_Tcollapsed_brain_mask.nii.gz --acqp=/data/projects/tbi/dti/acqp.txt --index=/data/projects/tbi/dti/index.txt --bvecs=/data/projects/tbi/dti/${n}/6-cmrr_mb3hydi_ipat2_64ch/bvecs --bvals=/data/projects/tbi/dti/${n}/6-cmrr_mb3hydi_ipat2_64ch/bvals --topup=/data/projects/tbi/dti/${n}/topup_output/topup_output --json=/data/projects/tbi/dti/${n}/6-cmrr_mb3hydi_ipat2_64ch/output.json --cnr_maps=/data/projects/tbi/dti/${n}/eddy_output --data_is_shelled --out=/data/projects/tbi/dti/${n}/eddy_output/eddy_corrected_data -v
+done
+
+for n in 5483 5406
+do
+eddy --imain=/data/projects/tbi/dti/${n}/6-cmrr_mb3hydi_ipat2_64ch/output.nii --mask=/data/projects/tbi/dti/${n}/topup_output/my_hifi_b0_Tcollapsed_brain_mask.nii.gz --acqp=/data/projects/tbi/dti/acqp.txt --index=/data/projects/tbi/dti/index.txt --bvecs=/data/projects/tbi/dti/${n}/6-cmrr_mb3hydi_ipat2_64ch/bvecs --bvals=/data/projects/tbi/dti/${n}/6-cmrr_mb3hydi_ipat2_64ch/bvals --topup=/data/projects/tbi/dti/${n}/topup_output/topup_output --json=/data/projects/tbi/dti/${n}/6-cmrr_mb3hydi_ipat2_64ch/output.json --cnr_maps=/data/projects/tbi/dti/${n}/eddy_output --data_is_shelled --out=/data/projects/tbi/dti/${n}/eddy_output/eddy_corrected_data -v
+done
+
+for n in 5334 5345
+do
+eddy --imain=/data/projects/tbi/dti/${n}/6-cmrr_mb3hydi_ipat2_64ch/output.nii --mask=/data/projects/tbi/dti/${n}/topup_output/my_hifi_b0_Tcollapsed_brain_mask.nii.gz --acqp=/data/projects/tbi/dti/acqp.txt --index=/data/projects/tbi/dti/index.txt --bvecs=/data/projects/tbi/dti/${n}/6-cmrr_mb3hydi_ipat2_64ch/bvecs --bvals=/data/projects/tbi/dti/${n}/6-cmrr_mb3hydi_ipat2_64ch/bvals --topup=/data/projects/tbi/dti/${n}/topup_output/topup_output --json=/data/projects/tbi/dti/${n}/6-cmrr_mb3hydi_ipat2_64ch/output.json --cnr_maps=/data/projects/tbi/dti/${n}/eddy_output --data_is_shelled --out=/data/projects/tbi/dti/${n}/eddy_output/eddy_corrected_data -v
+done
+
+
+
+
+
+
+#bedpostx preparation:  copy and rename brain mask, rotated bvecs, eddy corrected data, and bvals
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+	cp /data/projects/tbi/dti/${n}/eddy_output/eddy_corrected_data.nii.gz /data/projects/tbi/dti/${n}/bedpostx_input/
+	cp /data/projects/tbi/dti/${n}/eddy_output/eddy_corrected_data.eddy_rotated_bvecs /data/projects/tbi/dti/${n}/bedpostx_input/
+	cp /data/projects/tbi/dti/${n}/topup_output/my_hifi_b0_Tcollapsed_brain_mask.nii.gz /data/projects/tbi/dti/${n}/bedpostx_input/
+	cp /data/projects/tbi/dti/${n}/6-cmrr_mb3hydi_ipat2_64ch/bvals /data/projects/tbi/dti/${n}/bedpostx_input/
+done
+
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+	mv  /data/projects/tbi/dti/${n}/bedpostx_input/eddy_corrected_data.nii.gz /data/projects/tbi/dti/${n}/bedpostx_input/data.nii.gz
+	mv  /data/projects/tbi/dti/${n}/bedpostx_input/eddy_corrected_data.eddy_rotated_bvecs /data/projects/tbi/dti/${n}/bedpostx_input/bvecs
+	mv  /data/projects/tbi/dti/${n}/bedpostx_input/my_hifi_b0_Tcollapsed_brain_mask.nii.gz /data/projects/tbi/dti/${n}/bedpostx_input/nodif_brain_mask.nii.gz
+done
+
+#dwiextract for dti (b=<1000)
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+	dwiextract -fslgrad /data/projects/tbi/dti/${n}/bedpostx_input/bvecs /data/projects/tbi/dti/${n}/bedpostx_input/bvals -shells 0,250,1000 /data/projects/tbi/dti/${n}/bedpostx_input/data.nii.gz /data/projects/tbi/dti/${n}/mrtrix3_1000/data_250_1000.nii.gz -export_grad_fsl /data/projects/tbi/dti/${n}/mrtrix3_1000/bvecs_250_1000 /data/projects/tbi/dti/${n}/mrtrix3_1000/bvals_250_1000		
+done
+
+#dwiextract for fwe (b=<2000)
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+	dwiextract -fslgrad /data/projects/tbi/dti/${n}/bedpostx_input/bvecs /data/projects/tbi/dti/${n}/bedpostx_input/bvals -shells 0,250,1000,2000 /data/projects/tbi/dti/${n}/bedpostx_input/data.nii.gz /data/projects/tbi/dti/${n}/mrtrix3_2000/data_250_1000_2000.nii.gz -export_grad_fsl /data/projects/tbi/dti/${n}/mrtrix3_2000/bvecs_250_1000_2000 /data/projects/tbi/dti/${n}/mrtrix3_2000/bvals_250_1000_2000	
+done
+
+#dtifit - creation of scalar maps
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+	dtifit -k /data/projects/tbi/dti/${n}/mrtrix3_1000/data_250_1000.nii.gz -o /data/projects/tbi/dti/${n}/dtifit_output/DTI -m /data/projects/tbi/dti/${n}/topup_output/my_hifi_b0_Tcollapsed_brain_mask.nii.gz -r /data/projects/tbi/dti/${n}/mrtrix3_1000/bvecs_250_1000 -b /data/projects/tbi/dti/${n}/mrtrix3_1000/bvals_250_1000
+	fslmaths /data/projects/tbi/dti/${n}/dtifit_output/DTI_L2.nii.gz -add /data/projects/tbi/dti/${n}/dtifit_output/DTI_L3.nii.gz -div 2 /data/projects/tbi/dti/${n}/dtifit_output/DTI_RD
+done
+
+
+#create all permutations of conversion matrices using T1 structural image.  It is important not to go directly from diffusion space to structural or standard space because these scans use different imaging modalities:
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+	flirt -in /data/projects/tbi/dti/${n}/topup_output/my_hifi_b0_Tcollapsed_brain.nii.gz -ref /data/projects/tbi/dti/${n}/struct/Olson-TBI_${n}_brain.nii.gz -omat /data/projects/tbi/dti/transforms/diff2str_${n}.mat -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 6 -cost corratio
+	convert_xfm -omat /data/projects/tbi/dti/transforms/str2diff_${n}.mat -inverse /data/projects/tbi/dti/transforms/diff2str_${n}.mat;
+	flirt -in /data/projects/tbi/dti/${n}/struct/Olson-TBI_${n}_brain.nii.gz -ref /usr/local/fsl/data/standard/MNI152_T1_2mm_brain -omat /data/projects/tbi/dti/transforms/str2standard_${n}.mat -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -cost corratio
+	convert_xfm -omat /data/projects/tbi/dti/transforms/standard2str_${n}.mat -inverse /data/projects/tbi/dti/transforms/str2standard_${n}.mat
+	convert_xfm -omat /data/projects/tbi/dti/transforms/diff2standard_${n}.mat -concat /data/projects/tbi/dti/transforms/str2standard_${n}.mat /data/projects/tbi/dti/transforms/diff2str_${n}.mat
+	convert_xfm -omat /data/projects/tbi/dti/transforms/standard2diff_${n}.mat -inverse /data/projects/tbi/dti/transforms/diff2standard_${n}.mat
+done
+
+for n in 5477
+do
+	flirt -in /data/projects/tbi/dti/${n}/topup_output/my_hifi_b0_Tcollapsed_brain.nii.gz -ref /data/projects/tbi/dti/${n}/struct/Olson-TBI_${n}_brain.nii.gz -omat /data/projects/tbi/dti/transforms/diff2str_${n}.mat -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 6 -cost corratio
+	convert_xfm -omat /data/projects/tbi/dti/transforms/str2diff_${n}.mat -inverse /data/projects/tbi/dti/transforms/diff2str_${n}.mat;
+	flirt -in /data/projects/tbi/dti/${n}/struct/Olson-TBI_${n}_brain.nii.gz -ref /usr/local/fsl/data/standard/MNI152_T1_2mm_brain -omat /data/projects/tbi/dti/transforms/str2standard_${n}.mat -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -cost corratio
+	convert_xfm -omat /data/projects/tbi/dti/transforms/standard2str_${n}.mat -inverse /data/projects/tbi/dti/transforms/str2standard_${n}.mat
+	convert_xfm -omat /data/projects/tbi/dti/transforms/diff2standard_${n}.mat -concat /data/projects/tbi/dti/transforms/str2standard_${n}.mat /data/projects/tbi/dti/transforms/diff2str_${n}.mat
+	convert_xfm -omat /data/projects/tbi/dti/transforms/standard2diff_${n}.mat -inverse /data/projects/tbi/dti/transforms/diff2standard_${n}.mat
+done
+
+#warp seeds, waypoints (formerly 'targets'), and exclusion masks into subject's native diffusion space and binarize transformed output
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+for r in L_dlPFC L_dSTR L_SMA L_vmPFC L_vSTR R_dlPFC R_dSTR R_SMA R_vmPFC R_vSTR genu_seed_6 genu_waypoint1_6 genu_waypoint2_6 splenium_seed_6 splenium_waypoint1_6 splenium_waypoint2_6
+do
+for e in L_dSTR L_vSTR R_dSTR R_vSTR splenium genu
+do
+	applywarp --ref=/data/projects/tbi/dti/${n}/dtifit_output/DTI_FA.nii.gz --in=/data/projects/tbi/dti/roi/${r}_ss_bin.nii.gz --out=/data/projects/tbi/dti/roi/diff_roi/${r}_${n} --premat=/data/projects/tbi/dti/transforms/standard2diff_${n}.mat
+	fslmaths /data/projects/tbi/dti/roi/diff_roi/${r}_${n} -bin /data/projects/tbi/dti/roi/diff_roi/${r}_${n}_bin
+	applywarp --ref=/data/projects/tbi/dti/${n}/dtifit_output/DTI_FA.nii.gz --in=/data/projects/tbi/dti/exclusion_masks/${e}_em_ss.nii.gz --out=/data/projects/tbi/dti/exclusion_masks/em_diff/${e}_em_${n} --premat=/data/projects/tbi/dti/transforms/standard2diff_${n}.mat
+	fslmaths /data/projects/tbi/dti/exclusion_masks/em_diff/${e}_em_${n} -bin /data/projects/tbi/dti/exclusion_masks/em_diff/${e}_em_${n}_bin
+done
+done
+done
+
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+for r in genu_seed_6 genu_waypoint1_6 genu_waypoint2_6 splenium_seed_6 splenium_waypoint1_6 splenium_waypoint2_6
+do
+for e in splenium genu
+do
+	applywarp --ref=/data/projects/tbi/dti/${n}/dtifit_output/DTI_FA.nii.gz --in=/data/projects/tbi/dti/roi/${r}_ss_bin.nii.gz --out=/data/projects/tbi/dti/roi/diff_roi/${r}_${n} --premat=/data/projects/tbi/dti/transforms/standard2diff_${n}.mat
+	fslmaths /data/projects/tbi/dti/roi/diff_roi/${r}_${n} -bin /data/projects/tbi/dti/roi/diff_roi/${r}_${n}_bin
+	applywarp --ref=/data/projects/tbi/dti/${n}/dtifit_output/DTI_FA.nii.gz --in=/data/projects/tbi/dti/exclusion_masks/${e}_em_ss.nii.gz --out=/data/projects/tbi/dti/exclusion_masks/em_diff/${e}_em_${n} --premat=/data/projects/tbi/dti/transforms/standard2diff_${n}.mat
+	fslmaths /data/projects/tbi/dti/exclusion_masks/em_diff/${e}_em_${n} -bin /data/projects/tbi/dti/exclusion_masks/em_diff/${e}_em_${n}_bin
+done
+done
+done
+
+
+
+
+
+
+
+
+
+#create text files for seeds 
+#funnel path for each subject's seed roi into the text files
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+for k in L_vSTR L_dSTR R_vSTR R_dSTR genu_seed_6 splenium_seed_6
+do
+	echo /data/projects/tbi/dti/roi/diff_roi/${k}_${n}_bin.nii.gz >> /data/projects/tbi/dti/seeds/${k}_${n}_bin.txt
+done
+done
+
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+for k in L_dlPFC R_dlPFC L_vmPFC R_vmPFC L_SMA R_SMA
+do
+	echo /data/projects/tbi/dti/roi/diff_roi/${k}_${n}_bin.nii.gz >> /data/projects/tbi/dti/waypoints/${k}_${n}_bin.txt
+done
+done
+
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+for k in genu splenium
+do
+	echo /data/projects/tbi/dti/roi/diff_roi/${k}_waypoint1_6_${n}_bin.nii.gz >> /data/projects/tbi/dti/waypoints/${k}_waypoints_6_${n}_bin.txt
+	echo /data/projects/tbi/dti/roi/diff_roi/${k}_waypoint2_6_${n}_bin.nii.gz >> /data/projects/tbi/dti/waypoints/${k}_waypoints_6_${n}_bin.txt
+done
+done
+
+#Make probtrackx2 output directories for each tract and each subject
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+for k in R_dlPFC R_vmPFC R_SMA
+do
+for r in L_dlPFC L_vmPFC L_SMA
+do
+	mkdir /data/projects/tbi/dti/probtrackx2_output/R_dSTR_${k}/${n}/
+	mkdir /data/projects/tbi/dti/probtrackx2_output/R_vSTR_${k}/${n}/
+	mkdir /data/projects/tbi/dti/probtrackx2_output/L_dSTR_${r}/${n}/
+	mkdir /data/projects/tbi/dti/probtrackx2_output/L_vSTR_${r}/${n}/
+done
+done
+done
+
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+for k in genu splenium
+do
+	mkdir /data/projects/tbi/dti/probtrackx2_output/${k}/${n}
+done
+done
+
+
+
+
+
+#bedpostx
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+	bedpostx /data/projects/tbi/dti/${n}/bedpostx_input/ &
+done
+
+
+rsync -r /data/projects/tbi/dti/ cla19308:/Volumes/Olson-TBI/tbi/dti/
+
+
+
+
+
+
+
+#Probabilistic tractography	
+#L_vSTR
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+for k in L_dlPFC L_vmPFC L_SMA
+do 
+	probtrackx2 -x /data/projects/tbi/dti/seeds/L_vSTR_${n}_bin.txt -l --onewaycondition -c 0.2 -S 2000 --steplength=0.5 -P 5000 --fibthresh=0.01 --distthresh=0.0 --sampvox=0.0 --avoid=/data/projects/tbi/dti/exclusion_masks/em_diff/L_vSTR_em_${n}_bin.nii.gz --forcedir --opd -s /data/projects/tbi/dti/${n}/bedpostx_input.bedpostX/merged -m /data/projects/tbi/dti/${n}/bedpostx_input.bedpostX/nodif_brain_mask --dir=/data/projects/tbi/dti/probtrackx2_output/L_vSTR_${k}/${n} --waypoints=/data/projects/tbi/dti/waypoints/${k}_${n}_bin.txt &
+done
+done
+
+
+#R_vSTR
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+for k in R_dlPFC R_vmPFC R_SMA
+do 
+	probtrackx2 -x /data/projects/tbi/dti/seeds/R_vSTR_${n}_bin.txt -l --onewaycondition -c 0.2 -S 2000 --steplength=0.5 -P 5000 --fibthresh=0.01 --distthresh=0.0 --sampvox=0.0 --avoid=/data/projects/tbi/dti/exclusion_masks/em_diff/R_vSTR_em_${n}_bin.nii.gz --forcedir --opd -s /data/projects/tbi/dti/${n}/bedpostx_input.bedpostX/merged -m /data/projects/tbi/dti/${n}/bedpostx_input.bedpostX/nodif_brain_mask --dir=/data/projects/tbi/dti/probtrackx2_output/R_vSTR_${k}/${n} --waypoints=/data/projects/tbi/dti/waypoints/${k}_${n}_bin.txt &
+done
+done
+
+
+#L_dSTR
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+for k in L_dlPFC L_vmPFC L_SMA
+do 
+	probtrackx2 -x /data/projects/tbi/dti/seeds/L_dSTR_${n}_bin.txt -l --onewaycondition -c 0.2 -S 2000 --steplength=0.5 -P 5000 --fibthresh=0.01 --distthresh=0.0 --sampvox=0.0 --avoid=/data/projects/tbi/dti/exclusion_masks/em_diff/L_dSTR_em_${n}_bin.nii.gz --forcedir --opd -s /data/projects/tbi/dti/${n}/bedpostx_input.bedpostX/merged -m /data/projects/tbi/dti/${n}/bedpostx_input.bedpostX/nodif_brain_mask --dir=/data/projects/tbi/dti/probtrackx2_output/L_dSTR_${k}/${n} --waypoints=/data/projects/tbi/dti/waypoints/${k}_${n}_bin.txt &
+done
+done
+
+
+#R_dSTR
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+for k in R_dlPFC R_vmPFC R_SMA
+do 
+	probtrackx2 -x /data/projects/tbi/dti/seeds/R_dSTR_${n}_bin.txt -l --onewaycondition -c 0.2 -S 2000 --steplength=0.5 -P 5000 --fibthresh=0.01 --distthresh=0.0 --sampvox=0.0 --avoid=/data/projects/tbi/dti/exclusion_masks/em_diff/R_dSTR_em_${n}_bin.nii.gz --forcedir --opd -s /data/projects/tbi/dti/${n}/bedpostx_input.bedpostX/merged -m /data/projects/tbi/dti/${n}/bedpostx_input.bedpostX/nodif_brain_mask --dir=/data/projects/tbi/dti/probtrackx2_output/R_dSTR_${k}/${n} --waypoints=/data/projects/tbi/dti/waypoints/${k}_${n}_bin.txt &
+done
+done
+
+
+#Corpus Calossum (genu and splenium)
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+for k in genu splenium
+do 
+	probtrackx2 -x /data/projects/tbi/dti/seeds/${k}_seed_6_${n}_bin.txt -l --onewaycondition -c 0.2 -S 2000 --steplength=0.5 -P 5000 --fibthresh=0.01 --distthresh=0.0 --sampvox=0.0 --avoid=/data/projects/tbi/dti/exclusion_masks/em_diff/${k}_em_${n}_bin.nii.gz --forcedir --opd -s /data/projects/tbi/dti/${n}/bedpostx_input.bedpostX/merged -m /data/projects/tbi/dti/${n}/bedpostx_input.bedpostX/nodif_brain_mask --dir=/data/projects/tbi/dti/probtrackx2_output/${k}/${n} --waypoints=/data/projects/tbi/dti/waypoints/${k}_waypoints_6_${n}_bin.txt --waycond=AND &
+done
+done
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+	cp /data/projects/tbi/dti/${n}/topup_output /data/projects/tbi/denoise/${n}/
+	cp /data/projects/tbi/dti/${n}/struct/	/data/projects/tbi/denoise/${n}/
+	cp /data/projects/tbi/dti/${n}/6-cmrr_mb3hydi_ipat2_64ch/ /data/projects/tbi/denoise/${n}/
+	cp /data/projects/tbi/dti/${n}/9-cmrr_fieldmapse_ap/ /data/projects/tbi/denoise/${n}/
+	cp /data/projects/tbi/dti/${n}/11-cmrr_fieldmapse_pa/ /data/projects/tbi/denoise/${n}/
+done
+
+
+
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+	cp -r /data/projects/tbi/dti/${n}/topup_output /data/projects/tbi/denoise/${n}/
+done
+
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+	cp -r /data/projects/tbi/dti/${n}/struct/ /data/projects/tbi/denoise/${n}/
+	cp -r /data/projects/tbi/dti/${n}/6-cmrr_mb3hydi_ipat2_64ch/ /data/projects/tbi/denoise/${n}/
+	cp -r /data/projects/tbi/dti/${n}/9-cmrr_fieldmapse_ap/ /data/projects/tbi/denoise/${n}/
+	cp -r /data/projects/tbi/dti/${n}/11-cmrr_fieldmapse_pa/ /data/projects/tbi/denoise/${n}/
+done
+
+
+
+#setup subject preprocessing sub-directories
+#create dtifit directories for different b thresholds (1000 and 2000)
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+for k in dtifit_output mrtrix3_1000 mrtrix3_2000 bedpostx_input eddy_output fwe mrdegibbs dwidenoise
+do
+	mkdir /data/projects/tbi/denoise/${n}/${k}/
+done
+done
+
+
+#Use topup hifi brain mask [my_hifi_b0_Tcollapsed_brain_mask.nii.gz]
+#dMRI noise level estimation and denoising using Marchenko-Pastur PCA - MRTrix3
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+	dwidenoise -mask /data/projects/tbi/denoise/${n}/topup_output/my_hifi_b0_Tcollapsed_brain_mask.nii.gz -noise /data/projects/tbi/denoise/${n}/dwidenoise/noise_hifi_map.nii /data/projects/tbi/denoise/${n}/6-cmrr_mb3hydi_ipat2_64ch/output.nii /data/projects/tbi/denoise/${n}/dwidenoise/denoised_hifi_vol.nii &
+done
+
+#Remove Gibbs Ringing Artifacts - MRTrix3
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+	mrdegibbs /data/projects/tbi/denoise/${n}/dwidenoise/denoised_hifi_vol.nii /data/projects/tbi/denoise/${n}/mrdegibbs/denoised_degibbs_hifi_vol.nii &
+done
+
+
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+eddy --imain=/data/projects/tbi/denoise/${n}/mrdegibbs/denoised_degibbs_hifi_vol.nii --mask=/data/projects/tbi/denoise/${n}/topup_output/my_hifi_b0_Tcollapsed_brain_mask.nii.gz --acqp=/data/projects/tbi/denoise/acqp.txt --index=/data/projects/tbi/denoise/index.txt --bvecs=/data/projects/tbi/denoise/${n}/6-cmrr_mb3hydi_ipat2_64ch/bvecs --bvals=/data/projects/tbi/denoise/${n}/6-cmrr_mb3hydi_ipat2_64ch/bvals --topup=/data/projects/tbi/denoise/${n}/topup_output/topup_output --json=/data/projects/tbi/denoise/${n}/6-cmrr_mb3hydi_ipat2_64ch/output.json --cnr_maps=/data/projects/tbi/denoise/${n}/eddy_output --data_is_shelled --out=/data/projects/tbi/denoise/${n}/eddy_output/eddy_corrected_data -v &
+done
+
+
+
+#dwiextract for fwe (b=<2000) - MRTrix3
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+	mv /data/projects/tbi/denoise/${n}/mrtrix3_1000/ /data/projects/tbi/denoise/${n}/dwiextract_1000/
+	mv /data/projects/tbi/denoise/${n}/mrtrix3_2000/ /data/projects/tbi/denoise/${n}/dwiextract_2000/
+done
+
+
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+	dwiextract -fslgrad /data/projects/tbi/denoise/${n}/eddy_output/eddy_corrected_data.eddy_rotated_bvecs /data/projects/tbi/denoise/${n}/6-cmrr_mb3hydi_ipat2_64ch/bvals -shells 0,250,1000,2000 /data/projects/tbi/denoise/${n}/eddy_output/eddy_corrected_data.nii.gz /data/projects/tbi/denoise/${n}/dwiextract_2000/data_250_1000_2000.nii.gz -export_grad_fsl /data/projects/tbi/denoise/${n}/dwiextract_2000/bvecs_250_1000_2000 /data/projects/tbi/denoise/${n}/dwiextract_2000/bvals_250_1000_2000 &
+done
+
+#dwiextract for dti (b=<1000)
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+	dwiextract -fslgrad /data/projects/tbi/denoise/${n}/eddy_output/eddy_corrected_data.eddy_rotated_bvecs /data/projects/tbi/denoise/${n}/6-cmrr_mb3hydi_ipat2_64ch/bvals -shells 0,250,1000 /data/projects/tbi/denoise/${n}/eddy_output/eddy_corrected_data.nii.gz /data/projects/tbi/denoise/${n}/dwiextract_1000/data_250_1000.nii.gz -export_grad_fsl /data/projects/tbi/denoise/${n}/dwiextract_1000/bvecs_250_1000 /data/projects/tbi/denoise/${n}/dwiextract_1000/bvals_250_1000 &
+done
+
+#Bedpostx prep
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+	cp /data/projects/tbi/denoise/${n}/eddy_output/eddy_corrected_data.nii.gz /data/projects/tbi/denoise/${n}/bedpostx_input/
+	cp /data/projects/tbi/denoise/${n}/eddy_output/eddy_corrected_data.eddy_rotated_bvecs /data/projects/tbi/denoise/${n}/bedpostx_input/
+	cp /data/projects/tbi/denoise/${n}/topup_output/my_hifi_b0_Tcollapsed_brain_mask.nii.gz /data/projects/tbi/denoise/${n}/bedpostx_input/
+	cp /data/projects/tbi/denoise/${n}/6-cmrr_mb3hydi_ipat2_64ch/bvals /data/projects/tbi/denoise/${n}/bedpostx_input/
+done
+
+#rename files in bedpostx_input directories to be compatible with FSL's expectations
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+	mv  /data/projects/tbi/denoise/${n}/bedpostx_input/eddy_corrected_data.nii.gz /data/projects/tbi/denoise/${n}/bedpostx_input/data.nii.gz
+	mv  /data/projects/tbi/denoise/${n}/bedpostx_input/eddy_corrected_data.eddy_rotated_bvecs /data/projects/tbi/denoise/${n}/bedpostx_input/bvecs
+	mv  /data/projects/tbi/denoise/${n}/bedpostx_input/my_hifi_b0_Tcollapsed_brain_mask.nii.gz /data/projects/tbi/denoise/${n}/bedpostx_input/nodif_brain_mask.nii.gz
+done
+
+#dtifit - creation of scalar maps - NOT FWC
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+	dtifit -k /data/projects/tbi/denoise/${n}/dwiextract_1000/data_250_1000.nii.gz -o /data/projects/tbi/denoise/${n}/dtifit_output/DTI -m /data/projects/tbi/denoise/${n}/topup_output/my_hifi_b0_Tcollapsed_brain_mask.nii.gz -r /data/projects/tbi/denoise/${n}/dwiextract_1000/bvecs_250_1000 -b /data/projects/tbi/denoise/${n}/dwiextract_1000/bvals_250_1000
+	fslmaths /data/projects/tbi/denoise/${n}/dtifit_output/DTI_L2.nii.gz -add /data/projects/tbi/denoise/${n}/dtifit_output/DTI_L3.nii.gz -div 2 /data/projects/tbi/denoise/${n}/dtifit_output/DTI_RD
+done
+
+
+
+
+#create all permutations of conversion matrices using T1 structural image.  It is important not to go directly from diffusion space to structural or standard space because these scans use different imaging modalities:
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+	flirt -in /data/projects/tbi/denoise/${n}/topup_output/my_hifi_b0_Tcollapsed_brain.nii.gz -ref /data/projects/tbi/denoise/${n}/struct/Olson-TBI_${n}_brain.nii -omat /data/projects/tbi/denoise/transforms/diff2str_${n}.mat -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 6 -cost corratio
+	convert_xfm -omat /data/projects/tbi/denoise/transforms/str2diff_${n}.mat -inverse /data/projects/tbi/denoise/transforms/diff2str_${n}.mat;
+	flirt -in /data/projects/tbi/denoise/${n}/struct/Olson-TBI_${n}_brain.nii -ref /usr/local/fsl/data/standard/MNI152_T1_2mm_brain -omat /data/projects/tbi/denoise/transforms/str2standard_${n}.mat -searchrx -90 90 -searchry -90 90 -searchrz -90 90 -dof 12 -cost corratio
+	convert_xfm -omat /data/projects/tbi/denoise/transforms/standard2str_${n}.mat -inverse /data/projects/tbi/denoise/transforms/str2standard_${n}.mat
+	convert_xfm -omat /data/projects/tbi/denoise/transforms/diff2standard_${n}.mat -concat /data/projects/tbi/denoise/transforms/str2standard_${n}.mat /data/projects/tbi/denoise/transforms/diff2str_${n}.mat
+	convert_xfm -omat /data/projects/tbi/denoise/transforms/standard2diff_${n}.mat -inverse /data/projects/tbi/denoise/transforms/diff2standard_${n}.mat
+done
+
+
+#warp seeds, waypoints (formerly 'targets'), and exclusion masks into subject's native diffusion space and binarize transformed output
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+for r in L_dlPFC L_dSTR L_SMA L_vmPFC L_vSTR R_dlPFC R_dSTR R_SMA R_vmPFC R_vSTR genu_seed_6 genu_waypoint1_6 genu_waypoint2_6 splenium_seed_6 splenium_waypoint1_6 splenium_waypoint2_6
+do
+for e in L_dSTR L_vSTR R_dSTR R_vSTR splenium genu
+do
+	applywarp --ref=/data/projects/tbi/denoise/${n}/dtifit_output/DTI_FA.nii.gz --in=/data/projects/tbi/denoise/roi/${r}_ss_bin.nii.gz --out=/data/projects/tbi/denoise/roi/diff_roi/${r}_${n} --premat=/data/projects/tbi/denoise/transforms/standard2diff_${n}.mat
+	fslmaths /data/projects/tbi/denoise/roi/diff_roi/${r}_${n} -bin /data/projects/tbi/denoise/roi/diff_roi/${r}_${n}_bin
+	applywarp --ref=/data/projects/tbi/denoise/${n}/dtifit_output/DTI_FA.nii.gz --in=/data/projects/tbi/denoise/exclusion_masks/${e}_em_ss.nii.gz --out=/data/projects/tbi/denoise/exclusion_masks/em_diff/${e}_em_${n} --premat=/data/projects/tbi/denoise/transforms/standard2diff_${n}.mat
+	fslmaths /data/projects/tbi/denoise/exclusion_masks/em_diff/${e}_em_${n} -bin /data/projects/tbi/denoise/exclusion_masks/em_diff/${e}_em_${n}_bin
+done
+done
+done
+
+#create text files for seeds 
+#funnel path for each subject's seed roi into the text files
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+for k in L_vSTR L_dSTR R_vSTR R_dSTR genu_seed_6 splenium_seed_6
+do
+	echo /data/projects/tbi/denoise/roi/diff_roi/${k}_${n}_bin.nii.gz >> /data/projects/tbi/denoise/seeds/${k}_${n}_bin.txt
+done
+done
+
+
+
+#create text files for waypoints 
+#funnel path for each subject's waypoint roi into the text files
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+for k in L_dlPFC R_dlPFC L_vmPFC R_vmPFC L_SMA R_SMA
+do
+	echo /data/projects/tbi/denoise/roi/diff_roi/${k}_${n}_bin.nii.gz >> /data/projects/tbi/denoise/waypoints/${k}_${n}_bin.txt
+done
+
+
+
+
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+for k in genu splenium
+do
+	echo /data/projects/tbi/denoise/roi/diff_roi/${k}_waypoint1_6_${n}_bin.nii.gz >> /data/projects/tbi/denoise/waypoints/${k}_waypoints_6_${n}_bin.txt
+	echo /data/projects/tbi/denoise/roi/diff_roi/${k}_waypoint2_6_${n}_bin.nii.gz >> /data/projects/tbi/denoise/waypoints/${k}_waypoints_6_${n}_bin.txt
+done
+done
+
+
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+for k in R_dlPFC R_vmPFC R_SMA
+do
+for r in L_dlPFC L_vmPFC L_SMA
+do
+	mkdir /data/projects/tbi/denoise/probtrackx2_output/R_dSTR_${k}/${n}/
+	mkdir /data/projects/tbi/denoise/probtrackx2_output/R_vSTR_${k}/${n}/
+	mkdir /data/projects/tbi/denoise/probtrackx2_output/L_dSTR_${r}/${n}/
+	mkdir /data/projects/tbi/denoise/probtrackx2_output/L_vSTR_${r}/${n}/
+	mkdir /data/projects/tbi/denoise/probtrackx2_output/genu/${n}/
+	mkdir /data/projects/tbi/denoise/probtrackx2_output/splenium/${n}/
+
+done
+done
+done
+
+
+#bedpostx
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+	bedpostx /data/projects/tbi/denoise/${n}/bedpostx_input/ &
+done
+
+
+
+#L_vSTR
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+for k in L_dlPFC L_vmPFC L_SMA
+do 
+	probtrackx2 -x /data/projects/tbi/denoise/seeds/L_vSTR_${n}_bin.txt -l --onewaycondition -c 0.2 -S 2000 --steplength=0.5 -P 5000 --fibthresh=0.01 --distthresh=0.0 --sampvox=0.0 --avoid=/data/projects/tbi/denoise/exclusion_masks/em_diff/L_vSTR_em_${n}_bin.nii.gz --forcedir --opd -s /data/projects/tbi/denoise/${n}/bedpostx_input.bedpostX/merged -m /data/projects/tbi/denoise/${n}/bedpostx_input.bedpostX/nodif_brain_mask --dir=/data/projects/tbi/denoise/probtrackx2_output/L_vSTR_${k}/${n} --waypoints=/data/projects/tbi/denoise/waypoints/${k}_${n}_bin.txt &
+done
+done
+
+#R_vSTR
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+for k in R_dlPFC R_vmPFC R_SMA
+do 
+	probtrackx2 -x /data/projects/tbi/denoise/seeds/R_vSTR_${n}_bin.txt -l --onewaycondition -c 0.2 -S 2000 --steplength=0.5 -P 5000 --fibthresh=0.01 --distthresh=0.0 --sampvox=0.0 --avoid=/data/projects/tbi/denoise/exclusion_masks/em_diff/R_vSTR_em_${n}_bin.nii.gz --forcedir --opd -s /data/projects/tbi/denoise/${n}/bedpostx_input.bedpostX/merged -m /data/projects/tbi/denoise/${n}/bedpostx_input.bedpostX/nodif_brain_mask --dir=/data/projects/tbi/denoise/probtrackx2_output/R_vSTR_${k}/${n} --waypoints=/data/projects/tbi/denoise/waypoints/${k}_${n}_bin.txt &
+done
+done
+
+#L_dSTR
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+for k in L_dlPFC L_vmPFC L_SMA
+do 
+	probtrackx2 -x /data/projects/tbi/denoise/seeds/L_dSTR_${n}_bin.txt -l --onewaycondition -c 0.2 -S 2000 --steplength=0.5 -P 5000 --fibthresh=0.01 --distthresh=0.0 --sampvox=0.0 --avoid=/data/projects/tbi/denoise/exclusion_masks/em_diff/L_dSTR_em_${n}_bin.nii.gz --forcedir --opd -s /data/projects/tbi/denoise/${n}/bedpostx_input.bedpostX/merged -m /data/projects/tbi/denoise/${n}/bedpostx_input.bedpostX/nodif_brain_mask --dir=/data/projects/tbi/denoise/probtrackx2_output/L_dSTR_${k}/${n} --waypoints=/data/projects/tbi/denoise/waypoints/${k}_${n}_bin.txt &
+done
+done
+
+#R_dSTR
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+for k in R_dlPFC R_vmPFC R_SMA
+do 
+	probtrackx2 -x /data/projects/tbi/denoise/seeds/L_dSTR_${n}_bin.txt -l --onewaycondition -c 0.2 -S 2000 --steplength=0.5 -P 5000 --fibthresh=0.01 --distthresh=0.0 --sampvox=0.0 --avoid=/data/projects/tbi/denoise/exclusion_masks/em_diff/L_dSTR_em_${n}_bin.nii.gz --forcedir --opd -s /data/projects/tbi/denoise/${n}/bedpostx_input.bedpostX/merged -m /data/projects/tbi/denoise/${n}/bedpostx_input.bedpostX/nodif_brain_mask --dir=/data/projects/tbi/denoise/probtrackx2_output/L_dSTR_${k}/${n} --waypoints=/data/projects/tbi/denoise/waypoints/${k}_${n}_bin.txt &
+done
+done
+
+
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+for k in genu splenium
+do 
+	probtrackx2 -x /data/projects/tbi/denoise/seeds/${k}_seed_6_${n}_bin.txt -l --onewaycondition -c 0.2 -S 2000 --steplength=0.5 -P 5000 --fibthresh=0.01 --distthresh=0.0 --sampvox=0.0 --avoid=/data/projects/tbi/denoise/exclusion_masks/em_diff/${k}_em_${n}_bin.nii.gz --forcedir --opd -s /data/projects/tbi/denoise/${n}/bedpostx_input.bedpostX/merged -m /data/projects/tbi/denoise/${n}/bedpostx_input.bedpostX/nodif_brain_mask --dir=/data/projects/tbi/denoise/probtrackx2_output/${k}/${n} --waypoints=/data/projects/tbi/denoise/waypoints/${k}_waypoints_6_${n}_bin.txt --waycond=AND &
+done
+done
+
+/dti/
+
+
+
+for n in 5452 5477 3000 5498 5470 5448 5483 5406 5334 5345
+do
+	python /home/local/TU/tuf72977/Desktop/fwe_denoise/dipyfwe_${n}.py
+done
+
+
+
