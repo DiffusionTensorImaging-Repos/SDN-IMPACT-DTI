@@ -561,7 +561,7 @@ When FSL opens, it will first pull up:
 Next, we wil overlaying Structural and ANTS Images
 
 For each participant:  
-1. Load the participant’s structural scan.  
+1. Load the participant’s NIFTI structural scan.  
 2. Hit the **plus (+)** to add the ANTS-stripped version.  
 3. Move the stripped brain above the struct.  
 ![overlay](images/struct.ants.overlay.png)     
