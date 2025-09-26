@@ -589,7 +589,7 @@ If you have found good mask and made sure it worked for ~all participants, we ca
 
 This step extracts the first volume (the b0) from each subject’s AP and PA fieldmaps and merges them into a single 4D file. This merged file is the required input for topup.
 
-This step will accopmlish the following: 
+This step will accomplish the following: 
 1. Extract the first volume (b0) from the AP fieldmap (`*_fmapAP.nii`) → `<subj>_a2p_b0.nii.gz`  
 2. Extract the first volume (b0) from the PA fieldmap (`*_fmapPA.nii`) → `<subj>_p2a_b0.nii.gz`  
 3. Concatenate the AP and PA b0s into one file (`<subj>_merged_b0s.nii.gz`)  
