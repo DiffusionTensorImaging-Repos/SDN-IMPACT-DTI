@@ -1573,6 +1573,8 @@ Quad and Squad jobs are low-intensity (mainly file I/O and small FSL utilities),
 
 * **Note**: If the outputs aren’t combining succesfuly into a single qc_summary.txt file, you can run QUAD and SQUAD manually and check each participant’s output. However, the combined QC file is much more convenient, so try to run it this way first and troubleshoot as needed 
 
+Lastly - the script below is very long b
+
 
 ```bash
 #!/bin/bash
