@@ -1573,7 +1573,7 @@ Quad and Squad jobs are low-intensity (mainly file I/O and small FSL utilities),
 
 * **Note**: If the outputs aren’t combining succesfuly into a single qc_summary.txt file, you can run QUAD and SQUAD manually and check each participant’s output. However, the combined QC file is much more convenient, so try to run it this way first and troubleshoot as needed 
 
-Lastly - the script below is very long b
+Lastly - the script below is ***long*** because it combines quad, squad, and a script to combine them into one txt output. Feel free to only extract the quad and squad functions you need, or to run these 3 functions one at a time. 
 
 
 ```bash
@@ -1769,7 +1769,7 @@ Here is what our combine qc summary looks like:
 
 3. Lastly, we will visuall inspect the eddy output for each participant to exlcude those with >5 volumes with visible eddy motion artifacts. 
 
-[insert visual motion correction]
+[insert visual motion correction  - using photos/fsl prep]
 
 ---
 ## Step 11: BedpostX
@@ -1897,4 +1897,47 @@ echo "=== All BEDPOSTX jobs finished ==="
 tail -f bedpostx.log
 ```
 Even if you disconnect, the job keeps running. When you reconnect later, you can just run the same tail -f topup.log command to pick up the log again. This log will also be SAVED and can be checked later if you encounter errors
+
+**Audit script to make sure that bedpostx was run properly for each participant**
+```bash
+#!/bin/bash
+# ============================================================
+# Simple BEDPOSTX Audit (IMPACT DTI)
+# ============================================================
+# Checks only the main expected outputs:
+# dyads1, mean_f1/th1/ph1, merged f/th/ph (fibers 1–3)
+# ============================================================
+
+nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
+bedpostx_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX"
+
+printf "Subject\tdyads1\tmean_f1\tmean_th1\tmean_ph1\tf1\tth1\tph1\tf2\tth2\tph2\tf3\tth3\tph3\n"
+
+for subj in $(ls -1 "$nifti_base"); do
+    subj_dir="$bedpostx_base/$subj/bedpostx_input.bedpostX"
+
+    dyads=$([ -f "$subj_dir/dyads1.nii.gz" ] && echo "✅" || echo "❌")
+    meanf1=$([ -f "$subj_dir/mean_f1samples.nii.gz" ] && echo "✅" || echo "❌")
+    meanth1=$([ -f "$subj_dir/mean_th1samples.nii.gz" ] && echo "✅" || echo "❌")
+    meanph1=$([ -f "$subj_dir/mean_ph1samples.nii.gz" ] && echo "✅" || echo "❌")
+
+    f1=$([ -f "$subj_dir/merged_f1samples.nii.gz" ] && echo "✅" || echo "❌")
+    th1=$([ -f "$subj_dir/merged_th1samples.nii.gz" ] && echo "✅" || echo "❌")
+    ph1=$([ -f "$subj_dir/merged_ph1samples.nii.gz" ] && echo "✅" || echo "❌")
+
+    f2=$([ -f "$subj_dir/merged_f2samples.nii.gz" ] && echo "✅" || echo "❌")
+    th2=$([ -f "$subj_dir/merged_th2samples.nii.gz" ] && echo "✅" || echo "❌")
+    ph2=$([ -f "$subj_dir/merged_ph2samples.nii.gz" ] && echo "✅" || echo "❌")
+
+    f3=$([ -f "$subj_dir/merged_f3samples.nii.gz" ] && echo "✅" || echo "❌")
+    th3=$([ -f "$subj_dir/merged_th3samples.nii.gz" ] && echo "✅" || echo "❌")
+    ph3=$([ -f "$subj_dir/merged_ph3samples.nii.gz" ] && echo "✅" || echo "❌")
+
+    printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n" \
+      "$subj" "$dyads" "$meanf1" "$meanth1" "$meanph1" \
+      "$f1" "$th1" "$ph1" "$f2" "$th2" "$ph2" "$f3" "$th3" "$ph3"
+done
+
+echo -e "\n=== BEDPOSTX Audit Finished ==="
+```
 
