@@ -2075,3 +2075,5 @@ done
 
 echo -e "\n=== DWI Extract Audit Complete ==="
 ```
+---
+## Step 13
