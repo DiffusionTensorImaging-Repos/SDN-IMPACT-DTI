@@ -1940,4 +1940,32 @@ done
 
 echo -e "\n=== BEDPOSTX Audit Finished ==="
 ```
+---
+## Step 11: DWI Shell Extraction
 
+Following EDDY and BEDPOSTX preprocessing, we next extract diffusion-weighted imaging (DWI) volumes corresponding to specific b-value shells for downstream modeling and visualization.
+This step uses MRtrix3’s dwiextract command, which isolates all volumes matching specified b-values (e.g., 0, 1000, 2000 s/mm²) and exports the corresponding gradient tables.
+
+In our case, we extract two datasets per participant:
+
+1. b=0 and b=1000 volumes
+2. b=0, b=1000, and b=2000 volumes
+
+Each extraction produces a 4D image containing only the selected shells, along with new .bvec and .bval files corresponding to those shells.
+
+**Our code will use the following Inputs (output from the BEDPOSTX preparation step):** 
+1. Eddy-corrected DWI data (per subject):
+- derivatives/bedpostx_input/<subj>/data.nii.gz
+2. Gradient tables (per subject):
+- derivatives/bedpostx_input/<subj>/bvals
+- derivatives/bedpostx_input/<subj>/bvecs
+
+**Outputs (per subject):** 
+1. mrtrix3_1000/<subj>/ → DWI volumes containing only b=0 and b=1000
+- data_1000.nii.gz
+- bvecs_1000
+- bvals_1000
+2. mrtrix3_2000/<subj>/ → DWI volumes containing b=0, b=1000, and b=2000
+- data_1000_2000.nii.gz
+- bvecs_1000_2000
+- bvals_1000_2000
