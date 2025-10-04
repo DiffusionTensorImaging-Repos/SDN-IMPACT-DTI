@@ -1957,10 +1957,10 @@ Each extraction produces a 4D image containing only the selected shells, along w
 
 **Our code will use the following Inputs (output from the BEDPOSTX preparation step):** 
 1. Eddy-corrected DWI data (per subject):
-- derivatives/bedpostx_input/<subj>/data.nii.gz
+- /data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX/<subj>/bedpostx_input/data.nii.gz
 2. Gradient tables (per subject):
-- derivatives/bedpostx_input/<subj>/bvals
-- derivatives/bedpostx_input/<subj>/bvecs
+- /data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX/<subj>/bedpostx_input/bvecs
+- /data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX/<subj>/bedpostx_input/bvals
 
 **Outputs (per subject):** 
 1. mrtrix3_1000/<subj>/ → DWI volumes containing only b=0 and b=1000
@@ -1971,3 +1971,9 @@ Each extraction produces a 4D image containing only the selected shells, along w
 - data_1000_2000.nii.gz
 - bvecs_1000_2000
 - bvals_1000_2000
+
+
+**This task is very lightweight, and thus can be pasted directly in the SSH terminal and easily parallelized acorss all 60 participants. If you have many more participants than this, you can adjust accordingly.** 
+
+**Paste the following into the terminal**: 
+
