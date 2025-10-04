@@ -1946,6 +1946,8 @@ echo -e "\n=== BEDPOSTX Audit Finished ==="
 Following EDDY and BEDPOSTX preprocessing, we next extract diffusion-weighted imaging (DWI) volumes corresponding to specific b-value shells for downstream modeling and visualization.
 This step uses MRtrix3’s dwiextract command, which isolates all volumes matching specified b-values (e.g., 0, 1000, 2000 s/mm²) and exports the corresponding gradient tables.
 
+* **Note: As with BEDPOSTX, this step is performed primarily to prepare data for probabilistic tractography (e.g., MRtrix or FSL probtrackx2). It is not required for pyAFQ or other microstructure analyses, though it is advisable to run it regardless so the data remain ready for future tractography or modeling decisions.**
+
 In our case, we extract two datasets per participant:
 
 1. b=0 and b=1000 volumes
