@@ -2032,3 +2032,46 @@ wait
 echo "=== All DWI extraction jobs finished ==="
 
 ```
+**AUDIT script to make sure dwi extract worked properly for all participants**
+```bash
+
+#!/bin/bash
+# ============================================================
+# DWI Extract Audit — IMPACT DTI
+# ============================================================
+# Cross-checks that every subject in NIFTI base has
+# corresponding dwiextract outputs in mrtrix3_1000 and mrtrix3_2000
+# ============================================================
+
+nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
+mrtrix3_1000_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/mrtrix3_1000"
+mrtrix3_2000_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/mrtrix3_2000"
+
+printf "Subject\tdata_1000\tbvecs_1000\tbvals_1000\tdata_1000_2000\tbvecs_1000_2000\tbvals_1000_2000\n"
+
+for subj in $(ls -1 "$nifti_base"); do
+    # paths for b=1000 outputs
+    data1000="$mrtrix3_1000_base/$subj/data_1000.nii.gz"
+    bvec1000="$mrtrix3_1000_base/$subj/bvecs_1000"
+    bval1000="$mrtrix3_1000_base/$subj/bvals_1000"
+
+    # paths for b=2000 outputs
+    data2000="$mrtrix3_2000_base/$subj/data_1000_2000.nii.gz"
+    bvec2000="$mrtrix3_2000_base/$subj/bvecs_1000_2000"
+    bval2000="$mrtrix3_2000_base/$subj/bvals_1000_2000"
+
+    # ✅/❌ checks
+    d1000=$([ -f "$data1000" ] && echo "✅" || echo "❌")
+    bv1000=$([ -f "$bvec1000" ] && echo "✅" || echo "❌")
+    bl1000=$([ -f "$bval1000" ] && echo "✅" || echo "❌")
+
+    d2000=$([ -f "$data2000" ] && echo "✅" || echo "❌")
+    bv2000=$([ -f "$bvec2000" ] && echo "✅" || echo "❌")
+    bl2000=$([ -f "$bval2000" ] && echo "✅" || echo "❌")
+
+    printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n" \
+      "$subj" "$d1000" "$bv1000" "$bl1000" "$d2000" "$bv2000" "$bl2000"
+done
+
+echo -e "\n=== DWI Extract Audit Complete ==="
+```
