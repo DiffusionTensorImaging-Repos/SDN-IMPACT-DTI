@@ -1963,17 +1963,72 @@ Each extraction produces a 4D image containing only the selected shells, along w
 - /data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX/<subj>/bedpostx_input/bvals
 
 **Outputs (per subject):** 
-1. mrtrix3_1000/<subj>/ → DWI volumes containing only b=0 and b=1000
+1. /data/projects/STUDIES/IMPACT/DTI/derivatives/mrtrix3_1000/<subj>/ → DWI volumes containing only b=0 and b=1000
 - data_1000.nii.gz
 - bvecs_1000
 - bvals_1000
-2. mrtrix3_2000/<subj>/ → DWI volumes containing b=0, b=1000, and b=2000
+2. /data/projects/STUDIES/IMPACT/DTI/derivatives/mrtrix3_2000/<subj>/ → DWI volumes containing b=0, b=1000, and b=2000
 - data_1000_2000.nii.gz
 - bvecs_1000_2000
 - bvals_1000_2000
 
 
-**This task is very lightweight, and thus can be pasted directly in the SSH terminal and easily parallelized acorss all 60 participants. If you have many more participants than this, you can adjust accordingly.** 
+**This task is very lightweight, and thus can be pasted directly in the SSH terminal and easily parallelized acorss all 60 participants. If you have more participants than this, you can adjust accordingly.** 
 
 **Paste the following into the terminal**: 
 
+```bash
+#!/bin/bash
+# ============================================================
+# Step — DWI Extract (b=0,1000 and b=0,1000,2000)
+# ============================================================
+
+base_dir="/data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX"
+mrtrix3_1000_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/mrtrix3_1000"
+mrtrix3_2000_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/mrtrix3_2000"
+
+mkdir -p "$mrtrix3_1000_base" "$mrtrix3_2000_base"
+
+process_subj() {
+    subj="$1"
+    subj_dir="$base_dir/$subj/bedpostx_input"
+
+    echo ">>> [$subj] Running dwiextract (b=0,1000)"
+    mkdir -p "$mrtrix3_1000_base/$subj"
+    dwiextract \
+        -fslgrad "$subj_dir/bvecs" "$subj_dir/bvals" \
+        -shells 0,1000 \
+        "$subj_dir/data.nii.gz" \
+        "$mrtrix3_1000_base/$subj/data_1000.nii.gz" \
+        -export_grad_fsl \
+        "$mrtrix3_1000_base/$subj/bvecs_1000" \
+        "$mrtrix3_1000_base/$subj/bvals_1000" \
+        -force
+
+    echo ">>> [$subj] Running dwiextract (b=0,1000,2000)"
+    mkdir -p "$mrtrix3_2000_base/$subj"
+    dwiextract \
+        -fslgrad "$subj_dir/bvecs" "$subj_dir/bvals" \
+        -shells 0,1000,2000 \
+        "$subj_dir/data.nii.gz" \
+        "$mrtrix3_2000_base/$subj/data_1000_2000.nii.gz" \
+        -export_grad_fsl \
+        "$mrtrix3_2000_base/$subj/bvecs_1000_2000" \
+        "$mrtrix3_2000_base/$subj/bvals_1000_2000" \
+        -force
+
+    echo ">>> [$subj] Done!"
+}
+
+export -f process_subj
+export base_dir mrtrix3_1000_base mrtrix3_2000_base
+
+subjects=$(find "$base_dir" -mindepth 1 -maxdepth 1 -type d -exec basename {} \;)
+echo "Found $(echo "$subjects" | wc -l) subjects. Running dwiextract in parallel..."
+
+echo "$subjects" | xargs -n 1 -P 60 -I {} bash -c 'process_subj "$@"' _ {}
+
+wait
+echo "=== All DWI extraction jobs finished ==="
+
+```
