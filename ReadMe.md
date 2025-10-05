@@ -48,6 +48,23 @@ A. Preprocessing
 12. **AFQ Prep - BIDS Conversion**
 13. **ICV Calculation**
 
+#  Index — IMPACT DTI Preprocessing Pipeline
+
+1. [Step 1 — DICOM → NIfTI Conversion](#step-1--dicom-to-nifti-conversion)
+2. [Step 2 — ANTs Skull Stripping](#step-2-ants-skull-stripping)
+3. [Step 3 — B0 Concatenation](#step-3--b0-concatenation)
+4. [Step 4 — TOPUP (Susceptibility Distortion Correction)](#step-4--topup-susceptibility-distortion-correction)
+5. [Step 5 — Mean B0 Image (Collapsed Across Time)](#step-5--mean-b0-image-collapse-across-time)
+6. [Step 6 — BET (Brain Extraction on Mean B0)](#step-6--brain-extraction-on-mean-b0)
+7. [Step 7 — Gibbs Denoising + b=250 Cleanup](#step-7--gibbs-ringing-removal--b250-cleanup)
+8. [Step 8 — Eddy Current & Motion Correction](#step-8--eddy-current--motion-correction)
+9. [Step 9 — BEDPOSTX (Bayesian Diffusion Modeling)](#step-9-bedpostx)
+10. [Step 10 — DWIEXTRACT (Shell Separation)](#step-10-dwi-shell-extraction)
+11. [Step 11 — DTIFIT (Tensor Fitting)](#step-11-tensor-fitting-dtifit)
+12. [Step 12 — FLIRT + CONVERT (Spatial Alignment)](#step-12-flirt-and-convert-spatial-alignment-and-standardization)
+13. [Step 13 — ICV calculation](#Step-13-Intracranial-Volume-ICV-Estimation)
+
+
 B. Add steps as they are completed...(PYAFQ,ProbTact, Analyses)
 
 
@@ -584,7 +601,7 @@ I track each participant's progress after skullstripping.
 If you have found good mask and made sure it worked for ~all participants, we can move to the next step: 
 
 ---
-## Step 6 — B0 Concatenation
+## Step 3 — B0 Concatenation
 
 - This is a step that is neccesary to prep our data before we run  **topup** for susceptibility distortion correction! This step will build a combined baseline (b0) image. 
 
@@ -606,7 +623,7 @@ The code will use the fslroi + fslmerge FSL functions to grab the first b0 from 
 ```bash
 #!/bin/bash
 
-# Step 6: B0 Concatenation (parallel + verbose)
+# Step 3: B0 Concatenation (parallel + verbose)
 
 nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
 deriv_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/b0_concat"
@@ -719,7 +736,7 @@ done
 
 ```
 ---
-## Step 7 — TOPUP Susceptibility Distortion Correction
+## Step 4 — TOPUP Susceptibility Distortion Correction
 
 **TOPUP corrects for **susceptibility-induced geometric distortions** in diffusion-weighted MRI**
 
@@ -788,7 +805,7 @@ nano run_topup.sh
 ```Bash
 #!/bin/bash
 
-# Step 7: TOPUP (susceptibility distortion correction)
+# Step 4: TOPUP (susceptibility distortion correction)
 
 nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
 b0_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/b0_concat"
@@ -920,7 +937,7 @@ done
 ```
 ---
 
-## Step 8 — Mean B0 Image (Collapse Across Time)
+## Step 5 — Mean B0 Image (Collapse Across Time)
 
 
 Each subject has multiple b0 volumes (AP and PA) across time. Averaging them creates a single, **mean b0 image** that is more robust, less noisy, and better aligned than using any one volume. This mean image will serve as the reference for later registration and eddy correction.
@@ -943,7 +960,7 @@ We allow up to 60 parallel jobs at once because it’s just I/O + averaging. We'
 
 ```bash
 #!/bin/bash
-# Step 8: Mean B0 Image (collapse across time, with logging)
+# Step 5: Mean B0 Image (collapse across time, with logging)
 
 deriv_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/TOPUP"
 logfile="mean_b0.log"
@@ -1032,7 +1049,7 @@ done
 ```
 
 
-## Step 9 — Brain Extraction on Mean B0
+## Step 6 — Brain Extraction on Mean B0
 
 
 After creating the mean B0 image in Step 8, we need to generate a **brain mask**. This mask is critical for later MRtrix preprocessing steps (e.g., `dwidenoise`, `mrdegibbs`) because it ensures operations are limited to brain tissue, avoiding noise from skull and neck regions.  
@@ -1056,7 +1073,7 @@ Thiss step is safe to run fully parallel without worrying about SSH disconnects.
 
 **The Bash Code**
 ```bash
-# Step 8: Brain extraction on mean b0 (parallelized, Bash-only, safe logging)
+# Step 6: Brain extraction on mean b0 (parallelized, Bash-only, safe logging)
 
 deriv_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/TOPUP"
 
@@ -1147,7 +1164,7 @@ echo -e "\n=== BET audit finished ==="
 ---
 
 
-## Step 10 — Gibbs Ringing Removal + b=250 Cleanup
+## Step 7 — Gibbs Ringing Removal + b=250 Cleanup
 
 This step does two things:  reduces oscillation artifacts in diffusion MRI caused by Fourier sampling. Additionaly, we remove volumes with b=250 from the `.bvec` and `.bval` files. These volumes can cause instability in downstream tensor modeling.  
    The Olson Lab (and others at Temple) have regularly excluded these volumes, and doing so will not interfere with analyses. (Many labs don't even ***collect*** b=250 for DTI anymore, so this is a safe bet.)
@@ -1177,10 +1194,12 @@ export PATH=/data/tools/mrtrix3/bin:$PATH
   - `NIFTI/<subj>/dti/cmrr_mb3hydi_ipat2_64ch/<subj>_cmrr_mb3hydi_ipat2_64ch.nii.gz`
 
 **Outputs (per subject)**:
-
-- denoise/<subj>/dwidenoise/ → noise map + denoised volume
-- denoise/<subj>/mrdegibbs/ → Gibbs-corrected volume
-- denoise/<subj>/mrdegibbs_no_b250/ → final cleaned volume + modified .bval / .bvec
+```
+denoise/<subj>/
+├── dwidenoise/              → noise map + denoised volume
+├── mrdegibbs/               → Gibbs-corrected volume
+└── mrdegibbs_no_b250/       → final cleaned volume + modified .bval / .bvec
+```
 
 
 **And -  it will use the following functions from MrTRIX dwidenoise, mrdegibbs, dwiextract, which will be called using the following structure:**
@@ -1212,7 +1231,7 @@ nano run_denoise.sh
 ```bash
 #!/bin/bash
 
-# Step 9: Gibbs ringing removal + b=250 cleanup (sequential version)
+# Step 7: Gibbs ringing removal + b=250 cleanup (sequential version)
 
 denoise_dir="/data/projects/STUDIES/IMPACT/DTI/derivatives/denoise"
 nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
@@ -1326,7 +1345,7 @@ for subj in $(ls -1 "$nifti_base"); do
 done
 ```
 ---
-## Step 11 — Eddy Current & Motion Correction
+## Step 8 — Eddy Current & Motion Correction
 
 FSL EDDY corrects for subject head motion during diffusion scans, Eddy current–induced geometric distortions, and uses TOPUP fieldmap outputs (Step 7) to further correct susceptibility distortions.
 
@@ -1343,17 +1362,21 @@ Without this step, head motion and distortions can bias tensor fitting and tract
 3. From config:
 - acqp.txt (phase encoding info) - same file we used in the TOPUP step
 - index_no_b250.txt (volume index file)
+
 ![acqp](images/indexn250.png)
 
 Each 1 in index_no_b250.txt points to line 1 of acqp.txt, telling eddy to use that set of phase-encoding parameters for the corresponding volume. Because the b=250 volumes were dropped earlier, only the remaining shells are listed, all mapped to the same acquisition direction.
 
 **Outputs (per subject)**
-/data/projects/STUDIES/IMPACT/DTI/derivatives/eddyoutput/<subj>/
-- data.nii.gz → corrected DWI
-- bvals, bvecs → gradients, updated & rotated
-- nodif_brain_mask.nii.gz → brain mask from Step 9
-- cnr_maps.nii.gz → contrast-to-noise maps
--  eddy QC files (.eddy_rotated_bvecs, .eddy_outlier_report, etc.)
+```
+derivatives/eddyoutput/<subj>/
+├── data.nii.gz                     → corrected DWI
+├── bvals, bvecs                    → gradients (updated & rotated)
+├── nodif_brain_mask.nii.gz         → brain mask from Step 9
+├── cnr_maps.nii.gz                 → contrast-to-noise maps
+└── eddy QC files/                  → .eddy_rotated_bvecs, .eddy_outlier_report, etc.
+
+```
 
 Our code will use the FSL ```eddy``` function, and it will use the following call
 ```bash
@@ -1772,7 +1795,7 @@ Here is what our combine qc summary looks like:
 [insert visual motion correction  - using photos/fsl prep]
 
 ---
-## Step 11: BedpostX
+## Step 9: BedpostX
 
 FSL BEDPOSTX (Bayesian Estimation of Diffusion Parameters Obtained using Sampling Techniques) fits a multi-fiber diffusion model at each voxel.
 
@@ -1832,7 +1855,7 @@ Paste the following into nano:
 ```bash
 #!/bin/bash
 # ============================================================
-# Step 11: BEDPOSTX (IMPACT DTI)
+# Step 9: BEDPOSTX (IMPACT DTI)
 # ============================================================
 # Prepares inputs and runs bedpostx for each subject
 # Dynamically parallelizes across available cores
@@ -1960,7 +1983,7 @@ done
 echo -e "\n=== BEDPOSTX Audit Finished ==="
 ```
 ---
-## Step 11: DWI Shell Extraction
+## Step 10: DWI Shell Extraction
 
 Following EDDY and BEDPOSTX preprocessing, we next extract diffusion-weighted imaging (DWI) volumes corresponding to specific b-value shells for downstream modeling and visualization.
 This step uses MRtrix3’s dwiextract command, which isolates all volumes matching specified b-values (e.g., 0, 1000, 2000 s/mm²) and exports the corresponding gradient tables.
@@ -2114,7 +2137,7 @@ done
 echo -e "\n=== DWI Extract Audit Complete ==="
 ```
 ---
-## Step 13 Tensor Fitting (DTIFIT)
+## Step 11 Tensor Fitting (DTIFIT)
 
 After extracting the desired diffusion shells (b=0, 1000), the next step is to fit a diffusion tensor model to each participant’s DWI data. This is done using FSL’s dtifit, which estimates voxelwise diffusion tensor parameters including fractional anisotropy (FA), mean diffusivity (MD), axial diffusivity (AD/L1), and radial diffusivity (RD, derived as the mean of L2 and L3).
 
@@ -2154,7 +2177,7 @@ derivatives/DTIFIT_OUTPUT/s1000/
 ```bash
 #!/bin/bash
 # ============================================================
-# 🧠 IMPACT DTI — Step 13: Tensor Fitting (DTIFIT)
+# 🧠 IMPACT DTI — Step 11: Tensor Fitting (DTIFIT)
 # ============================================================
 
 source /usr/local/fsl/etc/fslconf/fsl.sh
@@ -2256,7 +2279,7 @@ done
 echo -e "\n=== DTIFIT Audit Complete ==="
 ```
 
-## Step 14: FLIRT and CONVERT (Spatial Alignment and Standardization)
+## Step 12: FLIRT and CONVERT (Spatial Alignment and Standardization)
 
 After tensor fitting, each participant’s diffusion-derived maps (FA, MD, RD, AD) remain in their native diffusion space. For many group-level or visualization analyses, however, these images must be aligned to a common reference space so that every voxel corresponds to the same anatomical location across participants.
 This alignment step—performed using FSL’s FLIRT (FMRIB Linear Image Registration Tool)—creates spatially standardized versions of the scalar maps.
@@ -2290,7 +2313,7 @@ derivatives/FLIRT/s1000/
 ```bash
 #!/bin/bash
 # ============================================================
-# 🧠 IMPACT DTI — Step 14: FLIRT + CONVERT (Spatial Alignment)
+# 🧠 IMPACT DTI — Step 12: FLIRT + CONVERT (Spatial Alignment)
 # ============================================================
 
 source /usr/local/fsl/etc/fslconf/fsl.sh
@@ -2394,4 +2417,146 @@ for subj in $(ls -1 "$ants_base"); do
 done
 
 echo -e "\n=== FLIRT + CONVERT Audit Complete ==="
+```
+
+## Step 13: Intracranial Volume (ICV Estimation)
+
+ICV (total volume of CSF, gray matter, and white matter) is estimated from each participant’s skull-stripped T1 image using ANTs’ Atropos segmentation. This value is often used as a covariate in diffusion analyses to control for individual differences in head size.
+ICV is estimated by segmenting T1 images into CSF, GM, and WM using ANTs’ Atropos, then summing their volumes with FSL’s fslstats.
+
+**Inputs (per subject):**
+1. Brain-extracted T1 image
+- /data/projects/STUDIES/IMPACT/DTI/derivatives/ANTs/<subj>/<subj>_BrainExtractionBrain.nii.gz
+2. Brain mask
+- /data/projects/STUDIES/IMPACT/DTI/derivatives/ANTs/<subj>/<subj>_BrainExtractionMask.nii.gz
+
+Expected File Output (per subject):
+```
+derivatives/ICV/<subj>/
+├── anat/
+│   ├── <subj>_BrainExtractionBrain_segmentation_labelled.nii.gz   → 3-class segmentation
+│   ├── <subj>_BrainExtractionBrain_segmentation_prob01.nii.gz     → CSF probability map
+│   ├── <subj>_BrainExtractionBrain_segmentation_prob02.nii.gz     → GM probability map
+│   └── <subj>_BrainExtractionBrain_segmentation_prob03.nii.gz     → WM probability map
+└── icv_results.csv                                                → total ICV summary (CSF+GM+WM)
+```
+**This task is very lightweight, and thus can be pasted directly in the SSH terminal and easily parallelized acorss all 60 participants. If you have more participants than this, you can adjust accordingly.** 
+
+**Paste the following into the terminal:**
+```bash
+#!/bin/bash
+# ============================================================
+# 🧠 IMPACT DTI — Step 13: Intracranial Volume (ICV) Estimation
+# ============================================================
+
+source /usr/local/fsl/etc/fslconf/fsl.sh
+export FSLOUTPUTTYPE=NIFTI_GZ
+
+ANTs_bin="/data/tools/ANTs/bin"
+ants_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/ANTs"
+icv_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/ICV"
+csv_file="$icv_base/icv_results.csv"
+log_file="$HOME/icv.log"
+
+mkdir -p "$icv_base"
+: > "$log_file"
+echo "participant_id,brain_file_name,ICV_mm3" > "$csv_file"
+
+# --- Function to process one subject ---
+process_subj() {
+    subj="$1"
+    subj_dir="$ants_base/$subj"
+    brain_file="$subj_dir/${subj}_BrainExtractionBrain.nii.gz"
+    mask_file="$subj_dir/${subj}_BrainExtractionMask.nii.gz"
+    out_dir="$icv_base/$subj"
+    mkdir -p "$out_dir"
+
+    echo ">>> [$subj] Running Atropos segmentation..." | tee -a "$log_file"
+
+    # Segmentation (probabilistic)
+    "$ANTs_bin/Atropos" -d 3 \
+        -a "$brain_file" \
+        -x "$mask_file" \
+        -i KMeans[3] \
+        -c [5,0.001] \
+        -m [0.3,1x1x1] \
+        -o ["$out_dir/${subj}_seg_labelled.nii.gz","$out_dir/${subj}_seg_prob%02d.nii.gz"]
+
+    # Ensure segmentation maps exist
+    if [[ ! -f "$out_dir/${subj}_seg_prob01.nii.gz" ]]; then
+        echo "!!! [$subj] Segmentation failed — missing prob maps." | tee -a "$log_file"
+        return
+    fi
+
+    # Compute ICV
+    csf=$(fslstats "$out_dir/${subj}_seg_prob01.nii.gz" -V | awk '{print $2}')
+    gm=$(fslstats "$out_dir/${subj}_seg_prob02.nii.gz" -V | awk '{print $2}')
+    wm=$(fslstats "$out_dir/${subj}_seg_prob03.nii.gz" -V | awk '{print $2}')
+
+    icv=$(echo "$csf + $gm + $wm" | bc)
+    echo "$subj,$(basename "$brain_file"),$icv" >> "$csv_file"
+
+    echo ">>> [$subj] Done (ICV = ${icv} mm³)" | tee -a "$log_file"
+}
+
+export -f process_subj
+export ANTs_bin ants_base icv_base csv_file log_file
+
+# --- Parallel run ---
+subjects=$(ls -1 "$ants_base")
+max_jobs=20  # adjust based on system load
+
+echo "Found $(echo "$subjects" | wc -l) subjects. Running up to $max_jobs in parallel..." | tee -a "$log_file"
+
+echo "$subjects" | xargs -n 1 -P "$max_jobs" -I {} bash -c 'process_subj "$@"' _ {}
+
+echo "=== All ICV jobs finished. Results in $csv_file ===" | tee -a "$log_file"
+
+
+```
+* Note - all coding from the icv step will be saved to icv.log
+
+**Audit ICV script**
+
+```bash
+#!/bin/bash
+# ============================================================
+# 🧠 IMPACT DTI — Step 13 Audit: Intracranial Volume (ICV)
+# ============================================================
+
+nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
+ants_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/ANTs"
+icv_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/ICV"
+csv_file="$icv_base/icv_results.csv"
+
+printf "Subject\tBrain\tMask\tProb01\tProb02\tProb03\tCSV\n"
+
+# Loop over subjects that exist in the NIFTI base (expected participants)
+for subj in $(ls -1 "$nifti_base"); do
+    subj_ants="$ants_base/$subj"
+    subj_icv="$icv_base/$subj"
+
+    # Expected ANTs input files
+    brain="$subj_ants/${subj}_BrainExtractionBrain.nii.gz"
+    mask="$subj_ants/${subj}_BrainExtractionMask.nii.gz"
+
+    # Expected ICV output files
+    prob01="$subj_icv/${subj}_seg_prob01.nii.gz"
+    prob02="$subj_icv/${subj}_seg_prob02.nii.gz"
+    prob03="$subj_icv/${subj}_seg_prob03.nii.gz"
+
+    # Checks
+    b_check=$([ -f "$brain" ] && echo "✅" || echo "❌")
+    m_check=$([ -f "$mask" ] && echo "✅" || echo "❌")
+    p1_check=$([ -f "$prob01" ] && echo "✅" || echo "❌")
+    p2_check=$([ -f "$prob02" ] && echo "✅" || echo "❌")
+    p3_check=$([ -f "$prob03" ] && echo "✅" || echo "❌")
+
+    csv_check=$([ -f "$csv_file" ] && grep -q "^$subj," "$csv_file" 2>/dev/null && echo "✅" || echo "❌")
+
+    printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n" \
+        "$subj" "$b_check" "$m_check" "$p1_check" "$p2_check" "$p3_check" "$csv_check"
+done
+
+echo -e "\n=== ICV Audit Complete ==="
 ```
