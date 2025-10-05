@@ -1980,33 +1980,31 @@ Each extraction produces a 4D image containing only the selected shells, along w
 ```bash
 #!/bin/bash
 ###############################################################################
-# IMPACT DTI — Parallel DWIEXTRACT (live + logged output)
+# 🧠 IMPACT DTI — Parallel DWIEXTRACT (live + logged output, stable + safe)
 ###############################################################################
 
-# --- automatic consistent logging ---
+# --- consistent logging (no SSH close) ---
 log_file="$HOME/dwiextract.log"
 : > "$log_file"   # clear previous run
-exec > >(tee -a "$log_file") 2>&1
+echo "=== Starting DWIEXTRACT ===" | tee -a "$log_file"
 
-echo "=== Starting DWIEXTRACT ==="
-
-# --- directories ---
+# --- base directories ---
 base_dir="/data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX"
 mrtrix3_1000_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/mrtrix3_1000"
 mrtrix3_2000_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/mrtrix3_2000"
 
 mkdir -p "$mrtrix3_1000_base" "$mrtrix3_2000_base"
 
+# --- function: process one subject ---
 process_subj() {
     subj="$1"
     subj_dir="$base_dir/$subj/bedpostx_input"
 
-    echo
-    echo ">>> [$subj] START"
+    echo ">>> [$subj] START" | tee -a "$log_file"
 
     mkdir -p "$mrtrix3_1000_base/$subj" "$mrtrix3_2000_base/$subj"
 
-    echo ">>> [$subj] Running dwiextract (b=0,1000)"
+    echo ">>> [$subj] Running dwiextract (b=0,1000)" | tee -a "$log_file"
     dwiextract \
         -fslgrad "$subj_dir/bvecs" "$subj_dir/bvals" \
         -shells 0,1000 \
@@ -2015,9 +2013,9 @@ process_subj() {
         -export_grad_fsl \
         "$mrtrix3_1000_base/$subj/bvecs_1000" \
         "$mrtrix3_1000_base/$subj/bvals_1000" \
-        -force
+        -force 2>&1 | tee -a "$log_file"
 
-    echo ">>> [$subj] Running dwiextract (b=0,1000,2000)"
+    echo ">>> [$subj] Running dwiextract (b=0,1000,2000)" | tee -a "$log_file"
     dwiextract \
         -fslgrad "$subj_dir/bvecs" "$subj_dir/bvals" \
         -shells 0,1000,2000 \
@@ -2026,23 +2024,22 @@ process_subj() {
         -export_grad_fsl \
         "$mrtrix3_2000_base/$subj/bvecs_1000_2000" \
         "$mrtrix3_2000_base/$subj/bvals_1000_2000" \
-        -force
+        -force 2>&1 | tee -a "$log_file"
 
-    echo ">>> [$subj] DONE"
+    echo ">>> [$subj] DONE" | tee -a "$log_file"
 }
 
 export -f process_subj
-export base_dir mrtrix3_1000_base mrtrix3_2000_base
+export base_dir mrtrix3_1000_base mrtrix3_2000_base log_file
 
+# --- find and run subjects in parallel (no hang, no wait) ---
 subjects=$(find "$base_dir" -mindepth 1 -maxdepth 1 -type d -exec basename {} \;)
-echo "Found $(echo "$subjects" | wc -l) subjects. Running in parallel..."
+count=$(echo "$subjects" | wc -l)
+echo "Found $count subjects. Running up to 60 in parallel..." | tee -a "$log_file"
 
-echo "$subjects" | xargs -n 1 -P 60 -I {} bash -c 'process_subj "$@"' _ {}
+echo "$subjects" | xargs -n 1 -P 60 -I {} bash -c 'process_subj "$@"' _ {} | tee -a "$log_file"
 
-wait
-echo "=== All DWIEXTRACT jobs finished ==="
-
-
+echo "=== All DWIEXTRACT jobs finished successfully ===" | tee -a "$log_file"
 
 ```
 Note: All coding output from this script is recorded in dwiextract.log
@@ -2130,29 +2127,27 @@ The DTIFIT tool requires four key inputs per subject:
 # ============================================================
 # 🧠 IMPACT DTI — Step 13: Tensor Fitting (DTIFIT)
 # ============================================================
-# --- Environment setup ---
+
 source /usr/local/fsl/etc/fslconf/fsl.sh
 export FSLOUTPUTTYPE=NIFTI_GZ
+
+# --- Safe logging (no exec redirection, no SSH close) ---
+log_file="$HOME/dtifit.log"
+: > "$log_file"
+echo "=== Starting DTIFIT ===" | tee -a "$log_file"
 
 # --- Base directories ---
 mrtrix3_1000_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/mrtrix3_1000"
 topup_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/TOPUP"
 dtifit_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/DTIFIT_OUTPUT"
-
 mkdir -p "$dtifit_base"
 
-# --- Logging ---
-logfile="dtifit.log"
-: > "$logfile"
-log() { echo "$*" | tee -a "$logfile" ; }
-
-# --- Function: run dtifit + RD calc for one subject ---
+# --- Function ---
 process_subj() {
     subj="$1"
     subj_mrtrix="$mrtrix3_1000_base/$subj"
     subj_topup="$topup_base/$subj/topup_output"
     subj_out="$dtifit_base/$subj"
-
     mkdir -p "$subj_out"
 
     data="$subj_mrtrix/data_1000.nii.gz"
@@ -2160,54 +2155,37 @@ process_subj() {
     bval="$subj_mrtrix/bvals_1000"
     mask="$subj_topup/${subj}_topup_Tmean_brain_mask.nii.gz"
 
-    # Check all required inputs
     if [[ ! -f "$data" || ! -f "$bvec" || ! -f "$bval" || ! -f "$mask" ]]; then
-        log "!!! [$subj] Missing input(s). Skipping."
+        echo "!!! [$subj] Missing input(s). Skipping." | tee -a "$log_file"
         return
     fi
 
-    log ">>> [$subj] Running DTIFIT"
+    echo ">>> [$subj] Running DTIFIT" | tee -a "$log_file"
     {
-        echo "----- [$subj] dtifit start"
-        dtifit -k "$data" \
-               -o "$subj_out/DTI" \
-               -m "$mask" \
-               -r "$bvec" \
-               -b "$bval"
-        echo "----- [$subj] dtifit end"
-        echo
-    } >>"$logfile" 2>&1
+        dtifit -k "$data" -o "$subj_out/DTI" -m "$mask" -r "$bvec" -b "$bval"
 
-    # Compute RD = (L2 + L3)/2
-    if [[ -f "$subj_out/DTI_L2.nii.gz" && -f "$subj_out/DTI_L3.nii.gz" ]]; then
-        log ">>> [$subj] Calculating RD = (L2+L3)/2"
-        fslmaths "$subj_out/DTI_L2.nii.gz" \
-                 -add "$subj_out/DTI_L3.nii.gz" \
-                 -div 2 "$subj_out/DTI_RD.nii.gz"
-    else
-        log "!!! [$subj] Missing L2/L3 for RD computation"
-    fi
+        if [[ -f "$subj_out/DTI_L2.nii.gz" && -f "$subj_out/DTI_L3.nii.gz" ]]; then
+            echo ">>> [$subj] Calculating RD = (L2+L3)/2"
+            fslmaths "$subj_out/DTI_L2.nii.gz" -add "$subj_out/DTI_L3.nii.gz" \
+                     -div 2 "$subj_out/DTI_RD.nii.gz"
+        else
+            echo "!!! [$subj] Missing L2/L3 for RD computation"
+        fi
 
-    log ">>> [$subj] Done"
+        echo ">>> [$subj] Done"
+    } 2>&1 | tee -a "$log_file"
 }
 
 export -f process_subj
-export mrtrix3_1000_base topup_base dtifit_base
-export -f log
+export mrtrix3_1000_base topup_base dtifit_base log_file
 
-# --- Parallel run (max 60 concurrent) ---
+# --- Parallel run ---
 subjects=$(ls -1 "$mrtrix3_1000_base")
-max_jobs=60
-job_count=0
+count=$(echo "$subjects" | wc -l)
+echo "Found $count subjects. Running up to 60 in parallel..." | tee -a "$log_file"
 
-for subj in $subjects; do
-    process_subj "$subj" &
-    ((job_count++))
-    if (( job_count >= max_jobs )); then
-        wait -n
-        ((job_count--))
-    fi
-done
+echo "$subjects" | xargs -n 1 -P 60 -I {} bash -c 'process_subj "$@"' _ {} | tee -a "$log_file"
 
-wait
-log "=== All DTIFIT jobs finished successfully ==="
+echo "=== All $count DTIFIT jobs finished successfully ===" | tee -a "$log_file"
+```
+Note: All coding output from this script is recorded in dwiextract.log
