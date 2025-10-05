@@ -481,7 +481,7 @@ Press Ctrl+X to close
 
 4. We can still watch the progress even though it is running outside of the ssh - by typing: 
 ```bash
-tail -ants.log
+tail -f ants.log
 ```
 - Even if you disconnect, the job keeps running. When you reconnect later, you can just run the same tail -f topup.log command to pick up the log again.
 
@@ -1983,15 +1983,19 @@ Each extraction produces a 4D image containing only the selected shells, along w
 # IMPACT DTI — Parallel DWIEXTRACT (live + logged output)
 ###############################################################################
 
+# --- automatic consistent logging ---
+log_file="$HOME/dwiextract.log"
+: > "$log_file"   # clear previous run
+exec > >(tee -a "$log_file") 2>&1
+
+echo "=== Starting DWIEXTRACT ==="
+
+# --- directories ---
 base_dir="/data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX"
 mrtrix3_1000_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/mrtrix3_1000"
 mrtrix3_2000_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/mrtrix3_2000"
-log_file="/data/projects/STUDIES/IMPACT/DTI/derivatives/dwiextract.log"
 
 mkdir -p "$mrtrix3_1000_base" "$mrtrix3_2000_base"
-: > "$log_file"   # clear previous run log
-
-echo "=== Starting DWIEXTRACT ===" | tee -a "$log_file"
 
 process_subj() {
     subj="$1"
@@ -2031,19 +2035,18 @@ export -f process_subj
 export base_dir mrtrix3_1000_base mrtrix3_2000_base
 
 subjects=$(find "$base_dir" -mindepth 1 -maxdepth 1 -type d -exec basename {} \;)
-echo "Found $(echo "$subjects" | wc -l) subjects. Running in parallel..." | tee -a "$log_file"
+echo "Found $(echo "$subjects" | wc -l) subjects. Running in parallel..."
 
-# --- key line: live and logged output simultaneously ---
-# Everything printed by each job goes through 'tee -a' to both stdout and the log
-echo "$subjects" | xargs -n 1 -P 60 -I {} bash -c 'process_subj "$@" 2>&1 | tee -a "'"$log_file"'"' _ {}
+echo "$subjects" | xargs -n 1 -P 60 -I {} bash -c 'process_subj "$@"' _ {}
 
 wait
-echo "=== All DWIEXTRACT jobs finished ===" | tee -a "$log_file"
+echo "=== All DWIEXTRACT jobs finished ==="
+
 
 
 ```
 Note: All coding output from this script is recorded in dwiextract.log
-To watch progress live: tail -f /data/projects/STUDIES/IMPACT/DTI/derivatives/dwiextract.log
+
 
 
 
