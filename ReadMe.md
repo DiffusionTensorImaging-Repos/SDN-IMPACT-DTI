@@ -1792,12 +1792,31 @@ From topup:
 
 The code will create a folder, derivatives/bedpostx_input, and rename the eddy files to FSL expected files names
 
+**Outputs (per subject)**
 ```
-bedpostx_input/
- ├── data.nii.gz (eddy corrected dwi)
- ├── bvecs (eddy rotated)
- ├── bvals 
- └── nodif_brain_mask.nii.gz (collapsed brain mask)
+derivatives/BEDPOSTX/s1000/
+│
+├── bedpostx_input/                      # input directory prepared for bedpostx
+│   ├── data.nii.gz                      # eddy-corrected diffusion data
+│   ├── bvecs                            # eddy-rotated gradient directions
+│   ├── bvals                            # corresponding b-values
+│   └── nodif_brain_mask.nii.gz          # binary brain mask (from TOPUP mean b0)
+│
+└── bedpostx_input.bedpostX/             # main output directory created by bedpostx
+    ├── dyads1.nii.gz                    # principal fiber orientation (direction)
+    ├── mean_f1samples.nii.gz            # mean fiber fraction (fiber 1)
+    ├── mean_th1samples.nii.gz           # mean theta (fiber 1)
+    ├── mean_ph1samples.nii.gz           # mean phi (fiber 1)
+    ├── merged_f1samples.nii.gz          # merged MCMC samples for fiber 1
+    ├── merged_th1samples.nii.gz         # merged MCMC samples for theta (fiber 1)
+    ├── merged_ph1samples.nii.gz         # merged MCMC samples for phi (fiber 1)
+    ├── merged_f2samples.nii.gz          # merged MCMC samples for fiber 2
+    ├── merged_th2samples.nii.gz         # merged MCMC samples for theta (fiber 2)
+    ├── merged_ph2samples.nii.gz         # merged MCMC samples for phi (fiber 2)
+    ├── merged_f3samples.nii.gz          # merged MCMC samples for fiber 3
+    ├── merged_th3samples.nii.gz         # merged MCMC samples for theta (fiber 3)
+    └── merged_ph3samples.nii.gz         # merged MCMC samples for phi (fiber 3)
+
  ```
 
 - **Note:** Unlike TOPUP/EDDY, which is moderately parallel and safe to run many subjects at once, BEDPOSTX is far more CPU-intensive, using MCMC sampling voxel-by-voxel. We cap threads per job (e.g., 4) and then parallelize across subjects dynamically, so the node stays busy without oversubscribing cores.
@@ -1963,15 +1982,19 @@ Each extraction produces a 4D image containing only the selected shells, along w
 - /data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX/<subj>/bedpostx_input/bvals
 
 **Outputs (per subject):** 
-1. /data/projects/STUDIES/IMPACT/DTI/derivatives/mrtrix3_1000/<subj>/ → DWI volumes containing only b=0 and b=1000
-- data_1000.nii.gz
-- bvecs_1000
-- bvals_1000
-2. /data/projects/STUDIES/IMPACT/DTI/derivatives/mrtrix3_2000/<subj>/ → DWI volumes containing b=0, b=1000, and b=2000
-- data_1000_2000.nii.gz
-- bvecs_1000_2000
-- bvals_1000_2000
+```
+derivatives/mrtrix3_1000/s1000/
+│
+├── data_1000.nii.gz         # DWI volumes including only b=0 and b=1000 shells
+├── bvecs_1000               # gradient directions for b=0,1000 data
+└── bvals_1000               # corresponding b-values
 
+derivatives/mrtrix3_2000/s1000/
+│
+├── data_1000_2000.nii.gz    # DWI volumes including b=0, b=1000, and b=2000 shells
+├── bvecs_1000_2000          # gradient directions for b=0,1000,2000 data
+└── bvals_1000_2000          # corresponding b-values
+```
 
 **This task is very lightweight, and thus can be pasted directly in the SSH terminal and easily parallelized acorss all 60 participants. If you have more participants than this, you can adjust accordingly.** 
 
@@ -2113,10 +2136,16 @@ The DTIFIT tool requires four key inputs per subject:
 /data/projects/STUDIES/IMPACT/DTI/derivatives/TOPUP/<subj>/topup_output/<subj>_topup_Tmean_brain_mask.nii.gz
 
 **Outputs (per subject):**
-1. /data/projects/STUDIES/IMPACT/DTI/derivatives/DTIFIT_OUTPUT/<subj>/DTI_FA.nii.gz
-2. /data/projects/STUDIES/IMPACT/DTI/derivatives/DTIFIT_OUTPUT/<subj>/DTI_MD.nii.gz
-3. /data/projects/STUDIES/IMPACT/DTI/derivatives/DTIFIT_OUTPUT/<subj>/DTI_L1.nii.gz
-4. /data/projects/STUDIES/IMPACT/DTI/derivatives/DTIFIT_OUTPUT/<subj>/DTI_RD.nii.gz (computed as (L2 + L3)/2)
+```
+derivatives/DTIFIT_OUTPUT/s1000/
+│
+├── DTI_FA.nii.gz      # fractional anisotropy map (0–1, white-matter integrity)
+├── DTI_MD.nii.gz      # mean diffusivity map (overall diffusion magnitude)
+├── DTI_L1.nii.gz      # axial diffusivity (principal eigenvalue)
+├── DTI_L2.nii.gz      # secondary eigenvalue
+├── DTI_L3.nii.gz      # tertiary eigenvalue
+└── DTI_RD.nii.gz      # radial diffusivity, computed as (L2 + L3) / 2
+```
 
 
 **This task is very lightweight, and thus can be pasted directly in the SSH terminal and easily parallelized acorss all 60 participants. If you have more participants than this, you can adjust accordingly.** 
@@ -2188,4 +2217,181 @@ echo "$subjects" | xargs -n 1 -P 60 -I {} bash -c 'process_subj "$@"' _ {} | tee
 
 echo "=== All $count DTIFIT jobs finished successfully ===" | tee -a "$log_file"
 ```
-Note: All coding output from this script is recorded in dwiextract.log
+Note: All coding output from this script is recorded in dtifit.log
+
+**Audit script to ensure DTIFIT ran for everyone**
+
+```bash
+#!/bin/bash
+###############################################################################
+# 🧠 IMPACT DTI — DTIFIT Audit (compare against NIFTI base)
+###############################################################################
+
+nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
+dtifit_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/DTIFIT_OUTPUT"
+
+printf "Subject\tFA\tMD\tL1\tL2\tL3\tRD\n"
+
+for subj in $(ls -1 "$nifti_base"); do
+    out_dir="$dtifit_base/$subj"
+
+    fa="$out_dir/DTI_FA.nii.gz"
+    md="$out_dir/DTI_MD.nii.gz"
+    l1="$out_dir/DTI_L1.nii.gz"
+    l2="$out_dir/DTI_L2.nii.gz"
+    l3="$out_dir/DTI_L3.nii.gz"
+    rd="$out_dir/DTI_RD.nii.gz"
+
+    fa_chk=$([ -f "$fa" ] && echo "✅" || echo "❌")
+    md_chk=$([ -f "$md" ] && echo "✅" || echo "❌")
+    l1_chk=$([ -f "$l1" ] && echo "✅" || echo "❌")
+    l2_chk=$([ -f "$l2" ] && echo "✅" || echo "❌")
+    l3_chk=$([ -f "$l3" ] && echo "✅" || echo "❌")
+    rd_chk=$([ -f "$rd" ] && echo "✅" || echo "❌")
+
+    printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n" \
+      "$subj" "$fa_chk" "$md_chk" "$l1_chk" "$l2_chk" "$l3_chk" "$rd_chk"
+done
+
+echo -e "\n=== DTIFIT Audit Complete ==="
+```
+
+## Step 14: FLIRT and CONVERT (Spatial Alignment and Standardization)
+
+After tensor fitting, each participant’s diffusion-derived maps (FA, MD, RD, AD) remain in their native diffusion space. For many group-level or visualization analyses, however, these images must be aligned to a common reference space so that every voxel corresponds to the same anatomical location across participants.
+This alignment step—performed using FSL’s FLIRT (FMRIB Linear Image Registration Tool)—creates spatially standardized versions of the scalar maps.
+
+* Note: While pyAFQ handles its own registration and doesn’t require pre-aligned FA maps, running FLIRT is still useful for quality control, future voxelwise or atlas-based analyses, and maintaining standardized, shareable outputs for visualization or cross-study compatibility.
+
+**Inputs (per subject)**
+
+1. FA map (moving image)
+- /data/projects/STUDIES/IMPACT/DTI/derivatives/DTIFIT_OUTPUT/<subj>/DTI_FA.nii.gz
+2. Template / reference image (fixed)
+- /data/projects/STUDIES/IMPACT/DTI/ANTsTemplate/FA_template.nii.gz
+3. Output directory
+/data/projects/STUDIES/IMPACT/DTI/derivatives/FLIRT/<subj>/
+
+**Expected File Output (Per Subject):**
+```
+derivatives/FLIRT/s1000/
+│
+├── DTI_FA_flirted.nii.gz          # FA map aligned to the study or MNI template
+├── DTI_FA_to_template.mat         # affine transform matrix (FA → template)
+├── DTI_MD_flirted.nii.gz          # MD map transformed using same matrix
+├── DTI_RD_flirted.nii.gz          # RD map transformed using same matrix
+├── DTI_AD_flirted.nii.gz          # AD (L1) map transformed using same matrix
+└── flirt_command.txt              # record of the full FLIRT command used
+```
+
+**This task is very lightweight, and thus can be pasted directly in the SSH terminal and easily parallelized acorss all 60 participants. If you have more participants than this, you can adjust accordingly.** 
+
+**Past the following into the SSH terminal:**
+```bash
+#!/bin/bash
+# ============================================================
+# 🧠 IMPACT DTI — Step 14: FLIRT + CONVERT (Spatial Alignment)
+# ============================================================
+
+source /usr/local/fsl/etc/fslconf/fsl.sh
+export FSLOUTPUTTYPE=NIFTI_GZ
+
+# --- Logging ---
+log_file="$HOME/flirtconvert.log"
+: > "$log_file"
+echo "=== Starting FLIRT + CONVERT ===" | tee -a "$log_file"
+
+# --- Directories ---
+ants_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/ANTs"
+topup_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/TOPUP"
+transform_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/TRANSFORMS"
+template_ref="/usr/local/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz"
+
+mkdir -p "$transform_base"
+
+# --- Function: Run FLIRT + CONVERT for one subject ---
+process_subj() {
+    subj="$1"
+    subj_ants="$ants_base/$subj"
+    subj_topup="$topup_base/$subj/topup_output"
+    subj_out="$transform_base/$subj"
+    mkdir -p "$subj_out"
+
+    t1_brain="$subj_ants/${subj}_BrainExtractionBrain.nii.gz"
+    b0_brain="$subj_topup/${subj}_topup_Tmean_brain.nii.gz"
+
+    # Skip if missing input
+    if [[ ! -f "$t1_brain" || ! -f "$b0_brain" ]]; then
+        echo "!!! [$subj] Missing input(s), skipping" | tee -a "$log_file"
+        return
+    fi
+
+    echo ">>> [$subj] Running FLIRT + CONVERT" | tee -a "$log_file"
+
+    flirt -in "$b0_brain" -ref "$t1_brain" \
+        -omat "$subj_out/diff2str_${subj}.mat" \
+        -searchrx -90 90 -searchry -90 90 -searchrz -90 90 \
+        -dof 6 -cost corratio
+
+    convert_xfm -omat "$subj_out/str2diff_${subj}.mat" \
+        -inverse "$subj_out/diff2str_${subj}.mat"
+
+    flirt -in "$t1_brain" -ref "$template_ref" \
+        -omat "$subj_out/str2standard_${subj}.mat" \
+        -searchrx -90 90 -searchry -90 90 -searchrz -90 90 \
+        -dof 12 -cost corratio
+
+    convert_xfm -omat "$subj_out/standard2str_${subj}.mat" \
+        -inverse "$subj_out/str2standard_${subj}.mat"
+
+    convert_xfm -omat "$subj_out/diff2standard_${subj}.mat" \
+        -concat "$subj_out/str2standard_${subj}.mat" "$subj_out/diff2str_${subj}.mat"
+
+    convert_xfm -omat "$subj_out/standard2diff_${subj}.mat" \
+        -inverse "$subj_out/diff2standard_${subj}.mat"
+
+    echo ">>> [$subj] Done" | tee -a "$log_file"
+}
+
+export -f process_subj
+export ants_base topup_base transform_base template_ref log_file
+
+# --- Parallel Run ---
+subjects=$(ls -1 "$ants_base")
+echo "Found $(echo "$subjects" | wc -l) subjects. Running up to 60 in parallel..." | tee -a "$log_file"
+
+echo "$subjects" | xargs -n 1 -P 60 -I {} bash -c 'process_subj "$@"' _ {}
+
+echo "=== All FLIRT + CONVERT jobs finished ===" | tee -a "$log_file"
+```
+
+Note: All coding output from this script is recorded in flirtconvert.log
+
+**Flirt and Convert Audit Script**
+```bash
+#!/bin/bash
+# ============================================================
+# 🧠 IMPACT DTI — Step 14 Audit: FLIRT + CONVERT Outputs
+# ============================================================
+
+ants_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/ANTs"
+transform_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/TRANSFORMS"
+
+printf "Subject\tdiff2str\tstr2diff\tstr2standard\tstandard2str\tdiff2standard\tstandard2diff\n"
+
+for subj in $(ls -1 "$ants_base"); do
+    subj_dir="$transform_base/$subj"
+
+    d2s=$([ -f "$subj_dir/diff2str_${subj}.mat" ] && echo "✅" || echo "❌")
+    s2d=$([ -f "$subj_dir/str2diff_${subj}.mat" ] && echo "✅" || echo "❌")
+    s2s=$([ -f "$subj_dir/str2standard_${subj}.mat" ] && echo "✅" || echo "❌")
+    st2s=$([ -f "$subj_dir/standard2str_${subj}.mat" ] && echo "✅" || echo "❌")
+    d2st=$([ -f "$subj_dir/diff2standard_${subj}.mat" ] && echo "✅" || echo "❌")
+    st2d=$([ -f "$subj_dir/standard2diff_${subj}.mat" ] && echo "✅" || echo "❌")
+
+    printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n" \
+      "$subj" "$d2s" "$s2d" "$s2s" "$st2s" "$d2st" "$st2d"
+done
+
+echo -e "\n=== FLIRT + CONVERT Audit Complete ==="
+```
