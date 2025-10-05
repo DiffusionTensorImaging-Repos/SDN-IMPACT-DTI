@@ -1979,22 +1979,30 @@ Each extraction produces a 4D image containing only the selected shells, along w
 
 ```bash
 #!/bin/bash
-# ============================================================
-# Step — DWI Extract (b=0,1000 and b=0,1000,2000)
-# ============================================================
+###############################################################################
+# IMPACT DTI — Parallel DWIEXTRACT (live + logged output)
+###############################################################################
 
 base_dir="/data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX"
 mrtrix3_1000_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/mrtrix3_1000"
 mrtrix3_2000_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/mrtrix3_2000"
+log_file="/data/projects/STUDIES/IMPACT/DTI/derivatives/dwiextract.log"
 
 mkdir -p "$mrtrix3_1000_base" "$mrtrix3_2000_base"
+: > "$log_file"   # clear previous run log
+
+echo "=== Starting DWIEXTRACT ===" | tee -a "$log_file"
 
 process_subj() {
     subj="$1"
     subj_dir="$base_dir/$subj/bedpostx_input"
 
+    echo
+    echo ">>> [$subj] START"
+
+    mkdir -p "$mrtrix3_1000_base/$subj" "$mrtrix3_2000_base/$subj"
+
     echo ">>> [$subj] Running dwiextract (b=0,1000)"
-    mkdir -p "$mrtrix3_1000_base/$subj"
     dwiextract \
         -fslgrad "$subj_dir/bvecs" "$subj_dir/bvals" \
         -shells 0,1000 \
@@ -2006,7 +2014,6 @@ process_subj() {
         -force
 
     echo ">>> [$subj] Running dwiextract (b=0,1000,2000)"
-    mkdir -p "$mrtrix3_2000_base/$subj"
     dwiextract \
         -fslgrad "$subj_dir/bvecs" "$subj_dir/bvals" \
         -shells 0,1000,2000 \
@@ -2017,21 +2024,29 @@ process_subj() {
         "$mrtrix3_2000_base/$subj/bvals_1000_2000" \
         -force
 
-    echo ">>> [$subj] Done!"
+    echo ">>> [$subj] DONE"
 }
 
 export -f process_subj
 export base_dir mrtrix3_1000_base mrtrix3_2000_base
 
 subjects=$(find "$base_dir" -mindepth 1 -maxdepth 1 -type d -exec basename {} \;)
-echo "Found $(echo "$subjects" | wc -l) subjects. Running dwiextract in parallel..."
+echo "Found $(echo "$subjects" | wc -l) subjects. Running in parallel..." | tee -a "$log_file"
 
-echo "$subjects" | xargs -n 1 -P 60 -I {} bash -c 'process_subj "$@"' _ {}
+# --- key line: live and logged output simultaneously ---
+# Everything printed by each job goes through 'tee -a' to both stdout and the log
+echo "$subjects" | xargs -n 1 -P 60 -I {} bash -c 'process_subj "$@" 2>&1 | tee -a "'"$log_file"'"' _ {}
 
 wait
-echo "=== All DWI extraction jobs finished ==="
+echo "=== All DWIEXTRACT jobs finished ===" | tee -a "$log_file"
+
 
 ```
+Note: All coding output from this script is recorded in dwiextract.log
+To watch progress live: tail -f /data/projects/STUDIES/IMPACT/DTI/derivatives/dwiextract.log
+
+
+
 **AUDIT script to make sure dwi extract worked properly for all participants**
 ```bash
 
@@ -2076,4 +2091,120 @@ done
 echo -e "\n=== DWI Extract Audit Complete ==="
 ```
 ---
-## Step 13
+## Step 13 Tensor Fitting (DTIFIT)
+
+After extracting the desired diffusion shells (b=0, 1000), the next step is to fit a diffusion tensor model to each participant’s DWI data. This is done using FSL’s dtifit, which estimates voxelwise diffusion tensor parameters including fractional anisotropy (FA), mean diffusivity (MD), axial diffusivity (AD/L1), and radial diffusivity (RD, derived as the mean of L2 and L3).
+
+* Note: This model assumes diffusion is Gaussian within each voxel, which holds true at lower b-values (≤1000 s/mm²).Including higher shells (e.g., b=2000) can bias tensor estimates, so for DTIFIT, we restrict input to b=0 and b=1000 volumes.
+
+The DTIFIT tool requires four key inputs per subject:
+1. The diffusion-weighted image (data_1000.nii.gz)
+2. Corresponding gradient direction files (bvecs_1000, bvals_1000)
+3. A binary brain mask to constrain tensor fitting to brain voxels
+4. An output prefix to specify where to save resulting tensor maps
+
+**Expected Input structure:**
+1. DWI data (b=0 and 1000 only):
+- /data/projects/STUDIES/IMPACT/DTI/derivatives/mrtrix3_1000/<subj>/data_1000.nii.gz
+2. Gradient tables:
+- /data/projects/STUDIES/IMPACT/DTI/derivatives/mrtrix3_1000/<subj>/bvecs_1000
+- /data/projects/STUDIES/IMPACT/DTI/derivatives/mrtrix3_1000/<subj>/bvals_1000
+3. Brain mask:
+/data/projects/STUDIES/IMPACT/DTI/derivatives/TOPUP/<subj>/topup_output/<subj>_topup_Tmean_brain_mask.nii.gz
+
+**Outputs (per subject):**
+1. /data/projects/STUDIES/IMPACT/DTI/derivatives/DTIFIT_OUTPUT/<subj>/DTI_FA.nii.gz
+2. /data/projects/STUDIES/IMPACT/DTI/derivatives/DTIFIT_OUTPUT/<subj>/DTI_MD.nii.gz
+3. /data/projects/STUDIES/IMPACT/DTI/derivatives/DTIFIT_OUTPUT/<subj>/DTI_L1.nii.gz
+4. /data/projects/STUDIES/IMPACT/DTI/derivatives/DTIFIT_OUTPUT/<subj>/DTI_RD.nii.gz (computed as (L2 + L3)/2)
+
+
+**This task is very lightweight, and thus can be pasted directly in the SSH terminal and easily parallelized acorss all 60 participants. If you have more participants than this, you can adjust accordingly.** 
+
+**Paste the following into the terminal**: 
+```bash
+#!/bin/bash
+# ============================================================
+# 🧠 IMPACT DTI — Step 13: Tensor Fitting (DTIFIT)
+# ============================================================
+# --- Environment setup ---
+source /usr/local/fsl/etc/fslconf/fsl.sh
+export FSLOUTPUTTYPE=NIFTI_GZ
+
+# --- Base directories ---
+mrtrix3_1000_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/mrtrix3_1000"
+topup_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/TOPUP"
+dtifit_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/DTIFIT_OUTPUT"
+
+mkdir -p "$dtifit_base"
+
+# --- Logging ---
+logfile="dtifit.log"
+: > "$logfile"
+log() { echo "$*" | tee -a "$logfile" ; }
+
+# --- Function: run dtifit + RD calc for one subject ---
+process_subj() {
+    subj="$1"
+    subj_mrtrix="$mrtrix3_1000_base/$subj"
+    subj_topup="$topup_base/$subj/topup_output"
+    subj_out="$dtifit_base/$subj"
+
+    mkdir -p "$subj_out"
+
+    data="$subj_mrtrix/data_1000.nii.gz"
+    bvec="$subj_mrtrix/bvecs_1000"
+    bval="$subj_mrtrix/bvals_1000"
+    mask="$subj_topup/${subj}_topup_Tmean_brain_mask.nii.gz"
+
+    # Check all required inputs
+    if [[ ! -f "$data" || ! -f "$bvec" || ! -f "$bval" || ! -f "$mask" ]]; then
+        log "!!! [$subj] Missing input(s). Skipping."
+        return
+    fi
+
+    log ">>> [$subj] Running DTIFIT"
+    {
+        echo "----- [$subj] dtifit start"
+        dtifit -k "$data" \
+               -o "$subj_out/DTI" \
+               -m "$mask" \
+               -r "$bvec" \
+               -b "$bval"
+        echo "----- [$subj] dtifit end"
+        echo
+    } >>"$logfile" 2>&1
+
+    # Compute RD = (L2 + L3)/2
+    if [[ -f "$subj_out/DTI_L2.nii.gz" && -f "$subj_out/DTI_L3.nii.gz" ]]; then
+        log ">>> [$subj] Calculating RD = (L2+L3)/2"
+        fslmaths "$subj_out/DTI_L2.nii.gz" \
+                 -add "$subj_out/DTI_L3.nii.gz" \
+                 -div 2 "$subj_out/DTI_RD.nii.gz"
+    else
+        log "!!! [$subj] Missing L2/L3 for RD computation"
+    fi
+
+    log ">>> [$subj] Done"
+}
+
+export -f process_subj
+export mrtrix3_1000_base topup_base dtifit_base
+export -f log
+
+# --- Parallel run (max 60 concurrent) ---
+subjects=$(ls -1 "$mrtrix3_1000_base")
+max_jobs=60
+job_count=0
+
+for subj in $subjects; do
+    process_subj "$subj" &
+    ((job_count++))
+    if (( job_count >= max_jobs )); then
+        wait -n
+        ((job_count--))
+    fi
+done
+
+wait
+log "=== All DTIFIT jobs finished successfully ==="
