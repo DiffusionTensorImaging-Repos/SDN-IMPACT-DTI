@@ -58,7 +58,6 @@ Index — IMPACT DTI Preprocessing Pipeline
 9. [Step 9: BedpostX](#step-9-bedpostx)
 10. [Step 10: DWI Shell Extraction](#step-10-dwi-shell-extraction)
 11. [Step 11 Tensor Fitting (DTIFIT)](#step-11-tensor-fitting-dtifit)
-
 12. [Step 12: FLIRT and CONVERT (Spatial Alignment and Standardization)](#step-12-flirt-and-convert-spatial-alignment-and-standardization)
 13. [Step 13: Intracranial Volume (ICV Estimation)](#step-13-intracranial-volume-icv-estimation)
 14. [Step 14: PYAFQ - BIDS and Running AFQ](#step-14-pyafq---bids-and-running-afq)
