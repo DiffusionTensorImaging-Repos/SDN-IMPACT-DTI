@@ -1771,8 +1771,19 @@ tail -n 20 "$out_txt"
 
 ```
 
-This will compile the participant movement metrics with the total absolute motion and outlier %'s from SQUAD into a text file. I moved this and the SQUAD output onto a local computer in order to check output: 
+This will compile the participant movement metrics with the total absolute motion and outlier %'s from SQUAD into a text file. 
 
+The following forum confirms that we have correctly interpreted our quad/output when converting it to  a summary txt file: https://www.jiscmail.ac.uk/cgi-bin/wa-jisc.exe?A2=FSL%3B8570b55c.1904&utm: 
+
+```
+qc_mot_abs → abs_motion
+qc_mot_rel → rel_motion
+qc_outliers_tot (or outlier_prop) → out_prop → out_pct
+From group_db.json:
+"qc_motion" → motions
+"qc_outliers" → outliers
+```
+I moved this summary file and the SQUAD output onto a local computer in order to check output.
 ```bash
 scp -Cp tur50045@cla19097.tu.temple.edu:/data/projects/STUDIES/IMPACT/DTI/derivatives/qc_summary.txt \
        tur50045@cla19097.tu.temple.edu:/data/projects/STUDIES/IMPACT/DTI/derivatives/SQUAD \
