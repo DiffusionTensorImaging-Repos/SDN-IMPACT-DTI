@@ -1711,11 +1711,8 @@ PY
 )
 
   if [[ -n "$out_prop" ]]; then
-    if (( $(echo "$out_prop <= 1" | bc -l) )); then
-      out_pct=$(awk -v v="$out_prop" 'BEGIN{printf("%.2f",v*100)}')
-    else
-      out_pct=$(awk -v v="$out_prop" 'BEGIN{printf("%.2f",v)}')
-    fi
+    # qc_outliers_tot is already expressed as percent of slices
+    out_pct=$(awk -v v="$out_prop" 'BEGIN{printf("%.2f",v)}')
   else
     out_pct="NA"
   fi
@@ -1771,6 +1768,7 @@ echo "=== Done. Summary written to: $out_txt ==="
 tail -n 20 "$out_txt"
 
 
+
 ```
 
 This will compile the participant movement metrics with the total absolute motion and outlier %'s from SQUAD into a text file. I moved this and the SQUAD output onto a local computer in order to check output: 
@@ -1784,7 +1782,8 @@ Here is what our combine qc summary looks like:
 
 ![qcsum](images/qc_summary.png)
 
-**Interpretation:** We found that head motion was low across participants, with mean average absolute motion of 0.27 mm (SD = 0.13), and no subjects exceeded the 2 mm exclusion threshold. Mean frequency of outlier slices was 1.42% (SD = 2.23%). Quad output for some participants scans show inflated outlier percentages despite low movement—this can happen when a single bad volume marks many slices as outliers, which we will handle during manual FSLEYES visual check.
+**Interpretation:** We found that head motion was low across participants, with mean average absolute motion of 0.27 mm (SD = 0.13), and no subjects exceeded the 2 mm exclusion threshold. Mean frequency of outlier slices was 1.42% (SD = 2.23%). 
+
 
 **Fsl squad** will also produce a pdf with this output: 
 
