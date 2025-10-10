@@ -1561,7 +1561,7 @@ echo -e "\n=== EDDY audit finished ==="
 
 To run these scripts: 
 
-1. The repol flag step is handled in the eddy script, so let's start with ...
+1. The repol flag step is handled in the eddy script, so let's start with eddy Quad (step 2)
 
 2. Eddy QUAD/SQUAD: 
 
@@ -1800,9 +1800,22 @@ Here is what our combine qc summary looks like:
 
 ![squadsum](images/squad_summary.png)
 
-3. Lastly, we will visuall inspect the eddy output for each participant to exlcude those with >5 volumes with visible eddy motion artifacts. 
 
-[insert visual motion correction  - using photos/fsl prep]
+3. **Lastly, for step 3, we will visuall inspect the eddy output for each participant to exlcude those with >5 volumes with visible eddy motion artifacts.** 
+
+This step will use FSL. Because I prefer to run fsleyes externally to the Linux I copied these files locally: 
+```bash
+rsync -avz \
+tur50045@cla19097:/data/projects/STUDIES/IMPACT/DTI/derivatives/EDDY/ \
+/Users/dannyzweben/Desktop/SDN/DTI/eddyqc/manualcheck/ \
+--include="*/" \
+--include="*eddy_outlier_free_data.nii.gz" \
+--exclude="*"
+```
+
+Next, let's open fsleyes, to begin manually inspecting each participant. 
+
+
 
 ---
 ## Step 9: BedpostX
@@ -1815,8 +1828,9 @@ FSL BEDPOSTX (Bayesian Estimation of Diffusion Parameters Obtained using Samplin
 
 **Inputs (per subject)**
 
+- * Note - make sure to use the version of eddy output with outliers replaced (see below)
 From eddy step: 
-- <subj>_eddy.nii.gz → eddy-corrected DWI
+- <subj>_eddy.eddy_outlier_free_data.nii.gz → eddy-corrected DWI (with repol; falls back to <subj>_eddy.nii.gz if not present)
 - <subj>_eddy.eddy_rotated_bvecs → rotated b-vectors
 - <subj>_dwi_no_b250.bval (from denoise step, unchanged by eddy) → b-values
 
