@@ -2114,9 +2114,6 @@ echo "=== All DWIEXTRACT jobs finished successfully ===" | tee -a "$log_file"
 ```
 Note: All coding output from this script is recorded in dwiextract.log
 
-
-
-
 **AUDIT script to make sure dwi extract worked properly for all participants**
 
 ```bash
