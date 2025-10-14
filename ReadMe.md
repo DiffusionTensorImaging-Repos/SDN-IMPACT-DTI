@@ -2114,6 +2114,7 @@ echo "=== All DWIEXTRACT jobs finished successfully ===" | tee -a "$log_file"
 ```
 Note: All coding output from this script is recorded in dwiextract.log
 
+
 **AUDIT script to make sure dwi extract worked properly for all participants**
 
 ```bash
@@ -2443,6 +2444,7 @@ echo -e "\n=== FLIRT + CONVERT Audit Complete ==="
 
 ## Step 13: Intracranial Volume (ICV Estimation)
 
+
 ICV (total volume of CSF, gray matter, and white matter) is estimated from each participant’s skull-stripped T1 image using ANTs’ Atropos segmentation. This value is often used as a covariate in diffusion analyses to control for individual differences in head size.
 ICV is estimated by segmenting T1 images into CSF, GM, and WM using ANTs’ Atropos, then summing their volumes with FSL’s fslstats.
 
@@ -2582,6 +2584,7 @@ done
 
 echo -e "\n=== ICV Audit Complete ==="
 ```
+
 ## Step 14: PYAFQ - BIDS and Running AFQ 
 
 This script organizes all preprocessed DTI outputs (from EDDY, BEDPOSTX, and ANTs) into a BIDS-compliant directory structure expected by pyAFQ.
