@@ -1813,7 +1813,7 @@ tur50045@cla19097:/data/projects/STUDIES/IMPACT/DTI/derivatives/EDDY/ \
 --exclude="*"
 ```
 
-Next, let's open fsleyes, to begin manually inspecting each participant. 
+Next, we'll open fsleyes, to begin manually inspecting each participant. 
 
 
 
