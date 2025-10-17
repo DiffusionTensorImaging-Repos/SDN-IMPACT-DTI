@@ -2197,6 +2197,7 @@ derivatives/DTIFIT_OUTPUT/s1000/
 **This task is very lightweight, and thus can be pasted directly in the SSH terminal and easily parallelized acorss all 60 participants. If you have more participants than this, you can adjust accordingly.** 
 
 **Paste the following into the terminal**: 
+
 ```bash
 #!/bin/bash
 # ============================================================
