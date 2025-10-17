@@ -1803,6 +1803,14 @@ Here is what our combine qc summary looks like:
 
 3. **Lastly, for step 3, we will visuall inspect the eddy output for each participant to exlcude those with >5 volumes with visible eddy motion artifacts.** 
 
+Data will be visually inspected for motion-related and signal-intensity artifacts in the EDDY-corrected diffusion volumes, and participants with more than five volumes showing excessive signal dropout or distortion were excluded from further analysis.
+
+Volumes with visible horizontal banding or clean slice lines indicating within-volume motion or signal corruption were marked as outliers: 
+
+![eddymotionoutlier](images/eddyoutlierlines.png)
+
+
+
 This step will use FSL. Because I prefer to run fsleyes externally to the Linux I copied these files locally: 
 ```bash
 rsync -avz \
@@ -1813,6 +1821,8 @@ tur50045@cla19097:/data/projects/STUDIES/IMPACT/DTI/derivatives/EDDY/ \
 --exclude="*"
 ```
 
+
+
 Next, we'll open fsleyes, to begin manually inspecting each participant. 
 
 
@@ -1822,34 +1832,25 @@ From terminal, launch:
 fsleyes
 ```
 
-When FSL opens, hit the plus button in the bottom left, to add an image. 
+When FSL opens, hit the plus button in the bottom left, to add an image. Add the eddy output data for a given subject. Make sure it is the output that utlized eddy repol (####_eddy.eddy_outlier_free_data)
 
-![Base FSL](images/fsl_base.png)
+![eddy base](images/eddymanopen.png)
 
-Next, we wil overlaying Structural and ANTS Images
 
-For each participant:  
-1. Load the participant’s NIFTI structural scan.  
-2. Hit the **plus (+)** to add the ANTS-stripped version.  
-3. Move the stripped brain above the struct.  
-![overlay](images/struct.ants.overlay.png)     
 
-4. Change the stripped brain’s color so the extraction edges are visible:  
-![antscheck](images/Antscheck.color.png)
+Next, for each participant, adjust the brightness and contrast so that each volume will be visible, and beging inspecting each volume for execssive motion, which would like like the example given above. Make sure you inspect every volume. This can be done relatively quickly for each volume
+(note: the example below depicts volumes where no outliers are detected)
 
-5. We want to make sure that for each participant, the stripped brain fully covers the T1 brain and doesn't capture non brain structures.  
 
-6. Example of a Good Extraction -- For confidentiality this is generic example not from our data base.
-![Good Skull Strip Example](images/skullcheck.png)
+![overlay](images/eddyvid.gif)     
 
-7. Here it is good to begin keeping a csv to track your progress. 
-I track each participant's progress after skullstripping. 
-![Good Skull Strip Example](images/datatracker.png)
+In a data tracker, for each participant list which volumes are outliers. **If it is more than 5** then exlcude that participant. 
 
-**Note:** If extraction cuts off brain or pulls in excesive spine/scalp/neck, exclude and note. This should be a rare issue (~all participants should be stripped propely if you used a good mask/template), if you run into several issues,switch template (NKI worked perfectly with IMPACT).
 
-If you have found good mask and made sure it worked for ~all participants, we can move to the next step: 
+![eddy tracker](images/eddytracker.png)
 
+
+Repeat this step for all participants. 
 
 ---
 ## Step 9: BedpostX
