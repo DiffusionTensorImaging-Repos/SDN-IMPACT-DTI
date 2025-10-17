@@ -1,6 +1,6 @@
 ﻿PID,ANTs Check,EDDY CHECK
-s0105-pilot,NA,
-s169,NA,
+s0105-pilot,NA,NA
+s169,NA,NA
 s4222,NA,
 s4418,NA,
 s4450,NA,
@@ -36,7 +36,7 @@ s4436,NA,
 s4631,NA,
 s807,NA,
 s1324,NA,
-s35,NA,
+s35,NA,NA
 s4351,NA,
 s4440,NA,
 s4643,NA,
