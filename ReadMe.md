@@ -1816,6 +1816,40 @@ tur50045@cla19097:/data/projects/STUDIES/IMPACT/DTI/derivatives/EDDY/ \
 Next, we'll open fsleyes, to begin manually inspecting each participant. 
 
 
+ **Open FSLeyes**
+From terminal, launch:
+```bash
+fsleyes
+```
+
+When FSL opens, hit the plus button in the bottom left, to add an image. 
+
+![Base FSL](images/fsl_base.png)
+
+Next, we wil overlaying Structural and ANTS Images
+
+For each participant:  
+1. Load the participant’s NIFTI structural scan.  
+2. Hit the **plus (+)** to add the ANTS-stripped version.  
+3. Move the stripped brain above the struct.  
+![overlay](images/struct.ants.overlay.png)     
+
+4. Change the stripped brain’s color so the extraction edges are visible:  
+![antscheck](images/Antscheck.color.png)
+
+5. We want to make sure that for each participant, the stripped brain fully covers the T1 brain and doesn't capture non brain structures.  
+
+6. Example of a Good Extraction -- For confidentiality this is generic example not from our data base.
+![Good Skull Strip Example](images/skullcheck.png)
+
+7. Here it is good to begin keeping a csv to track your progress. 
+I track each participant's progress after skullstripping. 
+![Good Skull Strip Example](images/datatracker.png)
+
+**Note:** If extraction cuts off brain or pulls in excesive spine/scalp/neck, exclude and note. This should be a rare issue (~all participants should be stripped propely if you used a good mask/template), if you run into several issues,switch template (NKI worked perfectly with IMPACT).
+
+If you have found good mask and made sure it worked for ~all participants, we can move to the next step: 
+
 
 ---
 ## Step 9: BedpostX
@@ -2689,4 +2723,4 @@ for subj_dir in "$eddy_base"/*/; do
     echo "Done: $subj" | tee -a "$log_file"
 done
 ```
-* Note: All output code from this script will be saved to 
+* Note: All output code from this script will be saved to pyAFQ_prep.log
