@@ -2418,7 +2418,7 @@ Note: All coding output from this script is recorded in flirtconvert.log
 ```bash
 #!/bin/bash
 # ============================================================
-# 🧠 IMPACT DTI — Step 14 Audit: FLIRT + CONVERT Outputs
+# 🧠 IMPACT DTI — Step 12 Audit: FLIRT + CONVERT Outputs
 # ============================================================
 
 ants_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/ANTs"
