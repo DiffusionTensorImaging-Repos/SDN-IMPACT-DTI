@@ -1844,6 +1844,14 @@ Next, for each participant, adjust the brightness and contrast so that each volu
 
 ![overlay](images/eddyvid.gif)     
 
+**Note:** Very minor motion may appear as ***slight*** blurring or ghosting across slices and is acceptable.
+
+Example: 
+![minormotion](images/minormotion.png)
+
+
+ In contrast, outlier volumes - depicted earlier - show distinct horizontal bands or sharp slice discontinuities that indicate severe motion or signal dropout. 
+
 In a data tracker, for each participant list which volumes are outliers. **If it is more than 5** then exlcude that participant. 
 
 
