@@ -1801,7 +1801,7 @@ Here is what our combine qc summary looks like:
 ![squadsum](images/squad_summary.png)
 
 
-3. **Lastly, for step 3, we will visuall inspect the eddy output for each participant to exlcude those with >5 volumes with visible eddy motion artifacts.** 
+3. **Lastly, for step 3, we will visually inspect the eddy output for each participant to exlcude those with >5 volumes with visible eddy motion artifacts.** 
 
 Data will be visually inspected for motion-related and signal-intensity artifacts in the EDDY-corrected diffusion volumes, and participants with more than five volumes showing excessive signal dropout or distortion were excluded from further analysis.
 
