@@ -1807,6 +1807,8 @@ Data will be visually inspected for motion-related and signal-intensity artifact
 
 Volumes with visible horizontal banding or clean slice lines indicating within-volume motion or signal corruption were marked as outliers: 
 
+* Below is an example of a volume that would be indicated as having excessive/outlier motion: 
+
 ![eddymotionoutlier](images/eddyoutlierlines.png)
 
 
@@ -1826,19 +1828,25 @@ tur50045@cla19097:/data/projects/STUDIES/IMPACT/DTI/derivatives/EDDY/ \
 Next, we'll open fsleyes, to begin manually inspecting each participant. 
 
 
- **Open FSLeyes**
+1.  **Open FSLeyes**
+
 From terminal, launch:
 ```bash
 fsleyes
 ```
+
+2. Open participant level eddy data 
 
 When FSL opens, hit the plus button in the bottom left, to add an image. Add the eddy output data for a given subject. Make sure it is the output that utlized eddy repol (####_eddy.eddy_outlier_free_data)
 
 ![eddy base](images/eddymanopen.png)
 
 
+3. Adjust brightness/contrast, and begin inspecting each volume. 
 
-Next, for each participant, adjust the brightness and contrast so that each volume will be visible, and beging inspecting each volume for execssive motion, which would like like the example given above. Make sure you inspect every volume. This can be done relatively quickly for each volume
+Next, for each participant, adjust the brightness and contrast until you find a level for which each volume will be visible, and begin inspecting each volume for execssive motion, which would like like the example given above.
+
+ Make sure you inspect every volume. This can be done relatively quickly for each volume
 (note: the example below depicts volumes where no outliers are detected)
 
 
@@ -1847,12 +1855,13 @@ Next, for each participant, adjust the brightness and contrast so that each volu
 **Note:** Very minor motion may appear as ***slight*** blurring or ghosting across slices and is acceptable.
 
 Example: 
+
 ![minormotion](images/minormotion.png)
 
 
  In contrast, outlier volumes - depicted earlier - show distinct horizontal bands or sharp slice discontinuities that indicate severe motion or signal dropout. 
 
-In a data tracker, for each participant list which volumes are outliers. **If it is more than 5** then exlcude that participant. 
+In a data tracker, for each participant, list which volumes are outliers. **If it is more than 5** exlcude that participant. 
 
 
 ![eddy tracker](images/eddytracker.png)
