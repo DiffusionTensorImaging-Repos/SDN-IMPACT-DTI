@@ -559,8 +559,9 @@ rsync -av \
   /Users/dannyzweben/Desktop/SDN/DTI/data.check/
 
 #then the full T1
+
 rsync -av \
-  "tur50045@cla19097:/data/projects/STUDIES/IMPACT/DTI/derivatives/ANTs/{s1228-pilot,s4418,s4419,s4423,s4427,s4429,s4436,s4440,s4446,s4447,s4449,s4450,s4459,s4475,s4482,s4531,s4631,s4643,s4650,s523,s601,s606,s673,s692,s701,s745,s807,s926}/*BrainExtractionBrain.nii.gz" \
+  "tur50045@cla19097:/data/projects/STUDIES/IMPACT/DTI/NIFTI/{s1228-pilot,s4418,s4419,s4423,s4427,s4429,s4436,s4440,s4446,s4447,s4449,s4450,s4459,s4475,s4482,s4531,s4631,s4643,s4650,s523,s601,s606,s673,s692,s701,s745,s807,s926}/struct/*_struct.nii" \
   /Users/dannyzweben/Desktop/SDN/DTI/data.check/
 ```
 
