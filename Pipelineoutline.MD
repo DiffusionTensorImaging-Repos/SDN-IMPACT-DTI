@@ -34,7 +34,20 @@ We will also provide links to resources for the following:
 
 Diffusion Tensor Imaging (DTI) preprocessing transforms raw diffusion scans into scientifically usable measures of white matter structure (like FA, MD, and RD). Each step removes artifacts, aligns data, and prepares it for tractography and statistical analyses. Below is an expanded overview of what happens at each stage.
 
+## Why this specific pipline?
+
+This sequence reflects the standardized preprocessing flow used across modern diffusion MRI research—including projects like the Human Connectome Project (HCP), UK Biobank, ABCD, etc...
+
+The papers below provide an overview of these steps and their importance to DTI preprocessing 
+
+https://www.sciencedirect.com/science/article/pii/S1053811921011010
+
+The core stages of the pipeline below: stages—brain extraction, noise and Gibbs correction, motion and eddy-current correction, susceptibility distortion correction, and spatial alignment, have become widely accepted as the minimum set of operations required for reliable diffusion metrics and tractography.
+
+* (Note: Minor implementation details here (e.g., concatenating reversed B0s for TOPUP, averaging B0s for masking) are software-specific requirements, not conceptual differences, so they aren't outlined in every paper that details this pipeline.)
 ---
+
+# What are the steps in the pipeline: 
 
 ### **1. DICOM → NIfTI Conversion**
 
