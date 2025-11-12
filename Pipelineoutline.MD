@@ -4,9 +4,15 @@ Diffusion Tensor Imaging (DTI) preprocessing is the foundation for all diffusion
 
 This tutorial provides a conceptual roadmap to the core preprocessing sequence used in the SDN Lab / IMPACT project, outlining:
 
-What each step accomplishes
-Why it’s necessary for reliable DTI data
-Which tools are typically used
+1. What each step accomplishes
+2. Why it’s necessary for reliable DTI data
+3. Which tools are typically used
+
+We will also provide links to resources for the following: 
+1. How to use the terminal and write bash scripts
+2. Understanding the DTI pipeline and DTI data
+3. How to download and prep each of the softwares that the pipeline uses. 
+
 
 
 | Order | Stage                          | Core Purpose                                                             | Main Tool(s)                          |
@@ -23,14 +29,6 @@ Which tools are typically used
 |   10  | **AFQ Prep / BIDS Conversion** | Organizes data for tractography and quality control                      | `pyAFQ`, `AFQ-Browser`                |
 |   11  | **ICV Calculation**            | Estimates intracranial volume for normalization                          | `FSL` or `ANTs`                       |
 
-
-# A more in depth overview: 
-
-Perfect — so that table you showed (the one with DICOM → NIfTI, Skull Stripping, etc.) is great as a *summary* for people who already know roughly what DTI preprocessing is.
-
-For a more **in-depth review that introduces beginners to what’s actually happening and why**, you can structure it like this — essentially turning the table into a **mini-tutorial overview** that explains *what each step does, why it matters, and what tool performs it*.
-
----
 
 ## 🧠 DTI Preprocessing: A Conceptual Overview
 
