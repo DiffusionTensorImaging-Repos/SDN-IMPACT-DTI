@@ -5,7 +5,7 @@
  1. SSH Into the Linux
 From your local terminal:
 ```bash
-ssh tur50045@cla19097.tu.temple.edu
+ssh -XY tur50045@cla19097.tu.temple.edu
 ```
 
 2. Navigate to Project Impact DICOMs
