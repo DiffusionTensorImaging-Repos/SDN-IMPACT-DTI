@@ -27,7 +27,7 @@ mkdri /DTI/config ##we will put configuration txt files neccesary for DTI prepro
 * Note: All the configutation files needed for this pipeline can be found in the /config folder of this repo: https://github.com/DiffusionTensorImaging-Repos/SDN-IMPACT-DTI/tree/bd9b3a1670651fc73af3fec46001cdf099ea086b/config
 
 ## What does the DTI pipeline ential?
-- **Note** - see github repo for a a breif description of each of the steps below: https://github.com/DiffusionTensorImaging-Repos/LITe-DTI-Preprocessing-Scripts/blob/main/README.md
+- **Note** - see github repo for a a breif description of each of the steps below:https://github.com/DiffusionTensorImaging-Repos/SDN-IMPACT-DTI/blob/main/Pipelineoutline.MD
 
 - Additionally all steps are described in detail before their implimentation below. 
 
