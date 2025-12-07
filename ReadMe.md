@@ -416,7 +416,7 @@ Swap:         2.0Gi          0B       2.0Gi
 With 114 GB free, we could theoretically run ≈38 jobs in parallel (114 ÷ 3).  
 To be safe but still efficient, we cap at 30 jobs (max_jobs=30).
 
-**This script will use the antsBrainExtraction.sh functino from the ANTs library:** 
+**This script will use the antsBrainExtraction.sh function from the ANTs library:** 
 
 **Note** — This step may take a while (1-2 hours), so we run it as a background script in Nohup to avoid it terminating in the case ssh disruptions. Here is how to run The Bash Code in Nohup:
 
