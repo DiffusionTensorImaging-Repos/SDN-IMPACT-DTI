@@ -64,10 +64,10 @@ Index — IMPACT DTI Preprocessing Pipeline
 
 Index — IMPACT DTI Tractography Pipeline (Section B)
 15. [Step 15 — MRtrix Conversion (mrconvert)](#step-15--mrtrix-conversion-mrconvert)
-16. Step 16 — Response Function Estimation (dwi2response)
-17. Step 17 — Group-Average Response Functions (responsemean)
-18. Step 18 — Fiber Orientation Distribution (dwi2fod MSMT-CSD)
-19. Step 19 — FOD Normalization (mtnormalise)
+16. [Step 16 — Response Function Estimation (dwi2response)](#step-16--response-function-estimation-dwi2response)
+17. [Step 17 — Group-Average Response Functions (responsemean)](#step-17--group-average-response-functions-responsemean)
+18. [Step 18 — Fiber Orientation Distribution (dwi2fod MSMT-CSD)](#step-18--fiber-orientation-distribution-dwi2fod-msmt-csd)
+19. [Step 19 — FOD Normalization (mtnormalise)](#step-19--fod-normalization-mtnormalise)
 20. Step 20 — ANTs Registration: MNI → T1 Space
 21. Step 21 — ROI Warping: MNI → T1 → Diffusion Space
 22. Step 22 — Atlas-Based Exclusion Masks
@@ -2933,4 +2933,540 @@ for subj in $(ls -1 "$nifti_base"); do
 done
 
 echo -e "\n=== mrconvert Audit Complete ==="
+```
+
+---
+
+## Step 16 — Response Function Estimation (dwi2response)
+
+Before we can model fiber orientations, MRtrix needs to know what the diffusion signal looks like inside each tissue type — white matter, gray matter, and CSF. The **Dhollander algorithm** (`dwi2response dhollander`) automatically estimates these tissue-specific "response functions" from each subject's own data, without requiring a T1 image or atlas. It works by identifying voxels that are unambiguously single-tissue (e.g., deep WM, cortical GM, ventricles) and averaging the signal profile within each.
+
+Each subject gets three output files:
+- `wm_response.txt` — white matter response function (multi-shell: one row per b-value)
+- `gm_response.txt` — gray matter response function
+- `csf_response.txt` — CSF response function
+
+In Step 17, we will average these across subjects to create **group response functions**, which then feed into the actual FOD estimation in Step 18. Using group-averaged responses (rather than per-subject) ensures that differences in FODs between subjects reflect genuine biological differences in fiber architecture — not differences in how the response function was estimated.
+
+**Input (per subject — from Step 15):**
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/<subj>/dwi.mif`
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/<subj>/mask.mif`
+
+**Expected Output (per subject):**
+```
+derivatives/CSD/s1000/
+│
+├── dwi.mif              # (from Step 15)
+├── mask.mif             # (from Step 15)
+├── wm_response.txt      # white matter response function
+├── gm_response.txt      # gray matter response function
+├── csf_response.txt     # CSF response function
+```
+
+This step is moderately CPU-intensive — we run up to 15 parallel jobs.
+
+**Running Step 16 in tmux:**
+
+1. SSH into the cluster and reattach (or create) the tmux session:
+```bash
+ssh -XY tur50045@cla19097.tu.temple.edu
+tmux attach -t csd || tmux new -s csd
+```
+
+2. Create the script:
+```bash
+nano run_dwi2response.sh
+```
+
+3. Paste the following into nano:
+```bash
+#!/bin/bash
+# ============================================================
+# Step 16: Estimate per-subject response functions (dwi2response)
+# ============================================================
+# Uses the Dhollander algorithm to estimate tissue-specific
+# response functions (WM, GM, CSF) from each subject's DWI data.
+# These are needed for multi-shell multi-tissue CSD (Step 18).
+# Input:  CSD/<subj>/dwi.mif, mask.mif
+# Output: CSD/<subj>/wm_response.txt, gm_response.txt, csf_response.txt
+# ============================================================
+
+export PATH=/data/tools/mrtrix3/bin:$PATH
+
+csd_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD"
+nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
+
+process_subj() {
+    subj=$1
+    echo ">>> [$subj] Estimating response functions"
+    d="$csd_base/$subj"
+
+    if [[ ! -f "$d/dwi.mif" || ! -f "$d/mask.mif" ]]; then
+        echo "!!! [$subj] Missing dwi.mif or mask.mif, skipping"
+        return
+    fi
+
+    dwi2response dhollander \
+        "$d/dwi.mif" \
+        "$d/wm_response.txt" \
+        "$d/gm_response.txt" \
+        "$d/csf_response.txt" \
+        -mask "$d/mask.mif" \
+        -force
+
+    echo ">>> [$subj] Done"
+}
+
+export -f process_subj
+export csd_base
+
+subjects=$(ls -1 "$nifti_base")
+for subj in $subjects; do
+    process_subj "$subj" &
+    while [ "$(jobs -r | wc -l)" -ge 15 ]; do sleep 1; done
+done
+wait
+echo "=== All response function estimations finished ==="
+```
+
+4. Save and exit nano:
+Press Ctrl+O then Enter to save
+Press Ctrl+X to close
+
+5. Make the script runnable and execute inside tmux:
+```bash
+chmod +x run_dwi2response.sh
+./run_dwi2response.sh 2>&1 | tee dwi2response.log
+```
+
+6. Detach from tmux while it runs (if needed):
+Press Ctrl+B, then D to detach. Reconnect later with:
+```bash
+tmux attach -t csd
+```
+* Note: All coding output from this script is recorded in dwi2response.log.
+
+**Step 16 Audit — verify dwi2response outputs for all subjects:**
+```bash
+#!/bin/bash
+# Audit Step 16: dwi2response outputs
+
+nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
+csd_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD"
+
+printf "Subject\twm_response\tgm_response\tcsf_response\n"
+
+for subj in $(ls -1 "$nifti_base"); do
+    d="$csd_base/$subj"
+    wm=$([ -f "$d/wm_response.txt" ] && echo "✅" || echo "❌")
+    gm=$([ -f "$d/gm_response.txt" ] && echo "✅" || echo "❌")
+    csf=$([ -f "$d/csf_response.txt" ] && echo "✅" || echo "❌")
+    printf "%s\t%s\t%s\t%s\n" "$subj" "$wm" "$gm" "$csf"
+done
+
+echo -e "\n=== dwi2response Audit Complete ==="
+```
+
+---
+
+## Step 17 — Group-Average Response Functions (responsemean)
+
+Now that every subject has their own tissue-specific response functions (from Step 16), we average them across all subjects to produce a single set of **group response functions**. This is a key recommendation from MRtrix3: using group-averaged responses for FOD estimation ensures that differences in the FOD maps between subjects reflect genuine differences in fiber architecture — not noise from how the response function was estimated for that individual.
+
+This step produces three files that live in the parent `CSD/` directory (not inside any subject folder), since they are shared across all subjects:
+- `group_wm_response.txt` — group-average white matter response
+- `group_gm_response.txt` — group-average gray matter response
+- `group_csf_response.txt` — group-average CSF response
+
+These group responses feed into Step 18 (dwi2fod) for every subject.
+
+**Input (per subject — from Step 16):**
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/<subj>/wm_response.txt`
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/<subj>/gm_response.txt`
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/<subj>/csf_response.txt`
+
+**Expected Output (shared across subjects):**
+```
+derivatives/CSD/
+│
+├── group_wm_response.txt     # group-average WM response
+├── group_gm_response.txt     # group-average GM response
+├── group_csf_response.txt    # group-average CSF response
+├── s1000/                    # (per-subject dirs from Steps 15-16)
+├── s1001/
+├── ...
+```
+
+This step is fast — three single commands, no parallelism needed.
+
+**Running Step 17 in tmux:**
+
+1. SSH into the cluster and reattach (or create) the tmux session:
+```bash
+ssh -XY tur50045@cla19097.tu.temple.edu
+tmux attach -t csd || tmux new -s csd
+```
+
+2. Create the script:
+```bash
+nano run_responsemean.sh
+```
+
+3. Paste the following into nano:
+```bash
+#!/bin/bash
+# ============================================================
+# Step 17: Group-average response functions (responsemean)
+# ============================================================
+# Averages per-subject response functions across all subjects
+# to create group-level WM, GM, CSF response functions.
+# MRtrix recommends group-averaged responses for FOD estimation.
+# Input:  CSD/<subj>/wm_response.txt, gm_response.txt, csf_response.txt
+# Output: CSD/group_wm_response.txt, group_gm_response.txt, group_csf_response.txt
+# ============================================================
+
+export PATH=/data/tools/mrtrix3/bin:$PATH
+
+csd_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD"
+
+cd "$csd_base"
+
+echo ">>> Computing group-average WM response"
+responsemean */wm_response.txt group_wm_response.txt -info -force
+
+echo ">>> Computing group-average GM response"
+responsemean */gm_response.txt group_gm_response.txt -info -force
+
+echo ">>> Computing group-average CSF response"
+responsemean */csf_response.txt group_csf_response.txt -info -force
+
+echo "=== Group-average response functions finished ==="
+```
+
+4. Save and exit nano:
+Press Ctrl+O then Enter to save
+Press Ctrl+X to close
+
+5. Make the script runnable and execute inside tmux:
+```bash
+chmod +x run_responsemean.sh
+./run_responsemean.sh 2>&1 | tee responsemean.log
+```
+
+6. Detach from tmux while it runs (if needed):
+Press Ctrl+B, then D to detach. Reconnect later with:
+```bash
+tmux attach -t csd
+```
+* Note: All coding output from this script is recorded in responsemean.log.
+
+**Step 17 Audit — verify group response functions exist:**
+```bash
+#!/bin/bash
+# Audit Step 17: group-average response functions
+
+csd_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD"
+
+echo "=== Group Response Function Audit ==="
+for tissue in wm gm csf; do
+    f="$csd_base/group_${tissue}_response.txt"
+    if [ -f "$f" ]; then
+        echo "✅ group_${tissue}_response.txt exists ($(wc -l < "$f") lines)"
+    else
+        echo "❌ group_${tissue}_response.txt MISSING"
+    fi
+done
+
+echo -e "\n=== responsemean Audit Complete ==="
+```
+
+---
+
+## Step 18 — Fiber Orientation Distribution (dwi2fod MSMT-CSD)
+
+This is the core modeling step — the MRtrix equivalent of what BedpostX did back in Step 9, but better. **Multi-Shell Multi-Tissue Constrained Spherical Deconvolution (MSMT-CSD)** takes each subject's DWI data and decomposes the diffusion signal at every voxel into contributions from white matter, gray matter, and CSF. The result is a **fiber orientation distribution (FOD)** at each voxel — a 3D shape that shows which directions fibers are pointing and how strongly.
+
+The key details:
+- We use `dwi2fod msmt_csd` — the multi-shell multi-tissue variant, which takes advantage of all our b-value shells (b=0, 1000, 2000, 3250, 5000) to better separate tissue types.
+- We use the **group-averaged response functions** from Step 17 (not per-subject), matching Ranesh's pipeline and MRtrix recommendations.
+- Each subject gets three FOD images: `wm_fod.mif` (white matter — this is the one that matters for tractography), `gm_fod.mif`, and `csf_fod.mif`.
+
+**Input (per subject):**
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/<subj>/dwi.mif` (from Step 15)
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/<subj>/mask.mif` (from Step 15)
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/group_wm_response.txt` (from Step 17)
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/group_gm_response.txt` (from Step 17)
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/group_csf_response.txt` (from Step 17)
+
+**Expected Output (per subject):**
+```
+derivatives/CSD/s1000/
+│
+├── dwi.mif              # (from Step 15)
+├── mask.mif             # (from Step 15)
+├── wm_response.txt      # (from Step 16)
+├── gm_response.txt      # (from Step 16)
+├── csf_response.txt     # (from Step 16)
+├── wm_fod.mif           # white matter FOD (feeds tractography)
+├── gm_fod.mif           # gray matter FOD
+├── csf_fod.mif          # CSF FOD
+```
+
+This step is CPU-intensive — we run up to 10 parallel jobs.
+
+**Running Step 18 in tmux:**
+
+1. SSH into the cluster and reattach (or create) the tmux session:
+```bash
+ssh -XY tur50045@cla19097.tu.temple.edu
+tmux attach -t csd || tmux new -s csd
+```
+
+2. Create the script:
+```bash
+nano run_dwi2fod.sh
+```
+
+3. Paste the following into nano:
+```bash
+#!/bin/bash
+# ============================================================
+# Step 18: Generate FODs — Multi-Shell Multi-Tissue CSD (dwi2fod)
+# ============================================================
+# Uses group-averaged response functions to estimate fiber
+# orientation distributions (FODs) for each tissue type.
+# This is the MRtrix equivalent of BedpostX fiber modeling.
+# Input:  CSD/<subj>/dwi.mif, mask.mif + CSD/group_*_response.txt
+# Output: CSD/<subj>/wm_fod.mif, gm_fod.mif, csf_fod.mif
+# ============================================================
+
+export PATH=/data/tools/mrtrix3/bin:$PATH
+
+csd_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD"
+nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
+
+process_subj() {
+    subj=$1
+    echo ">>> [$subj] Generating FODs (MSMT-CSD)"
+    d="$csd_base/$subj"
+
+    if [[ ! -f "$d/dwi.mif" || ! -f "$d/mask.mif" ]]; then
+        echo "!!! [$subj] Missing dwi.mif or mask.mif, skipping"
+        return
+    fi
+
+    if [[ ! -f "$csd_base/group_wm_response.txt" || ! -f "$csd_base/group_gm_response.txt" || ! -f "$csd_base/group_csf_response.txt" ]]; then
+        echo "!!! [$subj] Missing group response functions, skipping"
+        return
+    fi
+
+    dwi2fod -mask "$d/mask.mif" \
+        msmt_csd \
+        "$d/dwi.mif" \
+        "$csd_base/group_wm_response.txt" "$d/wm_fod.mif" \
+        "$csd_base/group_gm_response.txt" "$d/gm_fod.mif" \
+        "$csd_base/group_csf_response.txt" "$d/csf_fod.mif" \
+        -force
+
+    echo ">>> [$subj] Done"
+}
+
+export -f process_subj
+export csd_base
+
+subjects=$(ls -1 "$nifti_base")
+for subj in $subjects; do
+    process_subj "$subj" &
+    while [ "$(jobs -r | wc -l)" -ge 10 ]; do sleep 1; done
+done
+wait
+echo "=== All FOD estimations finished ==="
+```
+
+4. Save and exit nano:
+Press Ctrl+O then Enter to save
+Press Ctrl+X to close
+
+5. Make the script runnable and execute inside tmux:
+```bash
+chmod +x run_dwi2fod.sh
+./run_dwi2fod.sh 2>&1 | tee dwi2fod.log
+```
+
+6. Detach from tmux while it runs (if needed):
+Press Ctrl+B, then D to detach. Reconnect later with:
+```bash
+tmux attach -t csd
+```
+* Note: All coding output from this script is recorded in dwi2fod.log.
+
+**Step 18 Audit — verify dwi2fod outputs for all subjects:**
+```bash
+#!/bin/bash
+# Audit Step 18: dwi2fod outputs
+
+nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
+csd_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD"
+
+printf "Subject\twm_fod\tgm_fod\tcsf_fod\n"
+
+for subj in $(ls -1 "$nifti_base"); do
+    d="$csd_base/$subj"
+    wm=$([ -f "$d/wm_fod.mif" ] && echo "✅" || echo "❌")
+    gm=$([ -f "$d/gm_fod.mif" ] && echo "✅" || echo "❌")
+    csf=$([ -f "$d/csf_fod.mif" ] && echo "✅" || echo "❌")
+    printf "%s\t%s\t%s\t%s\n" "$subj" "$wm" "$gm" "$csf"
+done
+
+echo -e "\n=== dwi2fod Audit Complete ==="
+```
+
+---
+
+## Step 19 — FOD Normalization (mtnormalise)
+
+Before tractography, we normalize the FOD intensities across tissue types and subjects using `mtnormalise`. This corrects for global intensity differences between subjects (caused by scanner drift, coil sensitivity, etc.) so that the FOD amplitudes are comparable. Without this step, a subject whose scan had slightly higher overall signal intensity would appear to have "stronger" fiber orientations, biasing tractography.
+
+The normalized WM FOD (`wm_fod_norm.mif`) is what feeds into tractography in Steps 23–24.
+
+This step also creates **tissue-concatenated images** (`vf_fod.mif`, `vf_fod_norm.mif`) for visualization and quality checking — matching Ranesh's pipeline. These combine the first spherical harmonic component (l=0) of the WM FOD with the GM and CSF FODs into a single RGB-like image where you can see all three tissue compartments at once in mrview.
+
+**Input (per subject — from Step 18):**
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/<subj>/wm_fod.mif`
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/<subj>/gm_fod.mif`
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/<subj>/csf_fod.mif`
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/<subj>/mask.mif`
+
+**Expected Output (per subject):**
+```
+derivatives/CSD/s1000/
+│
+├── dwi.mif              # (from Step 15)
+├── mask.mif             # (from Step 15)
+├── wm_response.txt      # (from Step 16)
+├── gm_response.txt      # (from Step 16)
+├── csf_response.txt     # (from Step 16)
+├── wm_fod.mif           # (from Step 18)
+├── gm_fod.mif           # (from Step 18)
+├── csf_fod.mif          # (from Step 18)
+├── wm_fod_norm.mif      # normalized WM FOD → feeds tractography
+├── gm_fod_norm.mif      # normalized GM FOD
+├── csf_fod_norm.mif     # normalized CSF FOD
+├── vf_fod.mif           # tissue concat for visualization
+├── vf_fod_norm.mif      # tissue concat (normalized) for visualization
+```
+
+This step is moderately CPU-intensive — we run up to 15 parallel jobs.
+
+**Running Step 19 in tmux:**
+
+1. SSH into the cluster and reattach (or create) the tmux session:
+```bash
+ssh -XY tur50045@cla19097.tu.temple.edu
+tmux attach -t csd || tmux new -s csd
+```
+
+2. Create the script:
+```bash
+nano run_mtnormalise.sh
+```
+
+3. Paste the following into nano:
+```bash
+#!/bin/bash
+# ============================================================
+# Step 19: Normalize FODs (mtnormalise)
+# ============================================================
+# Normalizes FOD intensities across tissue types and subjects
+# so they are comparable. The normalized WM FOD (wm_fod_norm.mif)
+# is what feeds into tractography.
+# Also creates tissue-concatenated images for visualization/QC.
+# Input:  CSD/<subj>/wm_fod.mif, gm_fod.mif, csf_fod.mif, mask.mif
+# Output: CSD/<subj>/wm_fod_norm.mif, gm_fod_norm.mif, csf_fod_norm.mif
+#         CSD/<subj>/vf_fod.mif, vf_fod_norm.mif (visualization)
+# ============================================================
+
+export PATH=/data/tools/mrtrix3/bin:$PATH
+
+csd_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD"
+nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
+
+process_subj() {
+    subj=$1
+    echo ">>> [$subj] Normalizing FODs"
+    d="$csd_base/$subj"
+
+    if [[ ! -f "$d/wm_fod.mif" || ! -f "$d/gm_fod.mif" || ! -f "$d/csf_fod.mif" || ! -f "$d/mask.mif" ]]; then
+        echo "!!! [$subj] Missing FOD or mask files, skipping"
+        return
+    fi
+
+    # Normalize FODs
+    mtnormalise \
+        "$d/wm_fod.mif"  "$d/wm_fod_norm.mif" \
+        "$d/gm_fod.mif"  "$d/gm_fod_norm.mif" \
+        "$d/csf_fod.mif" "$d/csf_fod_norm.mif" \
+        -mask "$d/mask.mif" \
+        -force
+
+    # Tissue concatenation for visualization (matches Ranesh's pipeline)
+    mrconvert -coord 3 0 "$d/wm_fod.mif" - | \
+        mrcat "$d/csf_fod.mif" "$d/gm_fod.mif" - "$d/vf_fod.mif" -force
+
+    mrconvert -coord 3 0 "$d/wm_fod_norm.mif" - | \
+        mrcat "$d/csf_fod_norm.mif" "$d/gm_fod_norm.mif" - "$d/vf_fod_norm.mif" -force
+
+    echo ">>> [$subj] Done"
+}
+
+export -f process_subj
+export csd_base
+
+subjects=$(ls -1 "$nifti_base")
+for subj in $subjects; do
+    process_subj "$subj" &
+    while [ "$(jobs -r | wc -l)" -ge 15 ]; do sleep 1; done
+done
+wait
+echo "=== All FOD normalizations finished ==="
+```
+
+4. Save and exit nano:
+Press Ctrl+O then Enter to save
+Press Ctrl+X to close
+
+5. Make the script runnable and execute inside tmux:
+```bash
+chmod +x run_mtnormalise.sh
+./run_mtnormalise.sh 2>&1 | tee mtnormalise.log
+```
+
+6. Detach from tmux while it runs (if needed):
+Press Ctrl+B, then D to detach. Reconnect later with:
+```bash
+tmux attach -t csd
+```
+* Note: All coding output from this script is recorded in mtnormalise.log.
+
+**Step 19 Audit — verify mtnormalise outputs for all subjects:**
+```bash
+#!/bin/bash
+# Audit Step 19: mtnormalise outputs
+
+nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
+csd_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD"
+
+printf "Subject\twm_norm\tgm_norm\tcsf_norm\tvf_fod\tvf_norm\n"
+
+for subj in $(ls -1 "$nifti_base"); do
+    d="$csd_base/$subj"
+    wm=$([ -f "$d/wm_fod_norm.mif" ] && echo "✅" || echo "❌")
+    gm=$([ -f "$d/gm_fod_norm.mif" ] && echo "✅" || echo "❌")
+    csf=$([ -f "$d/csf_fod_norm.mif" ] && echo "✅" || echo "❌")
+    vf=$([ -f "$d/vf_fod.mif" ] && echo "✅" || echo "❌")
+    vfn=$([ -f "$d/vf_fod_norm.mif" ] && echo "✅" || echo "❌")
+    printf "%s\t%s\t%s\t%s\t%s\t%s\n" "$subj" "$wm" "$gm" "$csf" "$vf" "$vfn"
+done
+
+echo -e "\n=== mtnormalise Audit Complete ==="
 ```
