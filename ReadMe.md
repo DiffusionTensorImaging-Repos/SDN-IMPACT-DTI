@@ -68,8 +68,8 @@ Index — IMPACT DTI Tractography Pipeline (Section B)
 17. [Step 17 — Group-Average Response Functions (responsemean)](#step-17--group-average-response-functions-responsemean)
 18. [Step 18 — Fiber Orientation Distribution (dwi2fod MSMT-CSD)](#step-18--fiber-orientation-distribution-dwi2fod-msmt-csd)
 19. [Step 19 — FOD Normalization (mtnormalise)](#step-19--fod-normalization-mtnormalise)
-20. Step 20 — ANTs Registration: MNI → T1 Space
-21. Step 21 — ROI Warping: MNI → T1 → Diffusion Space
+20. [Step 20 — ANTs Registration: MNI → T1 Space](#step-20--ants-registration-mni--t1-space)
+21. [Step 21 — ROI Warping: MNI → T1 → Diffusion Space + Visual QC](#step-21--roi-warping-mni--t1--diffusion-space--visual-qc)
 22. Step 22 — Atlas-Based Exclusion Masks
 23. Step 23 — Test Tractography (5 Subjects)
 24. Step 24 — Full Tractography (All Subjects)
@@ -3470,3 +3470,525 @@ done
 
 echo -e "\n=== mtnormalise Audit Complete ==="
 ```
+
+---
+
+## ROI Upload — Ranesh's VTA, Hippocampus, and Tract Atlas Files
+
+Before we can run tractography, we need the seed, target, and exclusion ROIs in each subject's diffusion space. Ranesh Mopuru (Olson Lab) provided the following ROI files, all in **MNI 1mm standard space**:
+
+| File | Description |
+|---|---|
+| `left_VTA_0.25_bin.nii.gz` | Left VTA — Pauli atlas, thresholded at 25% (seed ROI) |
+| `right_VTA_0.25_bin.nii.gz` | Right VTA — Pauli atlas, thresholded at 25% (seed ROI) |
+| `HPC_L_0.5_bin.nii.gz` | Left hippocampus — Harvard-Oxford atlas, 50% threshold (target ROI) |
+| `HPC_R_0.5_bin.nii.gz` | Right hippocampus — Harvard-Oxford atlas, 50% threshold (target ROI) |
+| `l_vta_l_hipp_1mm_MNI_GroupMean_thr50.nii.gz` | Left VTA→HPC tract atlas — Ranesh's group mean, 50% threshold (for exclusion mask) |
+| `r_vta_r_hipp_1mm_MNI_GroupMean_thr50.nii.gz` | Right VTA→HPC tract atlas — Ranesh's group mean, 50% threshold (for exclusion mask) |
+| `l_vta_l_hipp_1mm_MNI_GroupMean_OverlapProp.nii.gz` | Left tract — raw probabilistic overlap map (reference only) |
+| `r_vta_r_hipp_1mm_MNI_GroupMean_OverlapProp.nii.gz` | Right tract — raw probabilistic overlap map (reference only) |
+
+These files were stored locally in `Connectivity-Next-Steps/ROIS/VTA-HPC ROIs/` and uploaded to the cluster:
+
+```bash
+# Upload ROIs to cluster
+scp /Users/dannyzweben/Desktop/SDN/DTI/Connectivity-Next-Steps/ROIS/VTA-HPC\ ROIs/*.nii.gz \
+    tur50045@cla19097.tu.temple.edu:/data/projects/STUDIES/IMPACT/DTI/ROIs/VTA-HPC/
+```
+
+**Cluster location:** `/data/projects/STUDIES/IMPACT/DTI/ROIs/VTA-HPC/`
+
+---
+
+## Step 20 — ANTs Registration: MNI → T1 Space
+
+The ROIs from Ranesh are in MNI standard space (1mm). Tractography runs in each subject's native diffusion space. To get ROIs from MNI → diffusion, we need two transforms applied in sequence:
+
+1. **MNI → T1** (ANTs nonlinear warp — this step)
+2. **T1 → Diffusion** (FLIRT linear transform — Step 21, using existing matrices from Step 12)
+
+We need the **nonlinear** ANTs warp for the MNI → T1 step because every brain is shaped differently from the MNI template. A linear (affine) transform can handle rotation, scaling, and shearing, but it cannot account for the fact that one person's hippocampus is a little wider, or their VTA sits a few mm lower, than the template. ANTs SyN registration deforms the MNI template to match each subject's specific brain shape, so the ROIs land precisely where they should.
+
+Ranesh used `antsRegistrationSyNQuick.sh` for this same purpose. We use the same tool with the same approach. The only difference is that Ranesh's HCP data was already T1-aligned to diffusion (no Step 21 needed), whereas our IMPACT data requires the additional FLIRT step.
+
+**Input (per subject):**
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/ANTs/<subj>/<subj>_BrainExtractionBrain.nii.gz` (skull-stripped T1 from Step 2)
+- `/usr/local/fsl/data/standard/MNI152_T1_1mm_brain.nii.gz` (MNI template — fixed across subjects)
+
+**Expected Output (per subject):**
+```
+derivatives/CSD/s1000/reg/
+│
+├── mni2t1_0GenericAffine.mat      # affine component of the registration
+├── mni2t1_1Warp.nii.gz            # nonlinear warp field (MNI → T1)
+├── mni2t1_1InverseWarp.nii.gz     # inverse warp (T1 → MNI, not used here)
+├── mni2t1_Warped.nii.gz           # MNI template warped into subject T1 space (for QC)
+```
+
+This step is CPU/memory intensive — we run up to 5 parallel jobs.
+
+**Running Step 20 in tmux:**
+
+1. SSH into the cluster and reattach (or create) the tmux session:
+```bash
+ssh -XY tur50045@cla19097.tu.temple.edu
+tmux attach -t csd || tmux new -s csd
+```
+
+2. Create the script:
+```bash
+nano run_ants_reg.sh
+```
+
+3. Paste the following into nano:
+```bash
+#!/bin/bash
+# ============================================================
+# Step 20: ANTs Registration — MNI → Subject T1 Space
+# ============================================================
+# Registers the MNI152 template to each subject's skull-stripped
+# T1, producing warp fields that can move any MNI-space image
+# (ROIs, atlases) into subject-native T1 space.
+# Input:  ANTs/<subj>/<subj>_BrainExtractionBrain.nii.gz (skull-stripped T1)
+#         FSL MNI152_T1_1mm_brain.nii.gz (standard template)
+# Output: CSD/<subj>/reg/mni2t1_0GenericAffine.mat
+#         CSD/<subj>/reg/mni2t1_1Warp.nii.gz
+#         CSD/<subj>/reg/mni2t1_1InverseWarp.nii.gz
+#         CSD/<subj>/reg/mni2t1_Warped.nii.gz
+# ============================================================
+
+export ANTSPATH=/data/tools/ANTs/bin/
+export PATH=${ANTSPATH}:$PATH
+
+ants_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/ANTs"
+csd_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD"
+nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
+mni_template="/usr/local/fsl/data/standard/MNI152_T1_1mm_brain.nii.gz"
+
+process_subj() {
+    subj=$1
+    echo ">>> [$subj] Running ANTs registration: MNI → T1"
+
+    t1_brain="$ants_base/$subj/${subj}_BrainExtractionBrain.nii.gz"
+    reg_dir="$csd_base/$subj/reg"
+    mkdir -p "$reg_dir"
+
+    if [[ ! -f "$t1_brain" ]]; then
+        echo "!!! [$subj] Missing skull-stripped T1, skipping"
+        return
+    fi
+
+    # Register MNI (moving) to subject T1 (fixed)
+    antsRegistrationSyNQuick.sh \
+        -d 3 \
+        -f "$t1_brain" \
+        -m "$mni_template" \
+        -o "$reg_dir/mni2t1_" \
+        -n 4
+
+    echo ">>> [$subj] Done"
+}
+
+export -f process_subj
+export ants_base csd_base mni_template ANTSPATH
+
+subjects=$(ls -1 "$nifti_base")
+for subj in $subjects; do
+    process_subj "$subj" &
+    while [ "$(jobs -r | wc -l)" -ge 5 ]; do sleep 1; done
+done
+wait
+echo "=== All ANTs registrations finished ==="
+```
+
+4. Save and exit nano:
+Press Ctrl+O then Enter to save
+Press Ctrl+X to close
+
+5. Make the script runnable and execute inside tmux:
+```bash
+chmod +x run_ants_reg.sh
+./run_ants_reg.sh 2>&1 | tee ants_reg.log
+```
+
+6. Detach from tmux while it runs (if needed):
+Press Ctrl+B, then D to detach. Reconnect later with:
+```bash
+tmux attach -t csd
+```
+* Note: All coding output from this script is recorded in ants_reg.log.
+
+**Step 20 Audit — verify ANTs registration outputs for all subjects:**
+```bash
+#!/bin/bash
+# Audit Step 20: ANTs registration outputs
+
+nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
+csd_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD"
+
+printf "Subject\tAffine\tWarp\tInvWarp\tWarped\n"
+
+for subj in $(ls -1 "$nifti_base"); do
+    d="$csd_base/$subj/reg"
+    aff=$([ -f "$d/mni2t1_0GenericAffine.mat" ] && echo "✅" || echo "❌")
+    wrp=$([ -f "$d/mni2t1_1Warp.nii.gz" ] && echo "✅" || echo "❌")
+    inv=$([ -f "$d/mni2t1_1InverseWarp.nii.gz" ] && echo "✅" || echo "❌")
+    wrd=$([ -f "$d/mni2t1_Warped.nii.gz" ] && echo "✅" || echo "❌")
+    printf "%s\t%s\t%s\t%s\t%s\n" "$subj" "$aff" "$wrp" "$inv" "$wrd"
+done
+
+echo -e "\n=== ANTs Registration Audit Complete ==="
+```
+
+---
+
+## Step 21 — ROI Warping: MNI → T1 → Diffusion Space + Visual QC
+
+With the ANTs warp fields computed in Step 20, we now warp all ROIs through two transforms to land them in each subject's native diffusion space:
+
+1. **MNI → T1**: `antsApplyTransforms` using the warp + affine from Step 20, with `NearestNeighbor` interpolation (preserves binary mask values).
+2. **T1 → Diffusion**: `flirt -applyxfm` using the `str2diff_<subj>.mat` matrix computed in Step 12, with `nearestneighbour` interpolation.
+
+Each output is also binarized (`fslmaths -thr 0.5 -bin`) as a safety step — NearestNeighbor should already produce binary values, but this guarantees it.
+
+**Why two steps instead of one?** The MNI → T1 transform is nonlinear (ANTs) and the T1 → diffusion transform is linear (FLIRT/FSL). These are different software tools with different transform formats, so we apply them separately. For binary ROI masks with NearestNeighbor interpolation, two rounds of resampling has negligible impact.
+
+**ROIs warped per subject (6 total):**
+
+| ROI | Purpose |
+|---|---|
+| `left_VTA_diff.nii.gz` | Seed for left hemisphere tractography |
+| `right_VTA_diff.nii.gz` | Seed for right hemisphere tractography |
+| `left_HPC_diff.nii.gz` | Target for left hemisphere tractography |
+| `right_HPC_diff.nii.gz` | Target for right hemisphere tractography |
+| `left_tract_atlas_diff.nii.gz` | Tract atlas for left exclusion mask (Step 22) |
+| `right_tract_atlas_diff.nii.gz` | Tract atlas for right exclusion mask (Step 22) |
+
+**Input (per subject):**
+- `/data/projects/STUDIES/IMPACT/DTI/ROIs/VTA-HPC/*.nii.gz` (MNI space ROIs)
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/<subj>/reg/mni2t1_1Warp.nii.gz` (from Step 20)
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/<subj>/reg/mni2t1_0GenericAffine.mat` (from Step 20)
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/TRANSFORMS/<subj>/str2diff_<subj>.mat` (from Step 12)
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX/<subj>/bedpostx_input/nodif_brain_mask.nii.gz` (diffusion reference)
+
+**Expected Output (per subject):**
+```
+derivatives/CSD/s1000/rois/
+│
+├── left_VTA_t1.nii.gz              # intermediate (T1 space)
+├── left_VTA_diff.nii.gz            # final (diffusion space) — SEED
+├── right_VTA_t1.nii.gz
+├── right_VTA_diff.nii.gz           # SEED
+├── left_HPC_t1.nii.gz
+├── left_HPC_diff.nii.gz            # TARGET
+├── right_HPC_t1.nii.gz
+├── right_HPC_diff.nii.gz           # TARGET
+├── left_tract_atlas_t1.nii.gz
+├── left_tract_atlas_diff.nii.gz    # for exclusion mask
+├── right_tract_atlas_t1.nii.gz
+├── right_tract_atlas_diff.nii.gz   # for exclusion mask
+```
+
+This step is lightweight — we run up to 15 parallel jobs.
+
+**Running Step 21 in tmux:**
+
+1. SSH into the cluster and reattach (or create) the tmux session:
+```bash
+ssh -XY tur50045@cla19097.tu.temple.edu
+tmux attach -t csd || tmux new -s csd
+```
+
+2. Create the script:
+```bash
+nano run_roi_warp.sh
+```
+
+3. Paste the following into nano:
+```bash
+#!/bin/bash
+# ============================================================
+# Step 21: Warp ROIs from MNI → T1 → Diffusion Space
+# ============================================================
+# Uses ANTs warp (Step 20) to bring ROIs from MNI to T1 space,
+# then FLIRT str2diff matrix (Step 12) to bring them to diffusion.
+# Both steps use NearestNeighbor interpolation for binary masks.
+# Outputs are binarized as a safety step.
+#
+# ROIs warped (per hemisphere):
+#   - VTA (Pauli atlas, 25% threshold)
+#   - HPC (Harvard-Oxford, 50% threshold)
+#   - Tract atlas (GroupMean_thr50)
+#
+# Input:  ROIs/VTA-HPC/*.nii.gz (MNI space)
+#         CSD/<subj>/reg/mni2t1_* (ANTs warp from Step 20)
+#         TRANSFORMS/<subj>/str2diff_<subj>.mat (FLIRT from Step 12)
+# Output: CSD/<subj>/rois/*_diff.nii.gz (diffusion space)
+# ============================================================
+
+export PATH=/data/tools/ANTs/bin:/usr/local/fsl/bin:$PATH
+
+roi_base="/data/projects/STUDIES/IMPACT/DTI/ROIs/VTA-HPC"
+csd_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD"
+ants_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/ANTs"
+transforms_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/TRANSFORMS"
+bedpostx_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX"
+nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
+
+# ROI files (MNI space) and their output names
+declare -a ROI_FILES=(
+    "left_VTA_0.25_bin.nii.gz:left_VTA"
+    "right_VTA_0.25_bin.nii.gz:right_VTA"
+    "HPC_L_0.5_bin.nii.gz:left_HPC"
+    "HPC_R_0.5_bin.nii.gz:right_HPC"
+    "l_vta_l_hipp_1mm_MNI_GroupMean_thr50.nii.gz:left_tract_atlas"
+    "r_vta_r_hipp_1mm_MNI_GroupMean_thr50.nii.gz:right_tract_atlas"
+)
+
+process_subj() {
+    subj=$1
+    echo ">>> [$subj] Warping ROIs to diffusion space"
+
+    reg_dir="$csd_base/$subj/reg"
+    roi_dir="$csd_base/$subj/rois"
+    mkdir -p "$roi_dir"
+
+    t1_brain="$ants_base/$subj/${subj}_BrainExtractionBrain.nii.gz"
+    warp="$reg_dir/mni2t1_1Warp.nii.gz"
+    affine="$reg_dir/mni2t1_0GenericAffine.mat"
+    flirt_mat="$transforms_base/$subj/str2diff_${subj}.mat"
+    diff_ref="$bedpostx_base/$subj/bedpostx_input/nodif_brain_mask.nii.gz"
+
+    # Check all required files exist
+    if [[ ! -f "$warp" || ! -f "$affine" ]]; then
+        echo "!!! [$subj] Missing ANTs warp files, skipping"
+        return
+    fi
+    if [[ ! -f "$flirt_mat" ]]; then
+        echo "!!! [$subj] Missing FLIRT str2diff matrix, skipping"
+        return
+    fi
+    if [[ ! -f "$diff_ref" ]]; then
+        echo "!!! [$subj] Missing diffusion reference image, skipping"
+        return
+    fi
+
+    for entry in "${ROI_FILES[@]}"; do
+        roi_file="${entry%%:*}"
+        roi_name="${entry##*:}"
+
+        roi_mni="$roi_base/$roi_file"
+        roi_t1="$roi_dir/${roi_name}_t1.nii.gz"
+        roi_diff="$roi_dir/${roi_name}_diff.nii.gz"
+
+        if [[ ! -f "$roi_mni" ]]; then
+            echo "!!! [$subj] Missing ROI: $roi_file, skipping"
+            continue
+        fi
+
+        # Step A: ANTs warp MNI → T1 (NearestNeighbor)
+        antsApplyTransforms -d 3 \
+            -i "$roi_mni" \
+            -r "$t1_brain" \
+            -o "$roi_t1" \
+            -t "$warp" \
+            -t "$affine" \
+            -n NearestNeighbor
+
+        # Step B: FLIRT T1 → Diffusion (nearestneighbour)
+        flirt -in "$roi_t1" \
+            -ref "$diff_ref" \
+            -applyxfm -init "$flirt_mat" \
+            -out "$roi_diff" \
+            -interp nearestneighbour
+
+        # Safety: binarize output
+        fslmaths "$roi_diff" -thr 0.5 -bin "$roi_diff"
+    done
+
+    echo ">>> [$subj] Done"
+}
+
+export -f process_subj
+export roi_base csd_base ants_base transforms_base bedpostx_base ROI_FILES
+
+subjects=$(ls -1 "$nifti_base")
+for subj in $subjects; do
+    process_subj "$subj" &
+    while [ "$(jobs -r | wc -l)" -ge 15 ]; do sleep 1; done
+done
+wait
+echo "=== All ROI warps finished ==="
+```
+
+4. Save and exit nano:
+Press Ctrl+O then Enter to save
+Press Ctrl+X to close
+
+5. Make the script runnable and execute inside tmux:
+```bash
+chmod +x run_roi_warp.sh
+./run_roi_warp.sh 2>&1 | tee roi_warp.log
+```
+
+6. Detach from tmux while it runs (if needed):
+Press Ctrl+B, then D to detach. Reconnect later with:
+```bash
+tmux attach -t csd
+```
+* Note: All coding output from this script is recorded in roi_warp.log.
+
+**Step 21 Audit — verify warped ROI outputs for all subjects:**
+```bash
+#!/bin/bash
+# Audit Step 21: warped ROI outputs
+
+nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
+csd_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD"
+
+printf "Subject\tL_VTA\tR_VTA\tL_HPC\tR_HPC\tL_atlas\tR_atlas\n"
+
+for subj in $(ls -1 "$nifti_base"); do
+    d="$csd_base/$subj/rois"
+    lv=$([ -f "$d/left_VTA_diff.nii.gz" ] && echo "✅" || echo "❌")
+    rv=$([ -f "$d/right_VTA_diff.nii.gz" ] && echo "✅" || echo "❌")
+    lh=$([ -f "$d/left_HPC_diff.nii.gz" ] && echo "✅" || echo "❌")
+    rh=$([ -f "$d/right_HPC_diff.nii.gz" ] && echo "✅" || echo "❌")
+    la=$([ -f "$d/left_tract_atlas_diff.nii.gz" ] && echo "✅" || echo "❌")
+    ra=$([ -f "$d/right_tract_atlas_diff.nii.gz" ] && echo "✅" || echo "❌")
+    printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$subj" "$lv" "$rv" "$lh" "$rh" "$la" "$ra"
+done
+
+echo -e "\n=== ROI Warp Audit Complete ==="
+```
+
+### Visual QC: Verifying ROI Placement in Diffusion Space
+
+After warping, it is critical to visually confirm that the ROIs landed where they should. We overlay the VTA and hippocampus ROIs on each subject's mean b0 image (diffusion space) and inspect sagittal, coronal, and axial slices centered at the ROI's center of mass.
+
+**What to look for:**
+- **VTA**: Should sit in the ventral midbrain, just anterior to the red nucleus, near the midline. It's tiny — only a few voxels. If it lands in the cerebral peduncle, pons, or outside the brainstem, the registration failed for that subject.
+- **Hippocampus**: Should trace the medial temporal lobe, curving along the floor of the lateral ventricle. If it overlaps with the ventricle itself or sits in white matter, something went wrong.
+- **Tract atlas**: Should form a thin corridor running from VTA up through the midbrain to the hippocampus. If it's scattered or covers half the brain, the threshold or registration is off.
+
+**QC is run on 5 subjects** (evenly spaced across the dataset) using FSL's `slicer` and `overlay` tools. PNG images are generated on the cluster and downloaded for inspection.
+
+```bash
+nano run_roi_qc.sh
+```
+
+Paste the following into nano:
+```bash
+#!/bin/bash
+# ============================================================
+# ROI Placement QC — Visual check of warped ROIs
+# ============================================================
+# Generates overlay PNG images showing VTA and HPC ROIs on top
+# of each subject's mean b0 (diffusion) image. For QC, we check
+# 5 subjects: first, last, and 3 evenly spaced in between.
+# Uses FSL slicer to create axial/coronal/sagittal slices at
+# the ROI center of mass.
+# Output: CSD/<subj>/qc/roi_qc_*.png
+# ============================================================
+
+export PATH=/usr/local/fsl/bin:/data/tools/mrtrix3/bin:$PATH
+
+csd_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD"
+bedpostx_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX"
+nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
+
+# Pick 5 subjects for QC
+all_subjs=($(ls -1 "$nifti_base"))
+n=${#all_subjs[@]}
+qc_subjs=(
+    "${all_subjs[0]}"
+    "${all_subjs[$((n/4))]}"
+    "${all_subjs[$((n/2))]}"
+    "${all_subjs[$((3*n/4))]}"
+    "${all_subjs[$((n-1))]}"
+)
+
+echo "=== QC subjects: ${qc_subjs[*]} ==="
+
+for subj in "${qc_subjs[@]}"; do
+    echo ">>> [$subj] Generating QC images"
+
+    roi_dir="$csd_base/$subj/rois"
+    qc_dir="$csd_base/$subj/qc"
+    mkdir -p "$qc_dir"
+
+    # Use nodif_brain_mask as underlay reference
+    b0_ref="$bedpostx_base/$subj/bedpostx_input/nodif_brain_mask.nii.gz"
+
+    # Extract a mean b0 from dwi.mif for better contrast underlay
+    if [[ -f "$csd_base/$subj/dwi.mif" ]]; then
+        dwiextract "$csd_base/$subj/dwi.mif" -bzero - 2>/dev/null | \
+            mrmath - mean "$qc_dir/mean_b0.nii.gz" -axis 3 -force 2>/dev/null
+        underlay="$qc_dir/mean_b0.nii.gz"
+    else
+        underlay="$b0_ref"
+    fi
+
+    # Generate overlays for each ROI
+    for roi_name in left_VTA right_VTA left_HPC right_HPC left_tract_atlas right_tract_atlas; do
+        roi_file="$roi_dir/${roi_name}_diff.nii.gz"
+        if [[ ! -f "$roi_file" ]]; then
+            echo "!!! [$subj] Missing $roi_name, skipping QC"
+            continue
+        fi
+
+        # Get ROI center of mass for slice positioning
+        com=$(fslstats "$roi_file" -C 2>/dev/null)
+        x=$(echo "$com" | awk '{printf "%.0f", $1}')
+        y=$(echo "$com" | awk '{printf "%.0f", $2}')
+        z=$(echo "$com" | awk '{printf "%.0f", $3}')
+
+        # Create overlay (ROI in red on b0)
+        overlay 1 0 "$underlay" -a "$roi_file" 0.5 1 "$qc_dir/overlay_${roi_name}.nii.gz" 2>/dev/null
+
+        # Axial, coronal, sagittal slices through ROI center
+        slicer "$qc_dir/overlay_${roi_name}.nii.gz" \
+            -x -${x} "$qc_dir/sag_${roi_name}.png" \
+            -y -${y} "$qc_dir/cor_${roi_name}.png" \
+            -z -${z} "$qc_dir/axi_${roi_name}.png" \
+            2>/dev/null
+
+        # Combine into one QC image
+        pngappend "$qc_dir/sag_${roi_name}.png" + "$qc_dir/cor_${roi_name}.png" + "$qc_dir/axi_${roi_name}.png" "$qc_dir/roi_qc_${roi_name}.png" 2>/dev/null
+
+        # Clean up intermediates
+        rm -f "$qc_dir/sag_${roi_name}.png" "$qc_dir/cor_${roi_name}.png" "$qc_dir/axi_${roi_name}.png" "$qc_dir/overlay_${roi_name}.nii.gz"
+    done
+
+    echo ">>> [$subj] QC images saved to $qc_dir/"
+done
+
+echo "=== QC image generation finished ==="
+```
+
+Run the QC script after Step 21 completes:
+```bash
+chmod +x run_roi_qc.sh
+./run_roi_qc.sh 2>&1 | tee roi_qc.log
+```
+
+Download the QC images to your local machine for review:
+```bash
+# From your local terminal (not the cluster):
+mkdir -p ~/Desktop/SDN/DTI/data.check/roi_qc
+
+# Copy all QC PNGs
+rsync -av \
+    "tur50045@cla19097.tu.temple.edu:/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/*/qc/roi_qc_*.png" \
+    ~/Desktop/SDN/DTI/data.check/roi_qc/
+```
+
+**What a good QC looks like:**
+- VTA: A small cluster of bright voxels in the ventral midbrain (near midline, below thalamus, above pons)
+- HPC: A curved structure in the medial temporal lobe, following the floor of the lateral ventricle
+- Tract atlas: A thin corridor of voxels running from midbrain toward temporal lobe
+
+**Red flags (re-check registration for that subject):**
+- ROI sitting in ventricle, white matter, or cortex instead of the expected gray matter structure
+- ROI completely absent (zero voxels after warping)
+- ROI shifted laterally (e.g., left VTA appearing on the right side)
