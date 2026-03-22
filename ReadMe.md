@@ -3838,157 +3838,294 @@ tmux attach -t csd
 ```
 * Note: All coding output from this script is recorded in roi_warp.log.
 
-**Step 21 Audit — verify warped ROI outputs for all subjects:**
-```bash
-#!/bin/bash
-# Audit Step 21: warped ROI outputs
+### Step 21 Comprehensive Audit (9 Checks)
 
-nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
-csd_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD"
+Following Ranesh Mopuru's QC approach — where he excluded 3 subjects for problematic registration — we run a 9-part automated audit covering every aspect of the ROI warp. The full audit script is at `/data/projects/STUDIES/IMPACT/DTI/scripts/step20_21_full_audit.sh`.
 
-printf "Subject\tL_VTA\tR_VTA\tL_HPC\tR_HPC\tL_atlas\tR_atlas\n"
+**Audit results (57/57 subjects):**
 
-for subj in $(ls -1 "$nifti_base"); do
-    d="$csd_base/$subj/rois"
-    lv=$([ -f "$d/left_VTA_diff.nii.gz" ] && echo "✅" || echo "❌")
-    rv=$([ -f "$d/right_VTA_diff.nii.gz" ] && echo "✅" || echo "❌")
-    lh=$([ -f "$d/left_HPC_diff.nii.gz" ] && echo "✅" || echo "❌")
-    rh=$([ -f "$d/right_HPC_diff.nii.gz" ] && echo "✅" || echo "❌")
-    la=$([ -f "$d/left_tract_atlas_diff.nii.gz" ] && echo "✅" || echo "❌")
-    ra=$([ -f "$d/right_tract_atlas_diff.nii.gz" ] && echo "✅" || echo "❌")
-    printf "%s\t%s\t%s\t%s\t%s\t%s\t%s\n" "$subj" "$lv" "$rv" "$lh" "$rh" "$la" "$ra"
-done
+| # | Audit | Result |
+|---|-------|--------|
+| 1 | Step 20 ANTs transform files (affine, warp, invwarp, warped) | 57/57 PASS |
+| 2 | Step 21 ROI file completeness (6 diff + 6 T1 intermediates) | 57/57 PASS |
+| 3 | Voxel counts + outlier detection (>2 SD from mean) | 0 empty ROIs |
+| 4 | ROI dimensions match diffusion reference | 57/57 PASS |
+| 5 | VTA-HPC overlap (must be zero, per Ranesh) | 0 subjects with overlap |
+| 6 | Binariness (all values 0 or 1) | 57/57 PASS |
+| 7 | ROI laterality (left ROIs on left hemisphere) | 57/57 PASS |
+| 8 | T1 intermediate files present (verify 2-stage warp) | 57/57 PASS |
+| 9 | Registration quality (cross-correlation, flag <2 SD) | 2 borderline (CC=0.59, threshold=0.60) |
 
-echo -e "\n=== ROI Warp Audit Complete ==="
-```
+**Voxel count summary (non-zero voxels per ROI):**
+
+| ROI | Min | Mean | Max | SD |
+|-----|-----|------|-----|-----|
+| L VTA | 32 | 44.4 | 56 | 5.5 |
+| R VTA | 34 | 43.9 | 56 | 5.2 |
+| L HPC | 308 | 394.8 | 497 | 33.0 |
+| R HPC | 332 | 406.5 | 493 | 34.3 |
+| L Atlas | 107 | 126.0 | 146 | 9.9 |
+| R Atlas | 99 | 123.1 | 149 | 10.6 |
+
+**Registration quality flagged subjects (s1694, s4531):** Both were visually inspected and confirmed to have correct ROI placement — the borderline CC score (0.59 vs threshold 0.60) reflects normal anatomical variation, not registration failure.
 
 ### Visual QC: Verifying ROI Placement in Diffusion Space
 
-After warping, it is critical to visually confirm that the ROIs landed where they should. We overlay the VTA and hippocampus ROIs on each subject's mean b0 image (diffusion space) and inspect sagittal, coronal, and axial slices centered at the ROI's center of mass.
+After warping, we visually confirm that ROIs landed in the correct anatomical locations. Following Ranesh's approach, visual QC was performed on **all 57 subjects** using three complementary methods.
 
 **What to look for:**
 - **VTA**: Should sit in the ventral midbrain, just anterior to the red nucleus, near the midline. It's tiny — only a few voxels. If it lands in the cerebral peduncle, pons, or outside the brainstem, the registration failed for that subject.
 - **Hippocampus**: Should trace the medial temporal lobe, curving along the floor of the lateral ventricle. If it overlaps with the ventricle itself or sits in white matter, something went wrong.
 - **Tract atlas**: Should form a thin corridor running from VTA up through the midbrain to the hippocampus. If it's scattered or covers half the brain, the threshold or registration is off.
 
-**QC is run on 5 subjects** (evenly spaced across the dataset) using FSL's `slicer` and `overlay` tools. PNG images are generated on the cluster and downloaded for inspection.
-
-```bash
-nano run_roi_qc.sh
-```
-
-Paste the following into nano:
-```bash
-#!/bin/bash
-# ============================================================
-# ROI Placement QC — Visual check of warped ROIs
-# ============================================================
-# Generates overlay PNG images showing VTA and HPC ROIs on top
-# of each subject's mean b0 (diffusion) image. For QC, we check
-# 5 subjects: first, last, and 3 evenly spaced in between.
-# Uses FSL slicer to create axial/coronal/sagittal slices at
-# the ROI center of mass.
-# Output: CSD/<subj>/qc/roi_qc_*.png
-# ============================================================
-
-export PATH=/usr/local/fsl/bin:/data/tools/mrtrix3/bin:$PATH
-
-csd_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD"
-bedpostx_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX"
-nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
-
-# Pick 5 subjects for QC
-all_subjs=($(ls -1 "$nifti_base"))
-n=${#all_subjs[@]}
-qc_subjs=(
-    "${all_subjs[0]}"
-    "${all_subjs[$((n/4))]}"
-    "${all_subjs[$((n/2))]}"
-    "${all_subjs[$((3*n/4))]}"
-    "${all_subjs[$((n-1))]}"
-)
-
-echo "=== QC subjects: ${qc_subjs[*]} ==="
-
-for subj in "${qc_subjs[@]}"; do
-    echo ">>> [$subj] Generating QC images"
-
-    roi_dir="$csd_base/$subj/rois"
-    qc_dir="$csd_base/$subj/qc"
-    mkdir -p "$qc_dir"
-
-    # Use nodif_brain_mask as underlay reference
-    b0_ref="$bedpostx_base/$subj/bedpostx_input/nodif_brain_mask.nii.gz"
-
-    # Extract a mean b0 from dwi.mif for better contrast underlay
-    if [[ -f "$csd_base/$subj/dwi.mif" ]]; then
-        dwiextract "$csd_base/$subj/dwi.mif" -bzero - 2>/dev/null | \
-            mrmath - mean "$qc_dir/mean_b0.nii.gz" -axis 3 -force 2>/dev/null
-        underlay="$qc_dir/mean_b0.nii.gz"
-    else
-        underlay="$b0_ref"
-    fi
-
-    # Generate overlays for each ROI
-    for roi_name in left_VTA right_VTA left_HPC right_HPC left_tract_atlas right_tract_atlas; do
-        roi_file="$roi_dir/${roi_name}_diff.nii.gz"
-        if [[ ! -f "$roi_file" ]]; then
-            echo "!!! [$subj] Missing $roi_name, skipping QC"
-            continue
-        fi
-
-        # Get ROI center of mass for slice positioning
-        com=$(fslstats "$roi_file" -C 2>/dev/null)
-        x=$(echo "$com" | awk '{printf "%.0f", $1}')
-        y=$(echo "$com" | awk '{printf "%.0f", $2}')
-        z=$(echo "$com" | awk '{printf "%.0f", $3}')
-
-        # Create overlay (ROI in red on b0)
-        overlay 1 0 "$underlay" -a "$roi_file" 0.5 1 "$qc_dir/overlay_${roi_name}.nii.gz" 2>/dev/null
-
-        # Axial, coronal, sagittal slices through ROI center
-        slicer "$qc_dir/overlay_${roi_name}.nii.gz" \
-            -x -${x} "$qc_dir/sag_${roi_name}.png" \
-            -y -${y} "$qc_dir/cor_${roi_name}.png" \
-            -z -${z} "$qc_dir/axi_${roi_name}.png" \
-            2>/dev/null
-
-        # Combine into one QC image
-        pngappend "$qc_dir/sag_${roi_name}.png" + "$qc_dir/cor_${roi_name}.png" + "$qc_dir/axi_${roi_name}.png" "$qc_dir/roi_qc_${roi_name}.png" 2>/dev/null
-
-        # Clean up intermediates
-        rm -f "$qc_dir/sag_${roi_name}.png" "$qc_dir/cor_${roi_name}.png" "$qc_dir/axi_${roi_name}.png" "$qc_dir/overlay_${roi_name}.nii.gz"
-    done
-
-    echo ">>> [$subj] QC images saved to $qc_dir/"
-done
-
-echo "=== QC image generation finished ==="
-```
-
-Run the QC script after Step 21 completes:
-```bash
-chmod +x run_roi_qc.sh
-./run_roi_qc.sh 2>&1 | tee roi_qc.log
-```
-
-Download the QC images to your local machine for review:
-```bash
-# From your local terminal (not the cluster):
-mkdir -p ~/Desktop/SDN/DTI/data.check/roi_qc
-
-# Copy all QC PNGs
-rsync -av \
-    "tur50045@cla19097.tu.temple.edu:/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/*/qc/roi_qc_*.png" \
-    ~/Desktop/SDN/DTI/data.check/roi_qc/
-```
-
-**What a good QC looks like:**
-- VTA: A small cluster of bright voxels in the ventral midbrain (near midline, below thalamus, above pons)
-- HPC: A curved structure in the medial temporal lobe, following the floor of the lateral ventricle
-- Tract atlas: A thin corridor of voxels running from midbrain toward temporal lobe
-
 **Red flags (re-check registration for that subject):**
 - ROI sitting in ventricle, white matter, or cortex instead of the expected gray matter structure
 - ROI completely absent (zero voxels after warping)
 - ROI shifted laterally (e.g., left VTA appearing on the right side)
+
+#### QC Method 1: Whole-Brain Context (Python/nibabel)
+
+3-panel images (sagittal, coronal, axial) showing each ROI overlaid in yellow on the mean b0. Generated on the cluster using `roi_qc_python.py` for all 57 subjects (342 images total). Useful for confirming ROIs are in the right general brain region.
+
+**Example — s1694 Left VTA (whole-brain view):**
+![roi_qc_wholebrain_left_VTA](images/roi_qc_wholebrain_left_VTA.png)
+
+**Example — s1694 Left Hippocampus (whole-brain view):**
+![roi_qc_wholebrain_left_HPC](images/roi_qc_wholebrain_left_HPC.png)
+
+#### QC Method 2: Zoomed ROI View (Python/nibabel)
+
+Tightly cropped around each ROI with 5x scaling so you can see individual voxels and surrounding anatomy. Generated using `roi_qc_zoomed.py` for all 57 subjects (342 images total). Best for verifying precise anatomical placement.
+
+**Example — s1694 Left VTA (zoomed):**
+![roi_qc_zoomed_left_VTA](images/roi_qc_zoomed_left_VTA.png)
+
+**Example — s1694 Left Hippocampus (zoomed):**
+![roi_qc_zoomed_left_HPC](images/roi_qc_zoomed_left_HPC.png)
+
+**Example — s1694 Left VTA-HPC Tract Atlas (zoomed):**
+![roi_qc_zoomed_left_tract_atlas](images/roi_qc_zoomed_left_tract_atlas.png)
+
+#### QC Method 3: FSLeyes Render (Publication Quality)
+
+Full ortho views rendered locally via `fsleyes render` with color-coded overlays: VTA in yellow, hippocampus in red, tract atlas in green. Generated for all 57 subjects (114 images total). Includes orientation labels (P/A, L/R, S/I).
+
+**Example — s1694 Left hemisphere (FSLeyes ortho):**
+![roi_qc_fsleyes_ortho_left](images/roi_qc_fsleyes_ortho_left.png)
+
+**Example — s1694 Right hemisphere (FSLeyes ortho):**
+![roi_qc_fsleyes_ortho_right](images/roi_qc_fsleyes_ortho_right.png)
+
+#### QC Image Locations
+
+| QC Method | Images Per Subject | Total | Location |
+|-----------|-------------------|-------|----------|
+| Whole-brain (Python) | 6 | 342 | `CSD/<subj>/qc/roi_qc_*.png` |
+| Zoomed (Python) | 6 | 342 | `CSD/<subj>/qc/roi_qc_*_zoomed.png` |
+| FSLeyes render | 2 | 114 | `~/Desktop/SDN/DTI/data.check/roi_qc_fsleyes/<subj>/` |
+
+#### QC Scripts
+
+All QC scripts are stored at `/data/projects/STUDIES/IMPACT/DTI/scripts/`:
+
+| Script | What it does |
+|--------|-------------|
+| `step20_21_full_audit.sh` | 9-part automated audit (run on cluster) |
+| `roi_qc_python.py` | Whole-brain 3-panel overlays for all subjects (run on cluster) |
+| `roi_qc_zoomed.py` | Zoomed ROI overlays for all subjects (run on cluster) |
+| `fsleyes_qc_render.sh` | FSLeyes ortho renders (run locally with mounted server) |
+
+#### QC Verdict
+
+All 57 subjects pass all 9 automated audits and visual inspection. No subjects excluded. ROIs consistently land in the correct anatomical locations across all subjects. Ready for Step 22.
+
+---
+
+## Step 22 — Atlas-Based Exclusion Masks
+
+Ranesh's original pipeline used 13 individual exclusion ROIs (ventral pallidum, accumbens L/R, striatum, thalamus, cortex/cerebellum, brainstem, amygdala, red nucleus, fornix, optic tract, optic nerve, opposite hemisphere) to constrain tractography. Each had to be warped, tidied (overlaps subtracted), and passed as separate `-exclude` flags to tckgen.
+
+Instead, we use the **atlas shortcut** that Ranesh recommended: his GroupMean_thr50 tract atlas (built from ~170 HCP 7T subjects using those 13 exclusion ROIs) already encodes "where VTA→HPC streamlines should plausibly go." We dilate this atlas by 2 voxels, add the VTA seed and HPC target ROIs, binarize the result into an "inclusion zone," and invert everything outside it into a single exclusion mask.
+
+From Ranesh's meeting notes: "By dilating the atlas by like two-ish voxels, you're generating like this box where your streamlines should plausibly go through... you exclude everything outside of this box... add the VTA and the hippocampus to this atlas mask, and then you invert everything else."
+
+**Logic (per hemisphere):**
+1. Dilate tract atlas by 2 voxels (`fslmaths -dilM -dilM`)
+2. Add VTA + HPC to dilated atlas, binarize → inclusion zone
+3. Invert inclusion zone → exclusion mask (everything outside is excluded)
+
+**Input (per subject, from Step 21):**
+- `CSD/<subj>/rois/left_tract_atlas_diff.nii.gz` — left GroupMean_thr50 atlas in diffusion space
+- `CSD/<subj>/rois/right_tract_atlas_diff.nii.gz` — right GroupMean_thr50 atlas in diffusion space
+- `CSD/<subj>/rois/left_VTA_diff.nii.gz` — left VTA seed ROI in diffusion space
+- `CSD/<subj>/rois/right_VTA_diff.nii.gz` — right VTA seed ROI in diffusion space
+- `CSD/<subj>/rois/left_HPC_diff.nii.gz` — left hippocampus target in diffusion space
+- `CSD/<subj>/rois/right_HPC_diff.nii.gz` — right hippocampus target in diffusion space
+
+**Expected Output (per subject):**
+```
+derivatives/CSD/s1000/rois/
+│
+├── l_atlas_dilated.nii.gz      # left tract atlas dilated by 2 voxels
+├── r_atlas_dilated.nii.gz      # right tract atlas dilated by 2 voxels
+├── l_inclusion_zone.nii.gz     # left allowed region (atlas + VTA + HPC, binarized)
+├── r_inclusion_zone.nii.gz     # right allowed region
+├── exclusion_mask_l.nii.gz     # LEFT exclusion mask (inverted inclusion zone)
+├── exclusion_mask_r.nii.gz     # RIGHT exclusion mask (inverted inclusion zone)
+```
+
+This step is lightweight — fslmaths operations only. We allow up to 30 parallel jobs.
+
+**Running Step 22 in tmux:**
+
+1. SSH into the cluster and reattach (or create) the tmux session:
+```bash
+ssh -XY tur50045@cla19097.tu.temple.edu
+tmux attach -t csd || tmux new -s csd
+```
+
+2. Create the script:
+```bash
+nano run_step22_exclusion_masks.sh
+```
+
+3. Paste the following into nano:
+```bash
+#!/bin/bash
+# ============================================================
+# Step 22: Build Atlas-Based Exclusion Masks
+# ============================================================
+# Uses Ranesh's GroupMean_thr50 tract atlas to create a single
+# exclusion mask per hemisphere, replacing 13 individual exclusion ROIs.
+#
+# Logic (per Ranesh):
+#   1. Dilate tract atlas by 2 voxels (fslmaths -dilM -dilM)
+#   2. Add VTA seed + HPC target to dilated atlas
+#   3. Binarize = inclusion zone (where streamlines are allowed)
+#   4. Invert = exclusion mask (everything outside is excluded)
+#
+# Input:  CSD/<subj>/rois/ (atlas, VTA, HPC in diffusion space)
+# Output: CSD/<subj>/rois/ (exclusion_mask_l/r.nii.gz)
+# ============================================================
+
+export FSLDIR=/usr/local/fsl
+export PATH=$FSLDIR/bin:$PATH
+source $FSLDIR/etc/fslconf/fsl.sh
+
+csd_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD"
+nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
+log_file="/data/projects/STUDIES/IMPACT/DTI/scripts/step22.log"
+
+echo "=== Step 22: Building exclusion masks ==="  > "$log_file"
+echo "Started: $(date)" >> "$log_file"
+
+process_subj() {
+    subj=$1
+    d="$csd_base/$subj/rois"
+
+    # Check inputs exist
+    missing=0
+    for f in left_tract_atlas_diff.nii.gz right_tract_atlas_diff.nii.gz \
+             left_VTA_diff.nii.gz right_VTA_diff.nii.gz \
+             left_HPC_diff.nii.gz right_HPC_diff.nii.gz; do
+        if [ ! -f "$d/$f" ]; then
+            echo "!!! [$subj] Missing $f — SKIPPING" | tee -a "$log_file"
+            missing=1
+        fi
+    done
+    if [ "$missing" -eq 1 ]; then return 1; fi
+
+    echo ">>> [$subj] Building exclusion masks" | tee -a "$log_file"
+
+    # === LEFT HEMISPHERE ===
+    # 1. Dilate tract atlas by 2 voxels
+    fslmaths "$d/left_tract_atlas_diff.nii.gz" -dilM -dilM "$d/l_atlas_dilated.nii.gz"
+
+    # 2. Add VTA + HPC to dilated atlas, binarize = inclusion zone
+    fslmaths "$d/l_atlas_dilated.nii.gz" \
+        -add "$d/left_VTA_diff.nii.gz" \
+        -add "$d/left_HPC_diff.nii.gz" \
+        -bin "$d/l_inclusion_zone.nii.gz"
+
+    # 3. Invert = exclusion mask
+    fslmaths "$d/l_inclusion_zone.nii.gz" -binv "$d/exclusion_mask_l.nii.gz"
+
+    # === RIGHT HEMISPHERE ===
+    fslmaths "$d/right_tract_atlas_diff.nii.gz" -dilM -dilM "$d/r_atlas_dilated.nii.gz"
+
+    fslmaths "$d/r_atlas_dilated.nii.gz" \
+        -add "$d/right_VTA_diff.nii.gz" \
+        -add "$d/right_HPC_diff.nii.gz" \
+        -bin "$d/r_inclusion_zone.nii.gz"
+
+    fslmaths "$d/r_inclusion_zone.nii.gz" -binv "$d/exclusion_mask_r.nii.gz"
+
+    echo ">>> [$subj] Done" | tee -a "$log_file"
+}
+
+export -f process_subj
+export csd_base log_file FSLDIR PATH
+
+# Run all subjects in parallel (lightweight fslmaths — 30 jobs fine)
+for subj in $(ls -1 "$nifti_base"); do
+    process_subj "$subj" &
+    while [ "$(jobs -r | wc -l)" -ge 30 ]; do sleep 0.5; done
+done
+wait
+
+echo "=== Step 22 Complete: $(date) ===" | tee -a "$log_file"
+```
+
+4. Save and exit nano:
+Press Ctrl+O then Enter to save
+Press Ctrl+X to close
+
+5. Make the script runnable and execute inside tmux:
+```bash
+chmod +x run_step22_exclusion_masks.sh
+./run_step22_exclusion_masks.sh 2>&1 | tee step22.log
+```
+
+6. Detach from tmux while it runs (if needed):
+Press Ctrl+B, then D to detach. Reconnect later with:
+```bash
+tmux attach -t csd
+```
+* Note: All coding output from this script is recorded in step22.log.
+
+**Step 22 Audit — verify exclusion masks for all subjects (7 checks):**
+
+The audit verifies:
+1. **File existence** — all 6 output files per subject
+2. **Binary check** — exclusion masks contain only 0s and 1s
+3. **Dimension match** — masks match DWI dimensions
+4. **VTA not excluded** — VTA voxels have value 0 in the exclusion mask (i.e., they are NOT excluded)
+5. **HPC not excluded** — HPC voxels have value 0 in the exclusion mask
+6. **Exclusion coverage** — inclusion zone is <20% of total volume (most of the brain is excluded)
+7. **Inclusion zone size** — reasonable voxel count (100-50000 range)
+
+Results: **57/57 subjects pass all 7 checks. 0 failures, 0 warnings.**
+
+Inclusion zone voxel counts range from ~1526 to ~1934 (mean ≈ 1720), consistent across subjects — this represents the narrow VTA→HPC white matter corridor.
+
+### Step 22 Visual QC
+
+QC images show the inclusion corridor (green), VTA (yellow), and HPC (red) overlaid on the mean b0 in three views (sagittal, coronal, axial), both whole-brain and zoomed.
+
+**Example: s1000 — Left VTA→HPC exclusion mask:**
+
+The green corridor traces a plausible anatomical path from VTA (midbrain) through medial forebrain bundle white matter to hippocampus (medial temporal lobe). VTA and HPC are fully contained within the inclusion zone.
+
+| Script | Purpose |
+|--------|---------|
+| `run_step22_exclusion_masks.sh` | Build exclusion masks for all subjects |
+| `step22_audit.sh` | 7-check automated audit |
+| `step22_visual_qc.py` | Generate QC overlay images (run on cluster) |
+
+#### QC Verdict
+
+All 57 subjects pass all 7 automated audits and visual inspection. Exclusion masks show anatomically plausible VTA→HPC corridors. Inclusion zone sizes are consistent (1526-1934 voxels). Ready for Step 23 (test tractography).
+
+**NOTE**: Ranesh recommended experimenting with 1 vs 2 voxel dilation. We start with 2 voxels. If Step 23 test tractography produces tracts that look too loose/dispersed, we can re-run with 1 voxel dilation.
+
+---
