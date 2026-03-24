@@ -4416,7 +4416,49 @@ for subj in s169 s4222 s4418 s606 s1000; do
 done
 ```
 
-**Results will be added here after the test run completes.**
+### Step 23 Results — Pilot Findings
+
+We tested four FOD amplitude cutoffs (0.1, 0.08, 0.06, 0.01) on 5 subjects across both hemispheres to determine the optimal tracking threshold for our 3T data.
+
+**Streamline counts (target: 1000, seed limit: 5,000,000):**
+
+| Subject | Hemi | 0.1 | 0.08 | 0.06 | 0.01 |
+|---------|------|-----|------|------|------|
+| s169 | L | 118 | 556 | 1000 | 1000 |
+| s169 | R | 30 | 434 | 1000 | 1000 |
+| s4222 | L | 274 | 1000 | 1000 | 1000 |
+| s4222 | R | 165 | 906 | 1000 | 1000 |
+| s4418 | L | 1000 | 1000 | 1000 | 1000 |
+| s4418 | R | 1000 | 1000 | 1000 | 1000 |
+| s606 | L | 88 | 309 | 1000 | 1000 |
+| s606 | R | 731 | 1000 | 1000 | 1000 |
+| s1000 | L | — | — | 1000 | 1000 |
+| s1000 | R | — | — | 1000 | 1000 |
+
+**Key findings:**
+- **0.1**: Too strict for 3T — most subjects failed to reach 1000 streamlines within the seed limit
+- **0.08**: Inconsistent — some subjects hit target, others fell well short (e.g., s606 left = 309)
+- **0.06**: Reliable — all 10/10 runs hit 1000 streamlines
+- **0.01**: Equally reliable — all 10/10 runs hit 1000 streamlines, but ~5× more seed-efficient (avg ~415K seeds vs ~2.1M+ at 0.06)
+
+**Visual and statistical comparison of 0.01 vs 0.06:**
+
+We generated tract density images (TDIs) for both cutoffs and compared them:
+- Tract paths are virtually identical — same VTA→HPC arc in both axial and coronal views
+- 0.01 produces slightly thicker TDIs (broader spatial spread through the tract corridor)
+- Spatial overlap (Dice coefficient) averaged 0.66 across all subjects/hemispheres
+- Mean streamline lengths were nearly identical (~44mm at 0.01 vs ~47mm at 0.06)
+- Standard deviation of lengths was marginally higher at 0.01 (~7mm vs ~6mm)
+
+**Example comparison — s169, left VTA→HPC:**
+
+![Cutoff comparison](images/cutoff_compare_s169_l.png)
+
+**Decision: Use cutoff 0.01 for full tractography (Step 24).**
+
+Ranesh confirmed this choice — he reported that with the atlas-based exclusion mask, dropping the FOD cutoff as low as 0.01 produces robust and clean streamlines. The mask constrains tracking to the anatomically plausible corridor, preventing the spurious streamlines that would normally result from a permissive cutoff. He also noted that the tracts may not even require pyAFQ cleaning afterward, though we will still run the cleaning step (Step 25) as a safeguard.
+
+---
 
 ### Decision Criteria
 
