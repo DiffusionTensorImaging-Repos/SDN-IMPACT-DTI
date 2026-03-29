@@ -4683,6 +4683,16 @@ echo "Pass (≥2500 streamlines): $pass / $((pass + fail))"
 echo "Fail: $fail / $((pass + fail))"
 ```
 
-**Results will be added here after the full run completes.**
+### Step 24 Results
+
+All 57 subjects completed successfully — **114/114 runs hit 2500 streamlines**, no subjects excluded.
+
+- **Seed usage range:** 511K (s4650 left) to 2.03M (s35 right) — all well under the 25M seed cap
+- **Average seeds used:** ~1.1M (~4.4% of the 25M limit)
+- **Total tck files:** 114 (57 subjects × 2 hemispheres)
+
+The cutoff 0.01 + atlas-based exclusion mask combination proved highly efficient at 3T, consistent with Ranesh's experience at 7T. No subject came close to exhausting the seed budget.
+
+**Step 24 Audit Result:** 114/114 pass (all ≥ 2500 streamlines). 0 failures.
 
 ---
