@@ -4450,9 +4450,15 @@ We generated tract density images (TDIs) for both cutoffs and compared them:
 - Mean streamline lengths were nearly identical (~44mm at 0.01 vs ~47mm at 0.06)
 - Standard deviation of lengths was marginally higher at 0.01 (~7mm vs ~6mm)
 
-**Example comparison — s169, left VTA→HPC:**
+**Example TDI comparison — s169, left VTA→HPC (0.06 left, 0.01 right):**
 
 ![Cutoff comparison](images/cutoff_compare_s169_l.png)
+
+**Statistical comparison across all 5 test subjects:**
+
+![Cutoff stats](images/cutoff_stats_comparison.png)
+
+Note the slightly thicker TDI at 0.01 — this reflects the broader spatial spread from the more permissive cutoff. The cleaning step (Step 25) addresses this by removing outlier streamlines, producing bundles that are even tighter than the conservative 0.06 threshold.
 
 **Decision: Use cutoff 0.01 for full tractography (Step 24).**
 
@@ -4959,5 +4965,23 @@ All 57 subjects completed successfully — **114/114 tracts cleaned**, no subjec
 The ~39% retention rate is typical for Mahalanobis-distance cleaning with these parameters (3 SD distance, 2 SD length, 5 rounds). The atlas-based exclusion mask (Step 22) kept the raw tracts clean enough that even after aggressive cleaning, every subject retains hundreds of streamlines.
 
 **Step 25 Audit Result:** 114/114 pass (all cleaned files exist, all > 0 streamlines). 0 failures.
+
+### Visual QC — Did Cleaning Fix the 0.01 "Messiness"?
+
+In Step 23, we noted that the 0.01 cutoff produced slightly thicker tract density images compared to the conservative 0.06 cutoff. After pyAFQ Mahalanobis cleaning, we compared all three versions side by side to verify that cleaning tightened the bundles:
+
+**Example 3-way comparison — s169, left VTA→HPC:**
+
+![3-way comparison](images/cleaned_compare_s169_l.png)
+
+Left: 0.06 conservative (1000 streamlines). Middle: 0.01 uncleaned (2500 streamlines). Right: 0.01 cleaned (~824 streamlines). The cleaned 0.01 tract is visibly more focused than both the uncleaned 0.01 and even the conservative 0.06.
+
+**Tract length variability (std dev) across all 5 test subjects:**
+
+![Cleaned stats comparison](images/cleaned_stats_comparison.png)
+
+The green bars (0.01 cleaned) are consistently the lowest — meaning the tightest, most consistent bundles. The cleaning removed outlier streamlines that were making 0.01 appear messier, producing bundles with ~3.5-4.5mm std dev compared to ~5-7mm for both uncleaned options.
+
+**Summary:** The 0.01 cutoff + pyAFQ cleaning produces tracts that are more efficient to generate AND tighter than the conservative 0.06 cutoff alone. This validates Ranesh's recommendation to use a permissive cutoff with the atlas-based exclusion mask and rely on Mahalanobis cleaning to refine the bundles.
 
 ---
