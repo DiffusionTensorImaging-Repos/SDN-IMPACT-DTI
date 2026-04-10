@@ -75,8 +75,11 @@ Index — IMPACT DTI Tractography Pipeline (Section B)
 24. Step 24 — Full Tractography (All Subjects)
 25. [Step 25 — Tract Cleaning (pyAFQ Mahalanobis Distance)](#step-25--tract-cleaning-pyafq-mahalanobis-distance)
 26. [Step 26 — Visual QC of Cleaned Tracts](#step-26--visual-qc-of-cleaned-tracts-all-57-subjects)
-27. Step 27 — Node-wise FA Extraction
-28. Step 28 — Statistical Analysis (Permutation Testing)
+27. Step 27 — Node-wise FA Extraction (awaiting Ranesh's profiling script)
+28. Step 28 — Statistical Analysis: Permutation Testing (awaiting Ranesh's script)
+29. Step 29 — NODDI Model Fitting (NDI + ODI maps per subject)
+30. Step 30 — Node-wise NDI/ODI Extraction along tracts
+31. Step 31 — Statistical Analysis on NDI/ODI (permutation testing)
 
 
 # DTI PREPROCESSING: 
