@@ -78,8 +78,8 @@ Index — IMPACT DTI Tractography Pipeline (Section B)
     - [Anterior VTA→HPC Tract Addendum](#anterior-vtahpc-tract-addendum) — same pipeline re-run with new atlas from Ranesh
 27. [Step 27 — Node-wise FA Extraction (AFQ-style Tract Profiling)](#step-27--node-wise-fa-extraction-afq-style-tract-profiling)
 28. Step 28 — Statistical Analysis: Permutation Testing (awaiting Ranesh's script)
-29. Step 29 — NODDI Model Fitting (NDI + ODI maps per subject)
-30. Step 30 — Node-wise NDI/ODI Extraction along tracts
+29. [Step 29 — NODDI Model Fitting (AMICO with Modulated Maps)](#step-29--noddi-model-fitting-amico-with-modulated-maps)
+30. [Step 30 — Node-wise NODDI Extraction (NDI, ODI, FWF)](#step-30--node-wise-noddi-extraction-ndi-odi-fwf-along-tracts)
 31. Step 31 — Statistical Analysis on NDI/ODI (permutation testing)
 
 
@@ -5678,5 +5678,250 @@ Posterior VTA→HPC, left hemisphere (s169) — different subject, similar overa
 **Step 27 Audit Result:** 4/4 CSVs at expected 5,701 rows each. 0 failures. **Ready for Step 28 (permutation testing) once the behavioral outcome variable is selected.**
 
 ---
+
+## Step 29 — NODDI Model Fitting (AMICO with Modulated Maps)
+
+Ranesh emphasized NODDI — he found NDI revealed effects that FA missed in his HCP cohort ("NDI_modulated" specifically, nodes 25–75). We fit NODDI on all 57 subjects using the AMICO toolbox with his exact configuration.
+
+**Why modulated maps (per Ranesh's email):** Standard NODDI output is contaminated by partial-volume effects (free-water signal mixing with tissue compartments). The `doSaveModulatedMaps=True` flag in AMICO produces `fit_NDI_modulated.nii.gz` and `fit_ODI_modulated.nii.gz`, which apply a tissue-weighted correction described in [Parker et al. 2021](https://doi.org/10.1016/j.neuroimage.2021.118749). FWF has no modulated version — the tissue-weighting *is* the partial-volume correction for NDI/ODI, so you use the regular `fit_FWF.nii.gz` if you want free-water content.
+
+**Dependencies:**
+- AMICO (`pip3 install --user dmri-amico`) — version 2.1.1 installed on cluster.
+
+**Input (per subject — same files as Step 25):**
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX/<subj>/bedpostx_input/data.nii.gz` (eddy-corrected DWI)
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX/<subj>/bedpostx_input/bvals`
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX/<subj>/bedpostx_input/bvecs`
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX/<subj>/bedpostx_input/nodif_brain_mask.nii.gz`
+
+**Expected Output (per subject):**
+```
+derivatives/NODDI/sub-s1000/
+│
+├── config.pickle
+├── sub-s1000_scheme.scheme
+├── fit_dir.nii.gz               # primary fiber direction
+├── fit_NDI.nii.gz               # neurite density index
+├── fit_ODI.nii.gz               # orientation dispersion index
+├── fit_FWF.nii.gz               # free water fraction
+├── fit_NDI_modulated.nii.gz     # NDI with tissue-weighted PVE correction (USE FOR ANALYSIS)
+├── fit_ODI_modulated.nii.gz     # ODI with tissue-weighted PVE correction (USE FOR ANALYSIS)
+└── fit_RMSE.nii.gz              # quality: model-fit residual
+```
+
+**Ranesh's parameters (reproduced exactly):**
+
+| Parameter | Value | Notes |
+|-----------|-------|-------|
+| `amico.util.fsl2scheme` `bStep` | 200 | Rounds b-values to nearest 200 (handles jitter around 0/1000/2000/3250/5000) |
+| `b0_thr` | 100 | Treat b-values < 100 as b0 |
+| `doSaveModulatedMaps` | True | Partial volume correction output |
+| `doComputeRMSE` | True | QC output |
+| `BLAS_nthreads` | 1 | Prevents BLAS over-subscription |
+| `save_dir_avg` | True | Saves full per-voxel metrics |
+
+**Parallelization strategy:** Ranesh ran 48 threads per subject serially. Our cluster has 48 cores + 125 GB RAM, so we ran **4 subjects in parallel × 12 threads each** = all 48 cores saturated with better wall-time utilization. A single-subject fit takes ~36 seconds, so 57 subjects with 4-way parallelism completed in ~15 minutes total.
+
+**Running Step 29 in tmux:**
+
+1. SSH into the cluster and create a tmux session:
+```bash
+ssh -XY tur50045@cla19097.tu.temple.edu
+tmux new -s step29
+```
+
+2. Create the single-subject Python script:
+```bash
+nano /data/projects/STUDIES/IMPACT/DTI/scripts/run_step29_noddi.py
+```
+
+3. Paste the Python script (adapted from Ranesh's `NODDI_fitting.py` with IMPACT paths — one-subject-per-invocation pattern).
+
+4. Create the parallel runner `run_step29_noddi_parallel.sh` that loops through all 57 subjects launching 4 at a time with `NODDI_NTHREADS=12`.
+
+5. Run:
+```bash
+chmod +x /data/projects/STUDIES/IMPACT/DTI/scripts/run_step29_noddi_parallel.sh
+bash /data/projects/STUDIES/IMPACT/DTI/scripts/run_step29_noddi_parallel.sh
+```
+
+6. Detach from tmux while it runs (Ctrl+B, D). Reconnect with `tmux attach -t step29`.
+
+**NOTE on the kernel-directory race condition:** AMICO's `generate_kernels(regenerate=True)` removes and regenerates files in a shared `NODDI/kernels/` directory. When multiple parallel jobs hit this simultaneously (early in the run), one job may delete a file another is writing, causing `FileNotFoundError`. On our run, 3 subjects (s1324, s418, s673) hit this on the first pass. They were re-run serially afterwards (each subject has its own output directory, so retries are safe) and all succeeded. If re-running from scratch, consider generating kernels once on a single subject before launching the parallel pool.
+
+**Downloading a subject's NODDI outputs locally (for FSLeyes inspection):**
+```bash
+scp -r tur50045@cla19097.tu.temple.edu:/data/projects/STUDIES/IMPACT/DTI/derivatives/NODDI/sub-s1000 \
+    ~/Desktop/SDN/DTI/data.check/noddi_s1000/
+```
+
+**Interactive review in FSLeyes (verify NDI looks right):**
+```bash
+export FSLDIR=/usr/local/fsl
+source $FSLDIR/etc/fslconf/fsl.sh
+
+fsleyes /data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/s1000/qc/mean_b0.nii.gz \
+    /data/projects/STUDIES/IMPACT/DTI/derivatives/NODDI/sub-s1000/fit_NDI_modulated.nii.gz \
+    -cm render3 -dr 0 1 &
+```
+
+NDI should show the classic white-matter-bright pattern (high in CC, internal capsule, corona radiata; low in cortex and CSF).
+
+**Step 29 Audit — verify NODDI outputs exist for all subjects:**
+```bash
+#!/bin/bash
+# Audit Step 29: NODDI fitting outputs
+
+nifti_base="/data/projects/STUDIES/IMPACT/DTI/NIFTI"
+noddi_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/NODDI"
+
+pass=0; fail=0
+printf "%-12s %-4s %-4s %-4s %-4s %-4s\n" "Subject" "NDI" "ODI" "FWF" "NDIm" "ODIm"
+
+for subj in $(ls -1 "$nifti_base"); do
+    d="$noddi_base/sub-$subj"
+    ndi=$([ -f "$d/fit_NDI.nii.gz" ] && echo "✅" || echo "❌")
+    odi=$([ -f "$d/fit_ODI.nii.gz" ] && echo "✅" || echo "❌")
+    fwf=$([ -f "$d/fit_FWF.nii.gz" ] && echo "✅" || echo "❌")
+    ndim=$([ -f "$d/fit_NDI_modulated.nii.gz" ] && echo "✅" || echo "❌")
+    odim=$([ -f "$d/fit_ODI_modulated.nii.gz" ] && echo "✅" || echo "❌")
+    printf "%-12s %-4s %-4s %-4s %-4s %-4s\n" "$subj" "$ndi" "$odi" "$fwf" "$ndim" "$odim"
+
+    if [[ -f "$d/fit_NDI_modulated.nii.gz" ]]; then
+        pass=$((pass + 1))
+    else
+        fail=$((fail + 1))
+    fi
+done
+echo ""
+echo "Pass: $pass / $((pass + fail))"
+echo "Fail: $fail / $((pass + fail))"
+```
+
+### Step 29 Results
+
+**57/57 subjects pass** — all have the complete set of NODDI outputs (NDI, ODI, FWF + modulated NDI/ODI + RMSE). No subjects excluded. Ready for Step 30 (nodewise extraction).
+
+---
+
+## Step 30 — Node-wise NODDI Extraction (NDI, ODI, FWF along tracts)
+
+With the NODDI maps from Step 29 and the cleaned tracts from Step 25, we extract NDI, ODI, and FWF along each tract at 100 equidistant nodes. This is a direct port of Ranesh's `nodewise_noddi.py` script to our IMPACT paths — identical profiling approach (QuickBundles orientation + AFQ Gaussian-weighted profiling), just using our cleaned tract files instead of Ranesh's HCP tracts.
+
+**Extraction follows Ranesh's exact approach (modulated NDI + ODI, regular FWF):**
+- **NDI** from `fit_NDI_modulated.nii.gz` (partial-volume corrected)
+- **ODI** from `fit_ODI_modulated.nii.gz` (partial-volume corrected)
+- **FWF** from `fit_FWF.nii.gz` (no modulated version needed — tissue weighting is the PVE correction)
+
+**Input (per subject, per tract):**
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/<subj>/tckgen/<tract>/<tract>_0.01_cleaned.tck` (from Step 25)
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/NODDI/sub-<subj>/fit_NDI_modulated.nii.gz`
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/NODDI/sub-<subj>/fit_ODI_modulated.nii.gz`
+- `/data/projects/STUDIES/IMPACT/DTI/derivatives/NODDI/sub-<subj>/fit_FWF.nii.gz`
+
+**Expected Output (per tract):**
+```
+derivatives/nodewise_noddi/
+│
+├── csvs/
+│   ├── l_vta_l_hipp_noddi_nodewise_all_subjects.csv
+│   ├── r_vta_r_hipp_noddi_nodewise_all_subjects.csv
+│   ├── anterior_l_vta_l_hipp_noddi_nodewise_all_subjects.csv
+│   └── anterior_r_vta_r_hipp_noddi_nodewise_all_subjects.csv
+│
+└── <subj>/<tract>/
+    ├── <tract>_NDI_profile.png
+    ├── <tract>_ODI_profile.png
+    └── <tract>_FWF_profile.png
+```
+
+Each CSV has 5,701 rows (header + 57 × 100) with columns: `Subject, Tract, Node, NDI, ODI, FWF`.
+
+**Running Step 30 in tmux:**
+
+1. SSH into the cluster and create a tmux session:
+```bash
+ssh -XY tur50045@cla19097.tu.temple.edu
+tmux new -s step30
+```
+
+2. Create the script `run_step30_noddi_extraction.py` — it's a direct port of Ranesh's `nodewise_noddi.py` with identical helpers (`orient_to_centroid`, `profile_metric`) and identical output schema (Subject, Tract, Node, NDI, ODI, FWF). The only differences from Ranesh's script: subject list is derived from the NIFTI directory, tract list is ours (posterior + anterior VTA-HPC), and paths point to our IMPACT directories.
+
+3. Run the script inside tmux:
+```bash
+python3 /data/projects/STUDIES/IMPACT/DTI/scripts/run_step30_noddi_extraction.py 2>&1 | tee step30_output.log
+```
+
+4. Detach from tmux while it runs:
+Press Ctrl+B, then D to detach. Reconnect later with:
+```bash
+tmux attach -t step30
+```
+
+**Estimated runtime:** ~30-40 min for all 57 subjects × 4 tracts (slightly slower than Step 27 because we're profiling 3 metrics per tract instead of 1).
+
+**Downloading CSVs and profile PNGs locally:**
+```bash
+mkdir -p ~/Desktop/SDN/DTI/data.check/step30_noddi
+scp tur50045@cla19097.tu.temple.edu:/data/projects/STUDIES/IMPACT/DTI/derivatives/nodewise_noddi/csvs/*.csv \
+    ~/Desktop/SDN/DTI/data.check/step30_noddi/
+
+scp -r tur50045@cla19097.tu.temple.edu:/data/projects/STUDIES/IMPACT/DTI/derivatives/nodewise_noddi/s1000 \
+    ~/Desktop/SDN/DTI/data.check/step30_noddi/
+```
+
+**Step 30 Audit — verify CSV row counts and subjects processed:**
+```bash
+#!/bin/bash
+# Audit Step 30: NODDI extraction CSVs
+
+csv_dir="/data/projects/STUDIES/IMPACT/DTI/derivatives/nodewise_noddi/csvs"
+expected_rows=5701  # header + (57 subjects × 100 nodes)
+
+echo "=== Step 30 Audit ==="
+for f in "$csv_dir"/*.csv; do
+    tract=$(basename "$f" _noddi_nodewise_all_subjects.csv)
+    rows=$(wc -l < "$f")
+    if [[ "$rows" -eq "$expected_rows" ]]; then
+        echo "✅ $tract: $rows rows (57 subjects × 100 nodes, 3 metrics)"
+    else
+        subjects=$(awk -F, 'NR>1 {print $1}' "$f" | sort -u | wc -l)
+        echo "⚠️  $tract: $rows rows, $subjects unique subjects"
+    fi
+done
+```
+
+### Step 30 Results
+
+All 57 subjects processed successfully — **4 tracts × 57 subjects × 3 metrics = 684 profiles generated**, zero skips.
+
+| Tract | CSV Rows | Subjects |
+|-------|----------|----------|
+| l_vta_l_hipp | 5,701 | 57 ✅ |
+| r_vta_r_hipp | 5,701 | 57 ✅ |
+| anterior_l_vta_l_hipp | 5,701 | 57 ✅ |
+| anterior_r_vta_r_hipp | 5,701 | 57 ✅ |
+
+Each row contains `NDI` (modulated), `ODI` (modulated), and `FWF` at one of 100 nodes along the tract.
+
+**Example NODDI profiles — s1000, posterior left VTA→HPC:**
+
+NDI (neurite density) — high near VTA (~0.78), dips in middle white matter, recovers toward HPC:
+
+![NDI profile](images/step30_NDI_profile_s1000_posterior_l.png)
+
+ODI (orientation dispersion) — higher near endpoints (fibers fanning out), low in deep WM (organized fibers):
+
+![ODI profile](images/step30_ODI_profile_s1000_posterior_l.png)
+
+FWF (free water fraction) — low in deep WM, climbs sharply near HPC endpoint (CSF/ventricle proximity):
+
+![FWF profile](images/step30_FWF_profile_s1000_posterior_l.png)
+
+**Anterior tract NDI (same subject) for comparison** — similar early trajectory but distinct late-tract shape:
+
+![Anterior NDI profile](images/step30_NDI_profile_s1000_anterior_l.png)
+
+**Step 30 Audit Result:** 4/4 CSVs at expected 5,701 rows each. 0 failures. **Ready for Step 31 (permutation testing on NODDI metrics) once the behavioral outcome variable is selected.**
 
 ---
