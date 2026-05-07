@@ -6003,6 +6003,16 @@ pd.DataFrame(rows).to_csv(out_dir / "lr_correlations_mid50.csv", index=False)
 - **FA correlations are more modest (~0.52)** — typical, FA is noisier than NODDI metrics
 - **Posterior and anterior tracts show very similar L/R correlation patterns** — internally consistent across the two pathways
 
+### Scatterplots — L vs R Hemisphere (Mid-50 Node Averages)
+
+Each point is one subject; gray dashed line = identity, red line = best-fit:
+
+![L vs R scatterplots](images/lr_scatterplots_mid50.png)
+
+**Top row (blue):** Posterior VTA→HPC. **Bottom row (orange):** Anterior VTA→HPC.
+
+The NDI and ODI scatterplots show the tightest clouds (points hugging the identity line), consistent with the high correlations (~0.81–0.88). FA is noisier with more spread, consistent with the modest ~0.52 correlations. FWF sits in between (~0.70).
+
 **Outputs (local, also runnable on cluster):**
 - `data.check/mid50_summary/mid50_averages_per_subject.csv` — wide format, 57 rows × 16 columns (4 tracts × 4 metrics)
 - `data.check/mid50_summary/lr_correlations_mid50.csv` — the correlation table above
