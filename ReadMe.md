@@ -5925,3 +5925,80 @@ FWF (free water fraction) — low in deep WM, climbs sharply near HPC endpoint (
 **Step 30 Audit Result:** 4/4 CSVs at expected 5,701 rows each. 0 failures. **Ready for Step 31 (permutation testing on NODDI metrics) once the behavioral outcome variable is selected.**
 
 ---
+
+## Mid-50-Nodes Summary + L vs R Hemisphere Correlations
+
+Per Ranesh's pre-meeting request: take the average of each metric across the **mid 50 nodes (nodes 25–74)** of each tract, then compute the correlation between left and right hemispheres for each tract type and metric. The mid 50 nodes correspond to the deep white matter portion of the tract (avoiding the partial-volume contamination from gray matter at the endpoints, nodes 0–4 and 95–99).
+
+**Script** (`scripts/mid50_correlations.py`):
+```python
+#!/usr/bin/env python3
+"""Mid-50-node averages + L/R hemisphere correlations across FA + NODDI."""
+import pandas as pd
+from pathlib import Path
+
+fa_dir = Path("/Users/dannyzweben/Desktop/SDN/DTI/data.check/step27_fa")
+nd_dir = Path("/Users/dannyzweben/Desktop/SDN/DTI/data.check/step30_noddi")
+out_dir = Path("/Users/dannyzweben/Desktop/SDN/DTI/data.check/mid50_summary")
+out_dir.mkdir(exist_ok=True, parents=True)
+
+mid_nodes = list(range(25, 75))  # nodes 25..74 (deep WM)
+results = {}
+
+for tract in ["l_vta_l_hipp", "r_vta_r_hipp",
+              "anterior_l_vta_l_hipp", "anterior_r_vta_r_hipp"]:
+    fa = pd.read_csv(fa_dir / f"{tract}_fa_nodewise_all_subjects.csv")
+    fa_mid = fa[fa["Node"].isin(mid_nodes)].groupby("Subject")["FA"].mean()
+    results[(tract, "FA")] = fa_mid
+
+    nd = pd.read_csv(nd_dir / f"{tract}_noddi_nodewise_all_subjects.csv")
+    nd_mid = nd[nd["Node"].isin(mid_nodes)].groupby("Subject")[["NDI","ODI","FWF"]].mean()
+    for col in ["NDI", "ODI", "FWF"]:
+        results[(tract, col)] = nd_mid[col]
+
+# Wide table: rows=Subject, cols=tract__metric
+wide = pd.DataFrame()
+for (tract, metric), series in results.items():
+    wide[f"{tract}__{metric}"] = series
+wide.to_csv(out_dir / "mid50_averages_per_subject.csv")
+
+# L vs R correlations
+posterior = ("l_vta_l_hipp", "r_vta_r_hipp")
+anterior = ("anterior_l_vta_l_hipp", "anterior_r_vta_r_hipp")
+rows = []
+for label, pair in [("Posterior VTA→HPC", posterior),
+                    ("Anterior VTA→HPC", anterior)]:
+    for metric in ["FA", "NDI", "ODI", "FWF"]:
+        l_col, r_col = f"{pair[0]}__{metric}", f"{pair[1]}__{metric}"
+        s = wide[[l_col, r_col]].dropna()
+        r = s.iloc[:, 0].corr(s.iloc[:, 1])
+        rows.append({"Tract_Pair": label, "Metric": metric,
+                     "L_vs_R_r": round(r, 3), "n": len(s)})
+pd.DataFrame(rows).to_csv(out_dir / "lr_correlations_mid50.csv", index=False)
+```
+
+### Results
+
+| Tract | Metric | L vs R r | n |
+|-------|--------|----------|---|
+| **Posterior VTA→HPC** | FA  | 0.52 | 57 |
+|                        | NDI | **0.86** | 57 |
+|                        | ODI | **0.88** | 57 |
+|                        | FWF | 0.70 | 57 |
+| **Anterior VTA→HPC**   | FA  | 0.53 | 57 |
+|                        | NDI | **0.81** | 57 |
+|                        | ODI | **0.80** | 57 |
+|                        | FWF | 0.70 | 57 |
+
+**Interpretation:**
+- **NODDI metrics show strong L↔R correlations (~0.80–0.88)** — symmetric anatomy is being captured well by NDI and ODI
+- **FA correlations are more modest (~0.52)** — typical, FA is noisier than NODDI metrics
+- **Posterior and anterior tracts show very similar L/R correlation patterns** — internally consistent across the two pathways
+
+**Outputs (local, also runnable on cluster):**
+- `data.check/mid50_summary/mid50_averages_per_subject.csv` — wide format, 57 rows × 16 columns (4 tracts × 4 metrics)
+- `data.check/mid50_summary/lr_correlations_mid50.csv` — the correlation table above
+
+---
+
+---
