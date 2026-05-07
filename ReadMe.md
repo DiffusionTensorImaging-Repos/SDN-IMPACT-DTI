@@ -73,9 +73,9 @@ A. Preprocessing
 19. [Step 19 — FOD Normalization (mtnormalise)](#step-19--fod-normalization-mtnormalise)
 20. [Step 20 — ANTs Registration: MNI → T1 Space](#step-20--ants-registration-mni--t1-space)
 21. [Step 21 — ROI Warping: MNI → T1 → Diffusion Space + Visual QC](#step-21--roi-warping-mni--t1--diffusion-space--visual-qc)
-22. Step 22 — Atlas-Based Exclusion Masks
-23. Step 23 — Test Tractography (5 Subjects)
-24. Step 24 — Full Tractography (All Subjects)
+22. [Step 22 — Atlas-Based Exclusion Masks](#step-22--atlas-based-exclusion-masks)
+23. [Step 23 — Test Tractography (Parameter Tuning)](#step-23--test-tractography-parameter-tuning)
+24. [Step 24 — Full Tractography (All 57 Subjects)](#step-24--full-tractography-all-57-subjects)
 25. [Step 25 — Tract Cleaning (pyAFQ Mahalanobis Distance)](#step-25--tract-cleaning-pyafq-mahalanobis-distance)
 26. [Step 26 — Visual QC of Cleaned Tracts](#step-26--visual-qc-of-cleaned-tracts-all-57-subjects)
     - [Anterior VTA→HPC Tract Addendum](#anterior-vtahpc-tract-addendum) — same pipeline re-run with new atlas from Ranesh
@@ -84,11 +84,11 @@ A. Preprocessing
 ### Index — IMPACT DTI Microstructure & Statistics (Section C)
 
 27. [Step 27 — Node-wise FA Extraction (AFQ-style Tract Profiling)](#step-27--node-wise-fa-extraction-afq-style-tract-profiling)
-28. Step 28 — Statistical Analysis: Permutation Testing (awaiting Ranesh's script)
+28. *Step 28 — Statistical Analysis: Permutation Testing (pending — awaiting outcome variable selection)*
 29. [Step 29 — NODDI Model Fitting (AMICO with Modulated Maps)](#step-29--noddi-model-fitting-amico-with-modulated-maps)
 30. [Step 30 — Node-wise NODDI Extraction (NDI, ODI, FWF)](#step-30--node-wise-noddi-extraction-ndi-odi-fwf-along-tracts)
     - [Mid-50-Nodes Summary + L vs R Hemisphere Correlations](#mid-50-nodes-summary--l-vs-r-hemisphere-correlations)
-31. Step 31 — Statistical Analysis on NDI/ODI (permutation testing)
+31. *Step 31 — Statistical Analysis on NDI/ODI (pending — paired with Step 28)*
 
 
 # DTI PREPROCESSING: 
