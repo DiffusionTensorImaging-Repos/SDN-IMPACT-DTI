@@ -1,0 +1,18 @@
+source "https://rubygems.org"
+
+# This Gemfile is only used for local previewing.
+# GitHub Pages builds the site automatically using `remote_theme`
+# (see _config.yml) and you don't need to install anything to deploy.
+#
+# To preview locally:
+#   cd docs
+#   bundle install
+#   bundle exec jekyll serve
+
+gem "jekyll", "~> 4.3"
+gem "just-the-docs", "~> 0.10"
+
+group :jekyll_plugins do
+  gem "jekyll-remote-theme"
+  gem "jekyll-seo-tag"
+end

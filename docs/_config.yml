@@ -1,0 +1,42 @@
+title: "SDN IMPACT DTI Pipeline"
+description: "End-to-end documentation for the DTI tractography pipeline used in the IMPACT project (Temple SDN Lab × Olson Lab collaboration)"
+remote_theme: just-the-docs/just-the-docs
+
+# Theme settings
+color_scheme: light
+search_enabled: true
+heading_anchors: true
+
+aux_links:
+  "View on GitHub":
+    - "https://github.com/DiffusionTensorImaging-Repos/SDN-IMPACT-DTI"
+
+# Footer
+footer_content: "SDN Lab × Olson Lab — IMPACT DTI"
+
+# Compress
+sass:
+  style: compressed
+
+plugins:
+  - jekyll-remote-theme
+  - jekyll-seo-tag
+
+# Don't include these in the build
+exclude:
+  - README.md
+  - ReadMe.md
+  - "*.sh"
+  - "*.py"
+  - .gitignore
+
+# Make permalinks pretty (no .html extension)
+permalink: pretty
+
+# Default front matter
+defaults:
+  - scope:
+      path: ""
+      type: pages
+    values:
+      layout: default
