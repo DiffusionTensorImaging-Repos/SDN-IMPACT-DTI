@@ -46,7 +46,8 @@ A. Preprocessing
 12. **AFQ Prep - BIDS Conversion**
 13. **ICV Calculation**
 
-Index — IMPACT DTI Preprocessing Pipeline
+### Index — IMPACT DTI Preprocessing Pipeline (Section A)
+
 1. [Step 1 — DICOM to NIfTI Conversion](#step-1--dicom-to-nifti-conversion)
 2. [Step 2 -  ANTs Skull Stripping](#step-2---ants-skull-stripping)
 3. [Step 3 — B0 Concatenation](#step-3--b0-concatenation)
@@ -62,7 +63,9 @@ Index — IMPACT DTI Preprocessing Pipeline
 13. [Step 13: Intracranial Volume (ICV Estimation)](#step-13-intracranial-volume-icv-estimation)
 14. [Step 14: PYAFQ - BIDS and Running AFQ](#step-14-pyafq---bids-and-running-afq)
 
-Index — IMPACT DTI Tractography Pipeline (Section B)
+
+### Index — IMPACT DTI Tractography Pipeline (Section B)
+
 15. [Step 15 — MRtrix Conversion (mrconvert)](#step-15--mrtrix-conversion-mrconvert)
 16. [Step 16 — Response Function Estimation (dwi2response)](#step-16--response-function-estimation-dwi2response)
 17. [Step 17 — Group-Average Response Functions (responsemean)](#step-17--group-average-response-functions-responsemean)
@@ -76,10 +79,15 @@ Index — IMPACT DTI Tractography Pipeline (Section B)
 25. [Step 25 — Tract Cleaning (pyAFQ Mahalanobis Distance)](#step-25--tract-cleaning-pyafq-mahalanobis-distance)
 26. [Step 26 — Visual QC of Cleaned Tracts](#step-26--visual-qc-of-cleaned-tracts-all-57-subjects)
     - [Anterior VTA→HPC Tract Addendum](#anterior-vtahpc-tract-addendum) — same pipeline re-run with new atlas from Ranesh
+
+
+### Index — IMPACT DTI Microstructure & Statistics (Section C)
+
 27. [Step 27 — Node-wise FA Extraction (AFQ-style Tract Profiling)](#step-27--node-wise-fa-extraction-afq-style-tract-profiling)
 28. Step 28 — Statistical Analysis: Permutation Testing (awaiting Ranesh's script)
 29. [Step 29 — NODDI Model Fitting (AMICO with Modulated Maps)](#step-29--noddi-model-fitting-amico-with-modulated-maps)
 30. [Step 30 — Node-wise NODDI Extraction (NDI, ODI, FWF)](#step-30--node-wise-noddi-extraction-ndi-odi-fwf-along-tracts)
+    - [Mid-50-Nodes Summary + L vs R Hemisphere Correlations](#mid-50-nodes-summary--l-vs-r-hemisphere-correlations)
 31. Step 31 — Statistical Analysis on NDI/ODI (permutation testing)
 
 
