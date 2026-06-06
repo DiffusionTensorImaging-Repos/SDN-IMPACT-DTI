@@ -6020,3 +6020,140 @@ The NDI and ODI scatterplots show the tightest clouds (points hugging the identi
 ---
 
 ---
+# Final Analyses — Permutation-Tested Associations with Memory & Trauma
+
+After completing the full microstructure pipeline (Steps 1–30), we ran a comprehensive set of node-wise permutation tests linking tract microstructure (FA + NODDI) to behavioral memory and childhood trauma measures. This entire section was built and run on **cr2** (`155.247.66.164`, 128 cores), then results were pulled back here for documentation.
+
+## Question
+
+For each of our 4 tracts × 4 microstructural metrics, does the metric *along the tract* (100 nodes) predict any of the following 5 outcomes, controlling for imaging + demographic covariates?
+
+**Outcomes (5):**
+1. `SOCIAL_dprime` — social-feedback memory d′ (signal-detection sensitivity)
+2. `MONETARY_dprime` — monetary-feedback memory d′
+3. `ctqsf_adult_totalmaltreatment_pnrscoring` — CTQ-SF total childhood maltreatment
+4. `ctqsf_adult_totalabuse_pnrscoring` — CTQ-SF total abuse
+5. `ctqsf_adult_totalneglect_pnrscoring` — CTQ-SF total neglect
+
+**Covariates (5):**
+- `ICV` — intracranial volume (FSL `fslstats -V` on each brain mask, pre-computed in `derivatives/ICV/icv_results.csv`)
+- `Mean_tckstats` — mean cleaned-streamline length for *this* tract (MRtrix `tckstats … -output mean`)
+- `Count_tckstats` — cleaned-streamline count for *this* tract (MRtrix `tckinfo -count`)
+- `absolute_motion` — absolute head motion, `qc_mot_abs` from each subject's `derivatives/QUAD/<subj>/qc.json` (eddy QUAD output)
+- `maternal_age` — REDCap `demo_poc_51` from `IMPACT_REDCap_clean_093024.csv`
+
+Per Ranesh's email guidance, handedness was *not* collected in IMPACT (verified across the REDCap data dictionary, demographics export, DICOM/JSON sidecars, task TSVs, and StudyManagement folders), so it is omitted with that note.
+
+**Tracts (4):** posterior L/R VTA→HPC + anterior L/R VTA→HPC (cleaned tracts from Step 25).
+**Metrics (4):** FA (DTIFIT), NDI (modulated, from Step 29 AMICO), ODI (modulated), FWF.
+**Total tests:** 5 × 4 × 4 = **80**.
+
+## Final sample sizes (per outcome after listwise deletion)
+
+| Outcome | N |
+|---|---|
+| `SOCIAL_dprime` | 42 |
+| `MONETARY_dprime` | 42 |
+| All 3 CTQ outcomes | 43 |
+
+(57 total subjects; drops are due to missing CTQ + maternal age in 14 of them.)
+
+## Pipeline
+
+### 1. Extract imaging covariates on cluster
+**Script:** `scripts/extract_imaging_covariates.py` (run on the default cluster).
+For each of the 57 subjects, pulls:
+- `qc_mot_abs` and `qc_mot_rel` from `derivatives/QUAD/<subj>/qc.json`
+- `ICV_mm3` from the precomputed `derivatives/ICV/icv_results.csv`
+- Streamline count via `tckinfo -count <tract>_0.01_cleaned.tck`
+- Mean streamline length via `tckstats <tract> -output mean`
+- Writes `derivatives/analysis/imaging_covariates.csv`.
+
+### 2. Build 16 analysis-ready CSVs
+**Script:** `scripts/build_analysis_csvs.py` (run locally).
+Pulls together:
+- `imaging_covariates.csv` (cluster-derived)
+- `IMPACT_REDCap_clean_093024.csv` (trauma + maternal age; downloaded from `derivatives/../REDCapData/processed_REDCap_data/`)
+- `IMPACT_grouped_export.csv` (d′ outcomes)
+- Pivots each of the 16 (tract × metric) node-wise CSVs from long → wide with columns `Subject + outcomes + covariates + metric_0..metric_99`.
+
+Output: `data.check/analysis_ready/<tract>__<metric>__analysis.csv` × 16 files, each 57 rows × 111 columns.
+
+### 3. Permutation testing (Freedman–Lane, 5000 perms, α=0.05)
+**Script:** `scripts/permutation_one.R` — direct adaptation of Ranesh's `vta_hippocampus_substance_use_noddi_permutation_testing.R`. Identical model structure:
+
+```r
+# Full model fitted at each node:
+full ~  metric_node + ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age
+# Reduced model (for Freedman–Lane residual permutation):
+red  ~  ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age
+```
+
+For each node, the observed t-statistic on `metric_node` is computed. We then run **5000 Freedman–Lane permutations** (permute reduced-model residuals + re-fit per node) to derive cluster-extent significance. A node is "significant" if its nodewise p < 0.05; spatially contiguous runs of significant nodes form clusters. The 95th percentile of the *max* cluster size under the null becomes the **cluster extent threshold**; observed clusters ≥ that size pass FWE correction at the cluster level.
+
+### 4. Run on cr2 (`155.247.66.164`)
+The default cluster (`cla19097`, 48 cores) was contended by other users (load avg >190). cr2 has **128 cores and was idle** (load 0.01). We bundled all 16 CSVs + the R script + a runner into a tarball, untarred under `/data/scratch/dti_perm/` on cr2, then launched:
+
+```bash
+scripts/run_perm_cr2.sh
+```
+
+This `xargs -P 80` parallel runner fires all 80 tests at once, each Rscript on its own core (80 ≤ 128 cores, no contention). Total wall time: ~57 minutes (each test = 5000 perms × 100 nodes × `lm()` fits on single core). Results were tarred back from `/data/scratch/dti_perm/results/` and unpacked locally.
+
+### 5. Summarize + plot
+**Scripts:** `scripts/summarize_perms.py`, `scripts/plot_hits.py`.
+- Compact summary of all 80 → `data/ALL_summaries_compact.csv`
+- Just the FWE-passing clusters → `data/ALL_SIGNIFICANT_clusters.csv`
+- Per-hit t-value plot → `images/perm_hits.png`
+
+## Results
+
+### Significant clusters (FWE-corrected at cluster level)
+
+3 of 80 tests yielded a cluster passing the permutation-derived extent threshold:
+
+| Outcome | Tract | Metric | Cluster (nodes) | Size | Direction | Max \|t\| | Cluster p |
+|---|---|---|---|---|---|---|---|
+| SOCIAL d′ | Posterior **Left** VTA→HPC | **NDI** | 4–48 | 45 | **Positive** | 3.02 @ node 22 | **0.014** |
+| MONETARY d′ | Posterior **Right** VTA→HPC | **NDI** | 36–74 | 39 | **Negative** | 2.72 @ node 49 | **0.017** |
+| MONETARY d′ | Anterior **Right** VTA→HPC | **FWF** | 39–58 | 20 | Positive | 2.75 @ node 52 | 0.048 |
+
+![Permutation hits](images/perm_hits.png)
+
+### What didn't pass
+
+**No trauma outcome (total maltreatment, abuse, or neglect) produced any cluster surviving FWE correction across any tract/metric.** A few showed nodewise sub-threshold trends (`ALL_summaries_compact.csv`: 8 tests with ≥5 nodewise-significant nodes but the largest contiguous cluster fell below the permutation-derived extent threshold).
+
+### Interpretive notes
+
+- **Lateralization splits by reward type.** The social-memory hit is on the LEFT posterior tract; both monetary-memory hits are on the RIGHT (one posterior NDI, one anterior FWF). Worth discussing with Ingrid/Ranesh/Blake — left/right asymmetries in mesolimbic memory-related tracts have been described, and our tracts aren't designed to test lateralization explicitly.
+- **NDI direction flips between social and monetary memory.** Higher NDI in the LEFT posterior tract = better social d′ (positive cluster); higher NDI in the RIGHT posterior tract = WORSE monetary d′ (negative cluster). The negative association is unusual — could be a real dissociation, could be sample-size sensitivity at n=42. Replication / robustness checks warranted.
+- **All hits sit in deep-WM nodes (away from VTA/HPC endpoints).** The SOCIAL cluster spans nodes 4–48, the MONETARY NDI cluster 36–74, the MONETARY FWF cluster 39–58 — these are mostly middle-of-tract regions where partial-volume contamination from gray matter is minimized.
+- **CTQ null is genuine null in this sample**, not a missing-data artifact. N=43 for trauma is fine for cluster-level permutation; we just don't see effects in these specific VTA→HPC tracts.
+
+## Caveats & next steps
+
+- **No multiple-comparison correction across the 80 tests.** Cluster-extent correction is *within* each test only. If we want strict FWE across the family of 80, options include Bonferroni (very conservative for spatially correlated outcomes/metrics), Benjamini-Hochberg FDR on the 80 cluster p-values, or restricting to pre-registered hypothesis-driven contrasts before peeking again. Worth deciding before writing this up formally.
+- **Handedness uncontrolled** (not collected — verified across all available data sources).
+- **Trauma analyses use the same sample for 3 outcomes that are not independent** (total = abuse + neglect). When reporting, mention which one is primary.
+- **VTA→striatum control tract is still not run** (Ranesh's accumbens atlas pending). That control would directly test the dopamine-specificity vs memory-network-generality of the social NDI finding.
+
+## File index for this section
+
+```
+scripts/
+├── extract_imaging_covariates.py   # cluster: pull motion, ICV, tck stats
+├── build_analysis_csvs.py          # local: merge into 16 analysis CSVs
+├── permutation_one.R               # one outcome × tract × metric (Freedman–Lane)
+├── run_perm_cr2.sh                 # cr2: xargs -P 80 parallel runner
+├── summarize_perms.py              # pool 80 summaries → compact + sig CSVs
+└── plot_hits.py                    # per-cluster t-value plots
+
+data/
+├── ALL_summaries_compact.csv       # one row per test (80 rows)
+└── ALL_SIGNIFICANT_clusters.csv    # FWE-passing clusters only (3 rows)
+
+images/perm_hits.png                # 3-panel t-value plots for the hits
+```
+
+---

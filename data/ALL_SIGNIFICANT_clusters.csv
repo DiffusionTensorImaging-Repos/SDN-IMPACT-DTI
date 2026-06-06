@@ -1,0 +1,4 @@
+outcome,tract,metric,Size,StartNode,EndNode,Direction,MeanTValue,MaxAbsTValue,MaxAbsTNode,ClusterPValue,ExtentThresholdNodes
+SOCIAL_dprime,l_vta_l_hipp,NDI,45,4,48,Positive,2.4979749354276124,3.0172674501803813,22,0.0138,26
+MONETARY_dprime,r_vta_r_hipp,NDI,39,36,74,Negative,-2.4183334223994173,-2.7182841739778527,49,0.017,25
+MONETARY_dprime,anterior_r_vta_r_hipp,FWF,20,39,58,Positive,2.453680628421681,2.753001381800843,52,0.0484,19
