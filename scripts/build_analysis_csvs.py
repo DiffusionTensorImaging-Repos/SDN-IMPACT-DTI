@@ -43,6 +43,18 @@ TRAUMA_COLS = [
 ]
 MEM_COLS = ["SOCIAL_dprime", "MONETARY_dprime"]
 
+# Memory-rate outcomes derived from raw counts
+# True memory rate  = TrueMem / TotalTrials
+# False memory rate = FalseMem / (TrueMem + FalseMem)
+RAW_MEM_COLS = [
+    "SOCIAL_TrueMem", "SOCIAL_FalseMem", "SOCIAL_TotalTrials",
+    "MONETARY_TrueMem", "MONETARY_FalseMem", "MONETARY_TotalTrials",
+]
+DERIVED_MEM_COLS = [
+    "SOCIAL_TrueMemRate", "SOCIAL_FalseMemRate",
+    "MONETARY_TrueMemRate", "MONETARY_FalseMemRate",
+]
+
 # === Tidy IDs ===
 red = red.rename(columns={"sub_id": "Subject"})
 grp = grp.rename(columns={"ID": "Subject"})
@@ -55,11 +67,19 @@ red_subset = (red_subset.dropna(subset=["Subject"])
                         .first()
                         .reset_index())
 
-grp_subset = grp[["Subject"] + MEM_COLS].copy()
+grp_subset = grp[["Subject"] + MEM_COLS + RAW_MEM_COLS].copy()
 grp_subset = (grp_subset.dropna(subset=["Subject"])
                         .groupby("Subject")
                         .first()
                         .reset_index())
+
+# Derive memory rates per subject
+for cond in ["SOCIAL", "MONETARY"]:
+    true_mem = pd.to_numeric(grp_subset[f"{cond}_TrueMem"], errors="coerce")
+    false_mem = pd.to_numeric(grp_subset[f"{cond}_FalseMem"], errors="coerce")
+    total = pd.to_numeric(grp_subset[f"{cond}_TotalTrials"], errors="coerce")
+    grp_subset[f"{cond}_TrueMemRate"] = true_mem / total
+    grp_subset[f"{cond}_FalseMemRate"] = false_mem / (true_mem + false_mem)
 
 # === Merge demographics + outcomes + imaging covariates ===
 base_df = cov.merge(red_subset, on="Subject", how="left") \
@@ -89,7 +109,7 @@ for tract in TRACTS:
     tract_df = tract_df[[
         "Subject", "absolute_motion", "ICV", "maternal_age",
         "Mean_tckstats", "Count_tckstats",
-        *TRAUMA_COLS, *MEM_COLS
+        *TRAUMA_COLS, *MEM_COLS, *DERIVED_MEM_COLS
     ]]
 
     for metric in METRICS:

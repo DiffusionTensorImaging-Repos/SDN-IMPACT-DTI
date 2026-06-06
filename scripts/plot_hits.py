@@ -15,12 +15,15 @@ HITS = [
     {"base": "r_vta_r_hipp__NDI__MONETARY_dprime", "outcome": "MONETARY d'",
      "tract": "Posterior Right VTA→HPC", "metric": "NDI",
      "cluster": "36-74", "p": 0.017, "color": "#F44336"},
+    {"base": "r_vta_r_hipp__NDI__MONETARY_FalseMemRate", "outcome": "MONETARY False-mem rate",
+     "tract": "Posterior Right VTA→HPC", "metric": "NDI",
+     "cluster": "42-79", "p": 0.018, "color": "#9C27B0"},
     {"base": "anterior_r_vta_r_hipp__FWF__MONETARY_dprime", "outcome": "MONETARY d'",
      "tract": "Anterior Right VTA→HPC", "metric": "FWF",
      "cluster": "39-58", "p": 0.048, "color": "#FF9800"},
 ]
 
-fig, axes = plt.subplots(1, 3, figsize=(18, 5))
+fig, axes = plt.subplots(1, 4, figsize=(22, 5))
 fig.suptitle("Significant Clusters — Per-Node t-values (Freedman–Lane, 5000 perms, α=0.05)",
              fontsize=15, fontweight='bold')
 

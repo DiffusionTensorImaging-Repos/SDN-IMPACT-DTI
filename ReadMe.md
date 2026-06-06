@@ -6028,12 +6028,22 @@ After completing the full microstructure pipeline (Steps 1–30), we ran a compr
 
 For each of our 4 tracts × 4 microstructural metrics, does the metric *along the tract* (100 nodes) predict any of the following 5 outcomes, controlling for imaging + demographic covariates?
 
-**Outcomes (5):**
-1. `SOCIAL_dprime` — social-feedback memory d′ (signal-detection sensitivity)
-2. `MONETARY_dprime` — monetary-feedback memory d′
-3. `ctqsf_adult_totalmaltreatment_pnrscoring` — CTQ-SF total childhood maltreatment
-4. `ctqsf_adult_totalabuse_pnrscoring` — CTQ-SF total abuse
-5. `ctqsf_adult_totalneglect_pnrscoring` — CTQ-SF total neglect
+**Outcomes (9):**
+
+*Memory — d′ from signal detection (original 2 outcomes):*
+1. `SOCIAL_dprime` — social-feedback memory d′
+2. `MONETARY_dprime` — monetary-feedback memory d′ (doors task)
+
+*Memory — derived true / false rates (added on Ranesh's request):*
+3. `SOCIAL_TrueMemRate` = `SOCIAL_TrueMem` / `SOCIAL_TotalTrials` — proportion of items correctly remembered
+4. `SOCIAL_FalseMemRate` = `SOCIAL_FalseMem` / (`SOCIAL_TrueMem` + `SOCIAL_FalseMem`) — false-alarm proportion among items the subject endorsed as "remembered"
+5. `MONETARY_TrueMemRate` = `MONETARY_TrueMem` / `MONETARY_TotalTrials`
+6. `MONETARY_FalseMemRate` = `MONETARY_FalseMem` / (`MONETARY_TrueMem` + `MONETARY_FalseMem`)
+
+*Childhood trauma — CTQ-SF (3 outcomes):*
+7. `ctqsf_adult_totalmaltreatment_pnrscoring` — full CTQ-SF total (range 25–103 in our sample, all 5 subscales)
+8. `ctqsf_adult_totalabuse_pnrscoring` — sum of emo + phys + sex abuse subscales
+9. `ctqsf_adult_totalneglect_pnrscoring` — sum of emo + phys neglect subscales
 
 **Covariates (5):**
 - `ICV` — intracranial volume (FSL `fslstats -V` on each brain mask, pre-computed in `derivatives/ICV/icv_results.csv`)
@@ -6046,17 +6056,20 @@ Per Ranesh's email guidance, handedness was *not* collected in IMPACT (verified 
 
 **Tracts (4):** posterior L/R VTA→HPC + anterior L/R VTA→HPC (cleaned tracts from Step 25).
 **Metrics (4):** FA (DTIFIT), NDI (modulated, from Step 29 AMICO), ODI (modulated), FWF.
-**Total tests:** 5 × 4 × 4 = **80**.
+**Total tests:** 9 × 4 × 4 = **144**.
+
+The 80 original tests (`SOCIAL_dprime`, `MONETARY_dprime`, 3 CTQ outcomes) were run first; the 4 memory-rate outcomes were added afterwards in a second cr2 batch (64 more tests).
 
 ## Final sample sizes (per outcome after listwise deletion)
 
 | Outcome | N |
 |---|---|
-| `SOCIAL_dprime` | 42 |
-| `MONETARY_dprime` | 42 |
+| `SOCIAL_dprime`, `MONETARY_dprime` | 42 |
+| `SOCIAL_TrueMemRate`, `SOCIAL_FalseMemRate` | 42 |
+| `MONETARY_TrueMemRate`, `MONETARY_FalseMemRate` | 42 |
 | All 3 CTQ outcomes | 43 |
 
-(57 total subjects; drops are due to missing CTQ + maternal age in 14 of them.)
+(57 total subjects; drops are due to missing CTQ + maternal age in 14 of them. The 6 memory outcomes lose 1 extra subject relative to the imaging covariates.)
 
 ## Pipeline
 
@@ -6094,15 +6107,15 @@ For each node, the observed t-statistic on `metric_node` is computed. We then ru
 ### 4. Run on cr2 (`155.247.66.164`)
 The default cluster (`cla19097`, 48 cores) was contended by other users (load avg >190). cr2 has **128 cores and was idle** (load 0.01). We bundled all 16 CSVs + the R script + a runner into a tarball, untarred under `/data/scratch/dti_perm/` on cr2, then launched:
 
-```bash
-scripts/run_perm_cr2.sh
-```
+**Round 1 — original 80 tests** (`scripts/run_perm_cr2.sh`): `xargs -P 80` parallel runner, one Rscript per outcome × tract × metric, each on a dedicated core (80 ≤ 128 cores, no contention). Total wall time: ~57 minutes.
 
-This `xargs -P 80` parallel runner fires all 80 tests at once, each Rscript on its own core (80 ≤ 128 cores, no contention). Total wall time: ~57 minutes (each test = 5000 perms × 100 nodes × `lm()` fits on single core). Results were tarred back from `/data/scratch/dti_perm/results/` and unpacked locally.
+**Round 2 — 64 added memory-rate tests** (`scripts/run_perm_cr2_v2.sh`): same pattern with the new analysis CSVs (rebuilt locally with the 4 new outcome columns added, re-uploaded to cr2). `xargs -P 64`, ~45 minutes.
+
+Each test = 5000 Freedman–Lane perms × 100 nodes × `lm()` fits on a single core. Combined results were tarred back from `/data/scratch/dti_perm/results/` and unpacked locally.
 
 ### 5. Summarize + plot
 **Scripts:** `scripts/summarize_perms.py`, `scripts/plot_hits.py`.
-- Compact summary of all 80 → `data/ALL_summaries_compact.csv`
+- Compact summary of all 144 → `data/ALL_summaries_compact.csv`
 - Just the FWE-passing clusters → `data/ALL_SIGNIFICANT_clusters.csv`
 - Per-hit t-value plot → `images/perm_hits.png`
 
@@ -6110,30 +6123,37 @@ This `xargs -P 80` parallel runner fires all 80 tests at once, each Rscript on i
 
 ### Significant clusters (FWE-corrected at cluster level)
 
-3 of 80 tests yielded a cluster passing the permutation-derived extent threshold:
+**4 of 144 tests** yielded a cluster passing the permutation-derived extent threshold:
 
-| Outcome | Tract | Metric | Cluster (nodes) | Size | Direction | Max \|t\| | Cluster p |
-|---|---|---|---|---|---|---|---|
-| SOCIAL d′ | Posterior **Left** VTA→HPC | **NDI** | 4–48 | 45 | **Positive** | 3.02 @ node 22 | **0.014** |
-| MONETARY d′ | Posterior **Right** VTA→HPC | **NDI** | 36–74 | 39 | **Negative** | 2.72 @ node 49 | **0.017** |
-| MONETARY d′ | Anterior **Right** VTA→HPC | **FWF** | 39–58 | 20 | Positive | 2.75 @ node 52 | 0.048 |
+| # | Outcome | Tract | Metric | Cluster (nodes) | Size | Direction | Max \|t\| | Cluster p |
+|---|---|---|---|---|---|---|---|---|
+| 1 | SOCIAL d′ | Posterior **Left** VTA→HPC | **NDI** | 4–48 | 45 | **Positive** | 3.02 @ node 22 | **0.014** |
+| 2 | MONETARY d′ | Posterior **Right** VTA→HPC | **NDI** | 36–74 | 39 | **Negative** | 2.72 @ node 49 | **0.017** |
+| 3 | MONETARY False-memory rate | Posterior **Right** VTA→HPC | **NDI** | 42–79 | 38 | **Positive** | 2.45 @ node 68 | **0.018** |
+| 4 | MONETARY d′ | Anterior **Right** VTA→HPC | **FWF** | 39–58 | 20 | Positive | 2.75 @ node 52 | 0.048 |
 
 ![Permutation hits](images/perm_hits.png)
 
 ### What didn't pass
 
-**No trauma outcome (total maltreatment, abuse, or neglect) produced any cluster surviving FWE correction across any tract/metric.** A few showed nodewise sub-threshold trends (`ALL_summaries_compact.csv`: 8 tests with ≥5 nodewise-significant nodes but the largest contiguous cluster fell below the permutation-derived extent threshold).
+- **No trauma outcome** (full CTQ total, abuse, or neglect) produced any FWE-passing cluster across any tract/metric.
+- **No SOCIAL TrueMemRate, SOCIAL FalseMemRate, or MONETARY TrueMemRate** outcome produced an FWE-passing cluster.
+- **No FA cluster passed correction** across all 36 FA tests (9 outcomes × 4 tracts), though MONETARY FA showed sub-threshold trends on the right hemisphere.
+
+`ALL_summaries_compact.csv` lists 19 tests with ≥5 nodewise-significant nodes that fell below the permutation-derived extent threshold — most concentrated on right-hemisphere MONETARY analyses.
 
 ### Interpretive notes
 
-- **Lateralization splits by reward type.** The social-memory hit is on the LEFT posterior tract; both monetary-memory hits are on the RIGHT (one posterior NDI, one anterior FWF). Worth discussing with Ingrid/Ranesh/Blake — left/right asymmetries in mesolimbic memory-related tracts have been described, and our tracts aren't designed to test lateralization explicitly.
-- **NDI direction flips between social and monetary memory.** Higher NDI in the LEFT posterior tract = better social d′ (positive cluster); higher NDI in the RIGHT posterior tract = WORSE monetary d′ (negative cluster). The negative association is unusual — could be a real dissociation, could be sample-size sensitivity at n=42. Replication / robustness checks warranted.
-- **All hits sit in deep-WM nodes (away from VTA/HPC endpoints).** The SOCIAL cluster spans nodes 4–48, the MONETARY NDI cluster 36–74, the MONETARY FWF cluster 39–58 — these are mostly middle-of-tract regions where partial-volume contamination from gray matter is minimized.
-- **CTQ null is genuine null in this sample**, not a missing-data artifact. N=43 for trauma is fine for cluster-level permutation; we just don't see effects in these specific VTA→HPC tracts.
+- **The posterior right NDI cluster carries a coherent monetary-memory-specificity signal.** Hits #2 and #3 are on the **same tract** (posterior right VTA→HPC), **same metric** (NDI), and the cluster regions **overlap heavily** (36–74 vs. 42–79). Direction is consistent across them once you read it the same way: higher NDI along this tract → lower d′ (#2) AND higher false-alarm rate (#3). Both indicate **less precise monetary memory** with higher neurite density there. This is a *signal-detection-style dissociation* on a single tract.
+- **Lateralization splits by reward type.** The social-memory hit is on the LEFT posterior tract; all monetary hits are on the RIGHT (posterior NDI × 2, anterior FWF). Worth discussing with Ingrid/Ranesh/Blake — left/right asymmetries in mesolimbic memory-related tracts have been described, and our tracts aren't designed to test lateralization explicitly.
+- **NDI direction flips between social and monetary memory.** Higher NDI in the LEFT posterior tract = *better* social d′ (positive cluster); higher NDI in the RIGHT posterior tract = *worse* monetary d′ AND *more* false memories. Could be a real social/monetary dissociation, could be sample-size sensitivity at n=42. Replication / robustness checks warranted.
+- **All hits sit in deep-WM nodes (away from VTA/HPC endpoints).** Cluster centers: node 22 (#1), 49 (#2), 68 (#3), 52 (#4). All comfortably in the deep-WM portion of the tract where partial-volume contamination from gray matter is minimized.
+- **CTQ null is genuine null in this sample.** N=43 for trauma is fine for cluster-level permutation; we just don't see effects in these specific VTA→HPC tracts.
+- **TrueMemRate is null even though d′ is significant.** Suggests the d′ signal is being driven primarily by the *false-alarm* component of d′ rather than the hit rate. Consistent with the FalseMemRate finding (#3) which is specifically about false alarms.
 
 ## Caveats & next steps
 
-- **No multiple-comparison correction across the 80 tests.** Cluster-extent correction is *within* each test only. If we want strict FWE across the family of 80, options include Bonferroni (very conservative for spatially correlated outcomes/metrics), Benjamini-Hochberg FDR on the 80 cluster p-values, or restricting to pre-registered hypothesis-driven contrasts before peeking again. Worth deciding before writing this up formally.
+- **No multiple-comparison correction across the 144 tests.** Cluster-extent correction is *within* each test only. If we want strict FWE across the family of 144, options include Bonferroni (very conservative for spatially correlated outcomes/metrics), Benjamini-Hochberg FDR on the 144 cluster p-values, or restricting to pre-registered hypothesis-driven contrasts. Worth deciding before formal write-up.
 - **Handedness uncontrolled** (not collected — verified across all available data sources).
 - **Trauma analyses use the same sample for 3 outcomes that are not independent** (total = abuse + neglect). When reporting, mention which one is primary.
 - **VTA→striatum control tract is still not run** (Ranesh's accumbens atlas pending). That control would directly test the dopamine-specificity vs memory-network-generality of the social NDI finding.
