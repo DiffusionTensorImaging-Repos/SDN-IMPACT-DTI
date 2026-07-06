@@ -6071,6 +6071,18 @@ The 80 original tests (`SOCIAL_dprime`, `MONETARY_dprime`, 3 CTQ outcomes) were 
 
 (57 total subjects; drops are due to missing CTQ + maternal age in 14 of them. The 6 memory outcomes lose 1 extra subject relative to the imaging covariates.)
 
+## Social vs Monetary d′ — are they the same construct?
+
+**No — the two d′ scores are essentially independent** (n = 56, Pearson r = **−0.04**, p = 0.76; Spearman r = −0.06, p = 0.65). Reassuring for the tract findings: the social and monetary memory hits are on *opposite hemispheres* (left vs right) and act on *different metrics/directions*, so if the two behavioral scores had been strongly correlated we'd worry about spillover. They aren't, so the tract-level dissociation is defensible.
+
+![Social vs Monetary d'](images/dprime_social_vs_monetary.png)
+
+Distributions (n = 56):
+- SOCIAL d′: mean = 0.07, SD = 0.29 (hugging chance = 0)
+- MONETARY d′: mean = 0.21, SD = 0.32
+
+Both hover near chance, which matches Danny's original observation about low variance in successful non-motivated memory — but there is enough spread in both for the DTI signal to have something to explain.
+
 ## Pipeline
 
 ### 1. Extract imaging covariates on cluster
