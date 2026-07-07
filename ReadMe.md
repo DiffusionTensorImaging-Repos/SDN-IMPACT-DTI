@@ -6303,13 +6303,26 @@ data/
 images/perm_hits.png                # 4-panel t-value plots for the hits
 ```
 
-## New sensitivity analysis to consider — RT covariate
+## Sensitivity analysis — MONETARY hits with `recall_monetary_rt_mean` covariate
 
-The behavioral deep-dive turned up a substantial RT ↔ MONETARY d′ correlation (r ≈ 0.65). Before finalizing the monetary hits, rerun those three permutations with `recall_monetary_rt_mean` added to the covariate list:
-- MONETARY_dprime × posterior R NDI
-- MONETARY_FalseMemRate × posterior R NDI
-- MONETARY_dprime × anterior R FWF
+The behavioral deep-dive turned up a substantial RT ↔ MONETARY d′ correlation (r ≈ 0.65) even though RT itself was not different between conditions. To test whether the monetary tract findings could be explained by a "careful responder" trait rather than tract microstructure, we reran all 3 monetary hits with `recall_monetary_rt_mean` added as an extra covariate in the same Freedman–Lane 5000-permutation framework.
 
-If the clusters survive that additional control, they're not a caution-speed confound. If they weaken/disappear, we need to be careful about how we frame the monetary story.
+**Result: all 3 hits survived and got slightly stronger.** The tract-microstructure signal is independent of the RT variance.
+
+| Test | Original cluster (nodes, p) | + RT covariate (nodes, p) | Δ |
+|---|---|---|---|
+| MONETARY d′ × posterior R NDI | 36–74, **p = 0.017** (size 39) | 36–78, **p = 0.011** (size 43) | slightly larger + more significant |
+| MONETARY FalseMemRate × posterior R NDI | 42–79, **p = 0.018** (size 38) | 42–80, **p = 0.014** (size 39) | slightly larger + more significant |
+| MONETARY d′ × anterior R FWF | 39–58, **p = 0.048** (size 20) | 38–59, **p = 0.037** (size 22) | slightly larger + more significant |
+
+Every one of the three grew (more nodewise-significant nodes, larger cluster, lower cluster p-value) once RT was residualized out. The direction and cluster location are essentially unchanged. This is the opposite of what you'd see if the tract-microstructure signal were an artifact of a "slow-and-careful" trait — in that world, adding RT would attenuate/dissolve the clusters.
+
+**Interpretation for the write-up:** RT is a real dimension of individual variation in this cohort (r ≈ 0.65 with monetary d′), but it doesn't overlap with the tract-microstructure variance. The monetary posterior-right NDI and anterior-right FWF findings speak to something in the microstructure of these tracts that shapes monetary memory *independently of* the person's response caution.
+
+**Files:**
+```
+data/sensitivity_rt_covariate.csv        # side-by-side comparison table
+scripts/permutation_one_extraCov.R       # R script accepting extra covariates via R_EXTRA_COV
+```
 
 ---

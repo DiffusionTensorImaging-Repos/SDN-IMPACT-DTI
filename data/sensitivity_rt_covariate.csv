@@ -1,0 +1,4 @@
+test,orig_N,rtcov_N,orig_sig_nodes,rtcov_sig_nodes,orig_max_cluster,rtcov_max_cluster,orig_extent_thresh,rtcov_extent_thresh,orig_passing,rtcov_passing,orig_top_p,rtcov_top_p
+MONETARY d′ ~ Posterior R NDI,42,42,39,43,39,43,25,24,1,1,0.017,0.011
+MONETARY FalseMemRate ~ Posterior R NDI,42,42,38,39,38,39,25,25,1,1,0.018,0.0138
+MONETARY d′ ~ Anterior R FWF,42,42,20,22,20,22,19,19,1,1,0.0484,0.037
