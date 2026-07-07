@@ -6163,6 +6163,121 @@ Each test = 5000 Freedman–Lane perms × 100 nodes × `lm()` fits on a single c
 - **CTQ null is genuine null in this sample.** N=43 for trauma is fine for cluster-level permutation; we just don't see effects in these specific VTA→HPC tracts.
 - **TrueMemRate is null even though d′ is significant.** Suggests the d′ signal is being driven primarily by the *false-alarm* component of d′ rather than the hit rate. Consistent with the FalseMemRate finding (#3) which is specifically about false alarms.
 
+## Behavioral deep-dive (added after the initial permutation results)
+
+Before writing this up formally, we did a set of follow-up behavioral sanity checks. Six questions:
+
+### (1) Are the reported d′ values at chance? (t-tests vs 0)
+
+Using the reported `SOCIAL_dprime` / `MONETARY_dprime` from `IMPACT_grouped_export.csv` on the full behavioral sample (n = 145):
+
+| Condition | Mean d′ | SD | t vs 0 | p |
+|---|---|---|---|---|
+| **SOCIAL** | +0.075 | 0.20 | **4.55** | **< 0.0001** |
+| **MONETARY** | +0.022 | 0.30 | 0.87 | 0.39 |
+
+**Social memory is significantly above chance; monetary memory is at chance across the group.** This is important context — the monetary tract findings live inside a population that on average couldn't discriminate old from new above chance for the monetary task.
+
+### (2) Do subjects remember social better than monetary? (paired test, verified d′)
+
+At n = 145: mean SOCIAL − MONETARY = +0.053, paired t = 1.83, p = 0.069 (marginal); Wilcoxon signed-rank p = **0.007**. **Yes, social discrimination is slightly better on average, but the two are individually uncorrelated (r = −0.04).**
+
+### (3) Verifying the exported d′ (independent Snodgrass–Corwin recomputation)
+
+We can't find the original scoring script, so we re-computed d′ ourselves from raw counts:
+
+```
+H = (TrueMem  + 0.5) / (TotalTrials/2 + 1)     # signal (old items)
+F = (FalseMem + 0.5) / (TotalTrials/2 + 1)     # noise (new items)
+d′ = z(H) − z(F)
+c  = −0.5 × (z(H) + z(F))
+```
+
+Correlation with the exported values:
+- **SOCIAL:** r = **+0.92** (n = 145)
+- **MONETARY:** r = **+0.96** (n = 145)
+
+Very close (nearly 1-to-1 with a small offset), so their formula is essentially standard SDT with Snodgrass–Corwin correction. We keep the exported values as the primary measure and derive `SOCIAL_bias_c` / `MONETARY_bias_c` as new outcomes from our own calculation.
+
+### (4) Response bias (c) — SDT criterion
+
+`c > 0` = conservative (biased to say "new"), `c < 0` = liberal (biased to say "old"):
+
+| Condition | Mean c | t vs 0 | p |
+|---|---|---|---|
+| **SOCIAL** | −0.029 | −0.85 | 0.40 (unbiased) |
+| **MONETARY** | +0.104 | **3.08** | **0.0025 (conservative)** |
+
+**Paired test (SOCIAL vs MONETARY):** mean diff = −0.13, **t = −4.36, p < 0.0001.**
+
+Subjects were substantially more conservative on monetary trials — they preferentially said "new / didn't see this" rather than "remember." This response strategy likely contributes to the near-chance monetary d′.
+
+### (5) Response time — is RT confounding the tract findings?
+
+Pulled trial-by-trial RT from `IMPACT-task/data/*.tsv` on the cluster, computed per-subject means for the 4 phases:
+
+| Phase | Mean RT (s) | SD |
+|---|---|---|
+| Encoding — SOCIAL | 1.564 | 0.225 |
+| Encoding — MONETARY | 1.513 | 0.292 |
+| Recall — SOCIAL | 1.623 | 0.279 |
+| Recall — MONETARY | 1.625 | 0.274 |
+
+Paired tests (n = 41 with all 4 phases available):
+- Encoding social vs monetary: diff = +0.05s, p = 0.15 (n.s.)
+- Recall social vs monetary: diff = −0.003s, p = 0.92 (n.s.)
+- **Monetary encoding vs recall: diff = −0.11s, p = 0.010** (slower at recall)
+
+**RT correlations with our behavioral outcomes** (n = 111 pooling all available RT data):
+
+| Outcome | RT phase | r | p |
+|---|---|---|---|
+| SOCIAL d′ | encoding social | +0.19 | 0.050 |
+| SOCIAL d′ | recall social | +0.22 | 0.023 |
+| **MONETARY d′** | **encoding monetary** | **+0.62** | **< 0.001** |
+| **MONETARY d′** | **recall monetary** | **+0.67** | **< 0.001** |
+| SOCIAL bias c | encoding social | −0.19 | 0.042 |
+| MONETARY bias c | encoding monetary | −0.03 | 0.78 |
+
+**⚠️ MONETARY d′ correlates strongly with RT (r ≈ 0.62–0.67).** Subjects who took longer had substantially better monetary discrimination. Our permutation models controlled for imaging covariates but **did not include behavioral RT.** For the write-up, we should rerun the monetary-hit sensitivity checks with mean RT as an added covariate, otherwise the tract findings for monetary d′ / FalseMemRate could partly reflect a "response caution" trait rather than a memory-specific one. Social RT correlations are weaker (r ~ 0.2) but non-zero.
+
+### (6) Laterality of significant nodes
+
+Even though only 4 clusters passed FWE correction, the pattern of *nodewise-significant* nodes across the 144 tests is overwhelmingly asymmetric:
+
+| Outcome | Left tract nodes | Right tract nodes | Split |
+|---|---|---|---|
+| SOCIAL_dprime | **83** | 5 | 94% left |
+| SOCIAL_FalseMemRate | **18** | 5 | 78% left |
+| MONETARY_dprime | 19 | **115** | 86% right |
+| MONETARY_FalseMemRate | 5 | **119** | 96% right |
+
+**Social memory → strongly left-lateralized VTA→HPC. Monetary memory → strongly right-lateralized.** The 4 FWE-passing clusters just happen to be one instance each of this broader pattern. Formal binomial test on the 4 clusters alone (1 L, 3 R) is p = 0.31 — small N — but the node-level pattern above is overwhelming.
+
+### (7) Cluster-mean metric vs outcome (scatterplots for each hit)
+
+For each of the 4 FWE hits, we averaged the metric across the cluster nodes per subject and plotted against the outcome:
+
+![Cluster-mean scatters](images/cluster_ndi_scatters.png)
+
+The scatterplots show the linear relationships behind each cluster — bivariate views of the same signal the permutation model detected (in the full model, the covariates are also included).
+
+### (8) d′ vs bias c vs FalseMemRate — how do the behavioral measures relate?
+
+![Memory measures](images/memory_measures_relationships.png)
+
+Panel-by-panel (per condition): d′ ↔ bias, d′ ↔ FalseMemRate, bias ↔ FalseMemRate. These help decide which outcomes are largely redundant vs orthogonal (e.g., d′ and FalseMemRate are related by construction, but the residual variance around that relationship still carries signal).
+
+### Files added in this deep-dive
+
+```
+data/verified_memory_measures.csv    # ID, reported d', my d', bias c, raw counts (SOCIAL + MONETARY)
+data/rt_summary.csv                   # Per-subject mean/median RT for the 4 phases
+images/cluster_ndi_scatters.png       # Cluster-mean metric vs outcome for each FWE hit
+images/memory_measures_relationships.png  # d' × bias × FalseMemRate (per condition)
+scripts/pull_rt_summary.py            # Cluster script: compute per-subject RT from raw TSVs
+```
+
 ## Caveats & next steps
 
 - **No multiple-comparison correction across the 144 tests.** Cluster-extent correction is *within* each test only. If we want strict FWE across the family of 144, options include Bonferroni (very conservative for spatially correlated outcomes/metrics), Benjamini-Hochberg FDR on the 144 cluster p-values, or restricting to pre-registered hypothesis-driven contrasts. Worth deciding before formal write-up.
@@ -6183,9 +6298,18 @@ scripts/
 
 data/
 ├── ALL_summaries_compact.csv       # one row per test (80 rows)
-└── ALL_SIGNIFICANT_clusters.csv    # FWE-passing clusters only (3 rows)
+└── ALL_SIGNIFICANT_clusters.csv    # FWE-passing clusters only (4 rows after v2)
 
-images/perm_hits.png                # 3-panel t-value plots for the hits
+images/perm_hits.png                # 4-panel t-value plots for the hits
 ```
+
+## New sensitivity analysis to consider — RT covariate
+
+The behavioral deep-dive turned up a substantial RT ↔ MONETARY d′ correlation (r ≈ 0.65). Before finalizing the monetary hits, rerun those three permutations with `recall_monetary_rt_mean` added to the covariate list:
+- MONETARY_dprime × posterior R NDI
+- MONETARY_FalseMemRate × posterior R NDI
+- MONETARY_dprime × anterior R FWF
+
+If the clusters survive that additional control, they're not a caution-speed confound. If they weaken/disappear, we need to be careful about how we frame the monetary story.
 
 ---
