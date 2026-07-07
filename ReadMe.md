@@ -6123,7 +6123,9 @@ The default cluster (`cla19097`, 48 cores) was contended by other users (load av
 
 **Round 2 — 64 added memory-rate tests** (`scripts/run_perm_cr2_v2.sh`): same pattern with the new analysis CSVs (rebuilt locally with the 4 new outcome columns added, re-uploaded to cr2). `xargs -P 64`, ~45 minutes.
 
-Each test = 5000 Freedman–Lane perms × 100 nodes × `lm()` fits on a single core. Combined results were tarred back from `/data/scratch/dti_perm/results/` and unpacked locally.
+**Round 3 — 64 added memory-bias tests** (`scripts/run_perm_bias.sh`): after the behavioral deep-dive we added valence-based positivity bias outcomes (`SOCIAL_HitRateBias`, `SOCIAL_FABias`, `MONETARY_HitRateBias`, `MONETARY_FABias`). Same pattern. `xargs -P 64`, ~45 minutes.
+
+**Total tests: 208** (80 + 64 + 64) across all three rounds. Each test = 5000 Freedman–Lane perms × 100 nodes × `lm()` fits on a single core. Combined results were tarred back from `/data/scratch/dti_perm/results/` and unpacked locally.
 
 ### 5. Summarize + plot
 **Scripts:** `scripts/summarize_perms.py`, `scripts/plot_hits.py`.
@@ -6135,14 +6137,31 @@ Each test = 5000 Freedman–Lane perms × 100 nodes × `lm()` fits on a single c
 
 ### Significant clusters (FWE-corrected at cluster level)
 
-**4 of 144 tests** yielded a cluster passing the permutation-derived extent threshold:
+**8 of 208 tests** yielded a cluster passing the permutation-derived extent threshold: 4 from memory-outcome analyses, 4 from memory-bias analyses.
+
+**Memory outcomes (d′ + FalseMemRate):**
 
 | # | Outcome | Tract | Metric | Cluster (nodes) | Size | Direction | Max \|t\| | Cluster p |
 |---|---|---|---|---|---|---|---|---|
 | 1 | SOCIAL d′ | Posterior **Left** VTA→HPC | **NDI** | 4–48 | 45 | **Positive** | 3.02 @ node 22 | **0.014** |
 | 2 | MONETARY d′ | Posterior **Right** VTA→HPC | **NDI** | 36–74 | 39 | **Negative** | 2.72 @ node 49 | **0.017** |
-| 3 | MONETARY False-memory rate | Posterior **Right** VTA→HPC | **NDI** | 42–79 | 38 | **Positive** | 2.45 @ node 68 | **0.018** |
+| 3 | MONETARY FalseMemRate | Posterior **Right** VTA→HPC | **NDI** | 42–79 | 38 | **Positive** | 2.45 @ node 68 | **0.018** |
 | 4 | MONETARY d′ | Anterior **Right** VTA→HPC | **FWF** | 39–58 | 20 | Positive | 2.75 @ node 52 | 0.048 |
+
+**Positivity-in-false-memory bias outcomes:**
+
+| # | Outcome | Tract | Metric | Cluster (nodes) | Size | Direction | Max \|t\| | Cluster p |
+|---|---|---|---|---|---|---|---|---|
+| 5 | **SOCIAL_FABias** | Posterior **Right** VTA→HPC | **NDI** | 36–67 | 32 | **Negative** | 3.36 @ node 48 | **0.026** |
+| 6 | **SOCIAL_FABias** | Posterior **Right** VTA→HPC | **FA** | 39–63 | 25 | **Negative** | 2.98 @ node 48 | **0.032** |
+| 7 | **MONETARY_FABias** | Posterior **Right** VTA→HPC | **FA** | 1–23 | 23 | **Positive** | 2.58 @ node 17 | **0.039** |
+| 8 | **SOCIAL_FABias** | Posterior **Left** VTA→HPC | **FA** | 43–64 | 22 | **Negative** | 2.46 @ node 48 | 0.047 |
+
+Notably:
+- **All 4 new hits involve `FABias` (positivity bias in false alarms), not `HitRateBias`.** Zero HitRateBias hits across all 32 HitRateBias tests. The microstructure story about positivity bias is specifically about the *false-memory* side, not the *correct-memory* side.
+- **FA finally shows up.** In the 144 memory tests, no FA cluster survived; here we have 3 FA clusters. FA appears specifically sensitive to false-memory valence bias — this is a new finding worth highlighting to Ranesh/Blake.
+- **Right-posterior tract emerges as a bias hub.** Three of the 4 bias hits are on the same right posterior tract that also carried the monetary d′ and FalseMemRate signals — this tract seems to shape multiple aspects of monetary and social memory quality.
+- **Direction: SOCIAL_FABias hits are all negative.** Higher microstructure = LESS positivity bias in social false memories → tighter/denser tracts = more balanced/less positive-skewed misremembering.
 
 ![Permutation hits](images/perm_hits.png)
 
@@ -6150,9 +6169,10 @@ Each test = 5000 Freedman–Lane perms × 100 nodes × `lm()` fits on a single c
 
 - **No trauma outcome** (full CTQ total, abuse, or neglect) produced any FWE-passing cluster across any tract/metric.
 - **No SOCIAL TrueMemRate, SOCIAL FalseMemRate, or MONETARY TrueMemRate** outcome produced an FWE-passing cluster.
-- **No FA cluster passed correction** across all 36 FA tests (9 outcomes × 4 tracts), though MONETARY FA showed sub-threshold trends on the right hemisphere.
+- **No `HitRateBias` (positivity in correct memories) hit** on any tract/metric. All 4 bias findings come from `FABias` (positivity in false alarms).
+- **FA is still null for the primary memory outcomes** (d′ / FalseMemRate). Its 3 significant clusters are exclusively on FABias.
 
-`ALL_summaries_compact.csv` lists 19 tests with ≥5 nodewise-significant nodes that fell below the permutation-derived extent threshold — most concentrated on right-hemisphere MONETARY analyses.
+`ALL_summaries_compact.csv` lists more tests with ≥5 nodewise-significant nodes that fell below the permutation-derived extent threshold — many on right-hemisphere MONETARY analyses.
 
 ### Interpretive notes
 

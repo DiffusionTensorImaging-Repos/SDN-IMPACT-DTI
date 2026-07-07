@@ -21,9 +21,23 @@ HITS = [
     {"base": "anterior_r_vta_r_hipp__FWF__MONETARY_dprime", "outcome": "MONETARY d'",
      "tract": "Anterior Right VTA→HPC", "metric": "FWF",
      "cluster": "39-58", "p": 0.048, "color": "#FF9800"},
+    # --- Bias hits (new) ---
+    {"base": "r_vta_r_hipp__NDI__SOCIAL_FABias", "outcome": "SOCIAL FABias",
+     "tract": "Posterior Right VTA→HPC", "metric": "NDI",
+     "cluster": "36-67", "p": 0.026, "color": "#00BCD4"},
+    {"base": "r_vta_r_hipp__FA__SOCIAL_FABias", "outcome": "SOCIAL FABias",
+     "tract": "Posterior Right VTA→HPC", "metric": "FA",
+     "cluster": "39-63", "p": 0.032, "color": "#4CAF50"},
+    {"base": "r_vta_r_hipp__FA__MONETARY_FABias", "outcome": "MONETARY FABias",
+     "tract": "Posterior Right VTA→HPC", "metric": "FA",
+     "cluster": "1-23", "p": 0.039, "color": "#795548"},
+    {"base": "l_vta_l_hipp__FA__SOCIAL_FABias", "outcome": "SOCIAL FABias",
+     "tract": "Posterior Left VTA→HPC", "metric": "FA",
+     "cluster": "43-64", "p": 0.047, "color": "#607D8B"},
 ]
 
-fig, axes = plt.subplots(1, 4, figsize=(22, 5))
+fig, axes = plt.subplots(2, 4, figsize=(22, 10))
+axes = axes.flatten()
 fig.suptitle("Significant Clusters — Per-Node t-values (Freedman–Lane, 5000 perms, α=0.05)",
              fontsize=15, fontweight='bold')
 

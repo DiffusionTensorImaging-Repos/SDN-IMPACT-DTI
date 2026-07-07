@@ -55,6 +55,22 @@ DERIVED_MEM_COLS = [
     "MONETARY_TrueMemRate", "MONETARY_FalseMemRate",
 ]
 
+# Positivity memory-bias outcomes — valence-broken-down counts
+# HitRateBias  = P(hit | positive item) - P(hit | negative item)
+# FABias       = P(FA  | positive item) - P(FA  | negative item)
+RAW_BIAS_COLS = [
+    "SOCIAL_TrueMem_positive", "SOCIAL_TrueMem_negative",
+    "SOCIAL_FalseMem_positive", "SOCIAL_FalseMem_negative",
+    "SOCIAL_Total_pos", "SOCIAL_Total_neg",
+    "MONETARY_TrueMem_positive", "MONETARY_TrueMem_negative",
+    "MONETARY_FalseMem_positive", "MONETARY_FalseMem_negative",
+    "MONETARY_Total_pos", "MONETARY_Total_neg",
+]
+BIAS_COLS = [
+    "SOCIAL_HitRateBias", "SOCIAL_FABias",
+    "MONETARY_HitRateBias", "MONETARY_FABias",
+]
+
 # === Tidy IDs ===
 red = red.rename(columns={"sub_id": "Subject"})
 grp = grp.rename(columns={"ID": "Subject"})
@@ -67,7 +83,7 @@ red_subset = (red_subset.dropna(subset=["Subject"])
                         .first()
                         .reset_index())
 
-grp_subset = grp[["Subject"] + MEM_COLS + RAW_MEM_COLS].copy()
+grp_subset = grp[["Subject"] + MEM_COLS + RAW_MEM_COLS + RAW_BIAS_COLS].copy()
 grp_subset = (grp_subset.dropna(subset=["Subject"])
                         .groupby("Subject")
                         .first()
@@ -80,6 +96,16 @@ for cond in ["SOCIAL", "MONETARY"]:
     total = pd.to_numeric(grp_subset[f"{cond}_TotalTrials"], errors="coerce")
     grp_subset[f"{cond}_TrueMemRate"] = true_mem / total
     grp_subset[f"{cond}_FalseMemRate"] = false_mem / (true_mem + false_mem)
+
+    # Positivity memory biases
+    tm_pos = pd.to_numeric(grp_subset[f"{cond}_TrueMem_positive"], errors="coerce")
+    tm_neg = pd.to_numeric(grp_subset[f"{cond}_TrueMem_negative"], errors="coerce")
+    fm_pos = pd.to_numeric(grp_subset[f"{cond}_FalseMem_positive"], errors="coerce")
+    fm_neg = pd.to_numeric(grp_subset[f"{cond}_FalseMem_negative"], errors="coerce")
+    n_pos = pd.to_numeric(grp_subset[f"{cond}_Total_pos"], errors="coerce")
+    n_neg = pd.to_numeric(grp_subset[f"{cond}_Total_neg"], errors="coerce")
+    grp_subset[f"{cond}_HitRateBias"] = (tm_pos / n_pos) - (tm_neg / n_neg)
+    grp_subset[f"{cond}_FABias"]      = (fm_pos / n_pos) - (fm_neg / n_neg)
 
 # === Merge demographics + outcomes + imaging covariates ===
 base_df = cov.merge(red_subset, on="Subject", how="left") \
@@ -109,7 +135,7 @@ for tract in TRACTS:
     tract_df = tract_df[[
         "Subject", "absolute_motion", "ICV", "maternal_age",
         "Mean_tckstats", "Count_tckstats",
-        *TRAUMA_COLS, *MEM_COLS, *DERIVED_MEM_COLS
+        *TRAUMA_COLS, *MEM_COLS, *DERIVED_MEM_COLS, *BIAS_COLS
     ]]
 
     for metric in METRICS:
