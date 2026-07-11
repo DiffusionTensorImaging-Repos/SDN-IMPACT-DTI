@@ -6362,13 +6362,33 @@ A **node-wise tract-profile analysis**: each cleaned VTA→HPC tract is split in
 
 | Dimension | Levels |
 |---|---|
-| **Outcomes (13)** | Memory **accuracy** (social/monetary d′); **false-memory rate** (of items endorsed as "remembered," fraction never actually shown); **true-memory rate**; **positivity bias** in false alarms & in hits; **childhood trauma** (CTQ total / abuse / neglect) |
+| **Outcomes (6)** | Memory **accuracy** — social & monetary d′; **positivity bias in false memories** (`FABias`); **positivity bias in correct memories** (`HitRateBias`) — each for the social and monetary tasks |
 | **Tracts (4)** | Posterior L, Posterior R, Anterior L, Anterior R (VTA→HPC) |
 | **Metrics (4)** | FA · NDI (modulated) · ODI (modulated) · FWF |
-| **Total analyses** | 13 × 4 × 4 = **208** |
+| **Total analyses** | 6 × 4 × 4 = **96** |
 | **Covariates (all models)** | absolute head motion (eddy QUAD) · intracranial volume · streamline count · mean streamline length · maternal age |
 
 *Handedness was not collected in IMPACT (verified across REDCap, DICOM/JSON sidecars, and task files) and is omitted with that note.*
+
+## The outcome metrics, defined
+
+**Memory accuracy — d′.** Signal-detection sensitivity: how well a mother distinguishes items she actually saw (received feedback on) from lures. `d′ = z(hit rate) − z(false-alarm rate)`; higher = sharper memory. Computed separately for the **social** (face/feedback) and **monetary** (doors) tasks.
+
+**Positivity bias in false memories — `FABias`.** Among items she *falsely* "remembered" (never actually shown), was she more prone to false-alarm to **positive** than **negative** material?
+
+```
+FABias = P(false alarm | positive item) − P(false alarm | negative item)
+       = (FalseMem_positive / N_positive) − (FalseMem_negative / N_negative)
+```
+Positive value → she conjures up more *positive* false memories (rose-tinted misremembering); negative → more negative false memories.
+
+**Positivity bias in correct memories — `HitRateBias`.** Among items she actually saw, was she more likely to **correctly** remember **positive** than **negative** ones?
+
+```
+HitRateBias = P(hit | positive item) − P(hit | negative item)
+            = (TrueMem_positive / N_positive) − (TrueMem_negative / N_negative)
+```
+Positive value → better memory for positive material. This is the *accuracy* side of valence bias; `FABias` is the *error* side.
 
 ## Scripts (this analysis stage)
 
@@ -6382,7 +6402,7 @@ A **node-wise tract-profile analysis**: each cleaned VTA→HPC tract is split in
 | `scripts/run_perm_cr2.sh` | parallel runner (cr2, 128 cores) |
 | `scripts/summarize_perms.py` · `plot_hits.py` | pool results, plot significant clusters |
 
-## Significant findings (8 of 208 passed FWE correction)
+## Significant findings (7 of 96 passed FWE correction)
 
 **Memory:**
 
@@ -6390,7 +6410,6 @@ A **node-wise tract-profile analysis**: each cleaned VTA→HPC tract is split in
 |---|---|---|---|---|---|
 | Social d′ | Posterior **Left** | NDI | 4–48 | Positive | 0.014 |
 | Monetary d′ | Posterior **Right** | NDI | 36–74 | Negative | 0.017 |
-| Monetary false-mem rate | Posterior **Right** | NDI | 42–79 | Positive | 0.018 |
 | Monetary d′ | Anterior **Right** | FWF | 39–58 | Positive | 0.048 |
 
 **Positivity bias in false memories (`FABias`):**
@@ -6402,12 +6421,12 @@ A **node-wise tract-profile analysis**: each cleaned VTA→HPC tract is split in
 | Monetary FA-bias | Posterior **Right** | FA | 1–23 | Positive | 0.039 |
 | Social FA-bias | Posterior **Left** | FA | 43–64 | Negative | 0.047 |
 
-**Null across every tract/metric:** childhood trauma (CTQ), true-memory rate, hit-rate positivity bias.
+**Null across every tract/metric:** positivity bias in *correct* memories (`HitRateBias`). *(Trauma, true-memory rate, and false-memory rate were explored in earlier passes and are documented in git history but are not part of this outcome set.)*
 
 ## How to read these (honest framing)
 
 - **Social memory = left tract; monetary memory = right tract** — a clean hemispheric split by reward type (see laterality bars in the Explorer: social-accuracy signal is ~94% left, monetary ~86–96% right).
-- The **right-posterior tract is a "memory-quality hub"** — the same NDI band (~nodes 40–75) tracks monetary accuracy (−), monetary false memories (+), and social positivity-bias (−): denser tract → messier/more valence-skewed memory.
+- The **right-posterior tract is a "memory-quality hub"** — the same NDI band (~nodes 40–75) tracks monetary accuracy (−) and social positivity-bias (−): denser tract → messier/more valence-skewed memory.
 - **Robustness:** the social bias findings survive leave-one-out and principled exclusions; the monetary findings are real but **fragile** (borderline p, single-subject-sensitive) with a biologically unusual negative direction — treat as suggestive. Sample is n≈42 (underpowered for small brain–behavior effects). Full per-analysis stats, node lists, and fragility live in the Results Explorer.
 
 ---

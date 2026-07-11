@@ -13,25 +13,13 @@ METRICS=['FA','NDI','ODI','FWF']
 
 FAMILY={'SOCIAL_dprime':('Memory accuracy (d′)','SOCIAL'),
         'MONETARY_dprime':('Memory accuracy (d′)','MONETARY'),
-        'SOCIAL_FalseMemRate':('False-memory rate','SOCIAL'),
-        'MONETARY_FalseMemRate':('False-memory rate','MONETARY'),
-        'SOCIAL_TrueMemRate':('True-memory rate','SOCIAL'),
-        'MONETARY_TrueMemRate':('True-memory rate','MONETARY'),
-        'SOCIAL_FABias':('Positivity bias — false alarms','SOCIAL'),
-        'MONETARY_FABias':('Positivity bias — false alarms','MONETARY'),
-        'SOCIAL_HitRateBias':('Positivity bias — hits','SOCIAL'),
-        'MONETARY_HitRateBias':('Positivity bias — hits','MONETARY'),
-        'ctqsf_adult_totalmaltreatment_pnrscoring':('Childhood trauma','TRAUMA'),
-        'ctqsf_adult_totalabuse_pnrscoring':('Childhood trauma','TRAUMA'),
-        'ctqsf_adult_totalneglect_pnrscoring':('Childhood trauma','TRAUMA')}
+        'SOCIAL_FABias':('Positivity bias — false memories','SOCIAL'),
+        'MONETARY_FABias':('Positivity bias — false memories','MONETARY'),
+        'SOCIAL_HitRateBias':('Positivity bias — correct memories','SOCIAL'),
+        'MONETARY_HitRateBias':('Positivity bias — correct memories','MONETARY')}
 OUTLABEL={'SOCIAL_dprime':"Social d′",'MONETARY_dprime':"Monetary d′",
-    'SOCIAL_FalseMemRate':"Social false-mem rate",'MONETARY_FalseMemRate':"Monetary false-mem rate",
-    'SOCIAL_TrueMemRate':"Social true-mem rate",'MONETARY_TrueMemRate':"Monetary true-mem rate",
-    'SOCIAL_FABias':"Social positivity bias (FA)",'MONETARY_FABias':"Monetary positivity bias (FA)",
-    'SOCIAL_HitRateBias':"Social positivity bias (hits)",'MONETARY_HitRateBias':"Monetary positivity bias (hits)",
-    'ctqsf_adult_totalmaltreatment_pnrscoring':"CTQ total maltreatment",
-    'ctqsf_adult_totalabuse_pnrscoring':"CTQ total abuse",
-    'ctqsf_adult_totalneglect_pnrscoring':"CTQ total neglect"}
+    'SOCIAL_FABias':"Social positivity bias (false mem)",'MONETARY_FABias':"Monetary positivity bias (false mem)",
+    'SOCIAL_HitRateBias':"Social positivity bias (hits)",'MONETARY_HitRateBias':"Monetary positivity bias (hits)"}
 
 results=[]
 for summ in sorted(glob.glob(f'{R}/*_summary.csv')):

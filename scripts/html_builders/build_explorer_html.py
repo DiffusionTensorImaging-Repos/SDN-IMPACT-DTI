@@ -73,12 +73,28 @@ a.back{color:var(--accent);text-decoration:none;font-size:13px}
 </style></head><body>
 <header>
 <h1>IMPACT · VTA→HPC Tract Microstructure — Results Explorer</h1>
-<div class="sub">All 208 node-wise permutation analyses (13 outcomes × 4 tracts × 4 metrics). Freedman–Lane, 5000 permutations, cluster-extent FWE at α=0.05. Click any row for the tract, significant nodes, laterality, stats, and scripts. &nbsp;·&nbsp; <a class="back" href="data_quality.html">→ Data-quality &amp; d′ background</a></div>
+<div class="sub">All 96 node-wise permutation analyses — 6 outcomes (social &amp; monetary × d′, positivity bias in false memories, positivity bias in correct memories) × 4 tracts × 4 metrics. Freedman–Lane, 5000 permutations, cluster-extent FWE at α=0.05. Click any row for the tract, significant nodes, laterality, stats, and scripts. &nbsp;·&nbsp; <a class="back" href="data_quality.html">→ Data-quality &amp; d′ background</a></div>
 </header>
 <div class="wrap">
 
 <div class="section"><h2>Sample — mothers (DTI analysis cohort)</h2>
 <div id="demo"></div></div>
+
+<div class="section"><h2>Outcomes analysed — definitions</h2>
+<div class="grid" style="grid-template-columns:1fr;gap:12px">
+ <div class="stat"><div class="k">Memory accuracy — d′</div>
+  <div style="font-size:13.5px;margin-top:5px">Signal-detection sensitivity: how well a mother tells apart items she actually saw (with feedback) from lures. <span class="tag">d′ = z(hit rate) − z(false-alarm rate). Higher = sharper memory. Run separately for the <b>social</b> (faces/feedback) and <b>monetary</b> (doors) tasks.</span></div></div>
+ <div class="stat"><div class="k">Positivity bias — false memories &nbsp;(<code>FABias</code>)</div>
+  <div style="font-size:13.5px;margin-top:5px">Among items she <b>falsely</b> "remembered" (never actually shown), was she more likely to false-alarm to <b>positive</b> than <b>negative</b> items?
+  <div class="script" style="margin-top:6px">FABias = P(false alarm | positive item) − P(false alarm | negative item)
+       = (FalseMem_positive / N_positive) − (FalseMem_negative / N_negative)</div>
+  <span class="tag">Positive value → she conjures up more <i>positive</i> false memories (rose-tinted misremembering). Negative value → more negative false memories.</span></div></div>
+ <div class="stat"><div class="k">Positivity bias — correct memories &nbsp;(<code>HitRateBias</code>)</div>
+  <div style="font-size:13.5px;margin-top:5px">Among items she actually saw, was she more likely to <b>correctly</b> remember <b>positive</b> than <b>negative</b> ones?
+  <div class="script" style="margin-top:6px">HitRateBias = P(hit | positive item) − P(hit | negative item)
+          = (TrueMem_positive / N_positive) − (TrueMem_negative / N_negative)</div>
+  <span class="tag">Positive value → better memory for positive material. This is the "accuracy" side of valence bias, vs. FABias which is the "error" side.</span></div></div>
+</div></div>
 
 <div class="section"><h2>All results</h2>
 <div class="controls">
