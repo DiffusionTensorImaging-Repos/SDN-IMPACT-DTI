@@ -6346,3 +6346,68 @@ scripts/permutation_one_extraCov.R       # R script accepting extra covariates v
 ```
 
 ---
+
+# 📊 Analysis Outline, Significant Results & Interactive Explorers
+
+> This section is the **clean capstone**: what we ran, the scripts, and the results that **survived correction**. For the *complete* run-down — every one of the 208 analyses (significant or not), clickable node-level detail, laterality, and full stats — open the interactive HTMLs linked below.
+
+## 🔗 Interactive result browsers (open in any browser)
+
+- **[▶ Results Explorer](results_html/results_explorer.html)** — all 208 analyses. Filter by outcome family, condition, tract, hemisphere, metric, or significance; click any result to see the tract, the node-wise t-value profile, the exact significant nodes, laterality (L vs R), cluster statistics, covariates, and the scripts that produced it. Includes the full **maternal demographic + clinical profile** of the cohort.
+- **[▶ Data-Quality & d′ Background](results_html/data_quality.html)** — social vs monetary d′ (correlation, each vs chance, difference), how d′ was calculated (with our end-to-end recomputation), and the response-time confound check.
+
+## What we ran
+
+A **node-wise tract-profile analysis**: each cleaned VTA→HPC tract is split into 100 nodes; at each node the microstructure metric is regressed on a behavioral/clinical outcome, controlling for covariates; spatially contiguous runs of significant nodes are tested with **Freedman–Lane permutation (5,000 perms) and cluster-extent FWE correction (α = 0.05)**.
+
+| Dimension | Levels |
+|---|---|
+| **Outcomes (13)** | Memory **accuracy** (social/monetary d′); **false-memory rate** (of items endorsed as "remembered," fraction never actually shown); **true-memory rate**; **positivity bias** in false alarms & in hits; **childhood trauma** (CTQ total / abuse / neglect) |
+| **Tracts (4)** | Posterior L, Posterior R, Anterior L, Anterior R (VTA→HPC) |
+| **Metrics (4)** | FA · NDI (modulated) · ODI (modulated) · FWF |
+| **Total analyses** | 13 × 4 × 4 = **208** |
+| **Covariates (all models)** | absolute head motion (eddy QUAD) · intracranial volume · streamline count · mean streamline length · maternal age |
+
+*Handedness was not collected in IMPACT (verified across REDCap, DICOM/JSON sidecars, and task files) and is omitted with that note.*
+
+## Scripts (this analysis stage)
+
+| Script | Role |
+|---|---|
+| `scripts/run_step27_fa_extraction.py` | FA node-wise tract profiles (AFQ-style, 100 nodes, Gaussian-weighted) |
+| `scripts/run_step30_noddi_extraction.py` | NDI/ODI/FWF node-wise tract profiles |
+| `scripts/extract_imaging_covariates.py` | head motion, ICV, streamline count + length |
+| `scripts/build_analysis_csvs.py` | merge tract profiles + covariates + outcomes → analysis CSVs |
+| `scripts/permutation_one.R` | Freedman–Lane cluster-extent permutation (one outcome × tract × metric) |
+| `scripts/run_perm_cr2.sh` | parallel runner (cr2, 128 cores) |
+| `scripts/summarize_perms.py` · `plot_hits.py` | pool results, plot significant clusters |
+
+## Significant findings (8 of 208 passed FWE correction)
+
+**Memory:**
+
+| Outcome | Tract | Metric | Cluster (nodes) | Direction | Cluster p |
+|---|---|---|---|---|---|
+| Social d′ | Posterior **Left** | NDI | 4–48 | Positive | 0.014 |
+| Monetary d′ | Posterior **Right** | NDI | 36–74 | Negative | 0.017 |
+| Monetary false-mem rate | Posterior **Right** | NDI | 42–79 | Positive | 0.018 |
+| Monetary d′ | Anterior **Right** | FWF | 39–58 | Positive | 0.048 |
+
+**Positivity bias in false memories (`FABias`):**
+
+| Outcome | Tract | Metric | Cluster (nodes) | Direction | Cluster p |
+|---|---|---|---|---|---|
+| Social FA-bias | Posterior **Right** | NDI | 36–67 | Negative | 0.026 |
+| Social FA-bias | Posterior **Right** | FA | 39–63 | Negative | 0.032 |
+| Monetary FA-bias | Posterior **Right** | FA | 1–23 | Positive | 0.039 |
+| Social FA-bias | Posterior **Left** | FA | 43–64 | Negative | 0.047 |
+
+**Null across every tract/metric:** childhood trauma (CTQ), true-memory rate, hit-rate positivity bias.
+
+## How to read these (honest framing)
+
+- **Social memory = left tract; monetary memory = right tract** — a clean hemispheric split by reward type (see laterality bars in the Explorer: social-accuracy signal is ~94% left, monetary ~86–96% right).
+- The **right-posterior tract is a "memory-quality hub"** — the same NDI band (~nodes 40–75) tracks monetary accuracy (−), monetary false memories (+), and social positivity-bias (−): denser tract → messier/more valence-skewed memory.
+- **Robustness:** the social bias findings survive leave-one-out and principled exclusions; the monetary findings are real but **fragile** (borderline p, single-subject-sensitive) with a biologically unusual negative direction — treat as suggestive. Sample is n≈42 (underpowered for small brain–behavior effects). Full per-analysis stats, node lists, and fragility live in the Results Explorer.
+
+---

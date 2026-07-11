@@ -1,0 +1,168 @@
+{
+ "demographics": {
+  "n_dti": 57,
+  "n_with_demo": 55,
+  "age": {
+   "mean": 45.7,
+   "sd": 7.1,
+   "min": 32,
+   "max": 63,
+   "n": 55
+  },
+  "ethnicity": {
+   "Hispanic/Latino": 7,
+   "Not Hispanic/Latino": 48
+  },
+  "race": {
+   "Asian": 5,
+   "Black/African American": 17,
+   "White": 35
+  },
+  "education": {
+   "HS grad/GED": 3,
+   "Some college": 17,
+   "4-yr degree": 14,
+   "Master's": 16,
+   "Doctoral": 5
+  },
+  "marital": {
+   "Never married": 10,
+   "Married": 34,
+   "Separated": 4,
+   "Divorced": 7
+  },
+  "income": {
+   "median": 56000,
+   "mean": 68363,
+   "min": 0,
+   "max": 280000,
+   "n": 55
+  },
+  "clinical": {
+   "Social anxiety (SCAARED)": {
+    "mean": 4.4,
+    "sd": 3.4,
+    "n": 43
+   },
+   "GAD (SCAARED)": {
+    "mean": 9.0,
+    "sd": 6.6,
+    "n": 43
+   },
+   "Depression (IDAS-II gen.)": {
+    "mean": 39.1,
+    "sd": 10.7,
+    "n": 42
+   },
+   "Perceived stress (PSS)": {
+    "mean": 14.6,
+    "sd": 6.2,
+    "n": 43
+   },
+   "Emotion-reg diff. (DERS)": {
+    "mean": 71.9,
+    "sd": 18.7,
+    "n": 43
+   },
+   "CTQ total maltreatment": {
+    "mean": 42.2,
+    "sd": 15.9,
+    "n": 43
+   },
+   "BAS reward-resp.": {
+    "mean": 16.7,
+    "sd": 2.3,
+    "n": 43
+   },
+   "BIS": {
+    "mean": 20.9,
+    "sd": 3.6,
+    "n": 43
+   }
+  }
+ },
+ "data_quality": {
+  "dprime": {
+   "social": {
+    "n": 56,
+    "mean": 0.069,
+    "sd": 0.285,
+    "t_vs0": 1.81,
+    "p_vs0": 0.0763
+   },
+   "monetary": {
+    "n": 56,
+    "mean": 0.211,
+    "sd": 0.316,
+    "t_vs0": 5.01,
+    "p_vs0": 0.0
+   },
+   "correlation": {
+    "r": -0.042,
+    "p": 0.759,
+    "n": 56
+   },
+   "paired_diff": {
+    "mean_diff": -0.143,
+    "t": -2.46,
+    "p": 0.0171,
+    "wilcoxon_p": 0.0276
+   }
+  },
+  "dprime_recompute": [
+   {
+    "cond": "SOCIAL",
+    "r_with_reported": 0.8105,
+    "n": 55
+   },
+   {
+    "cond": "MONETARY",
+    "r_with_reported": 0.9875,
+    "n": 55
+   }
+  ],
+  "rt": {
+   "phase_means": {
+    "encoding_social": {
+     "mean": 1.583,
+     "sd": 0.206,
+     "n": 29
+    },
+    "encoding_monetary": {
+     "mean": 1.521,
+     "sd": 0.253,
+     "n": 29
+    },
+    "recall_social": {
+     "mean": 1.676,
+     "sd": 0.238,
+     "n": 57
+    },
+    "recall_monetary": {
+     "mean": 1.651,
+     "sd": 0.248,
+     "n": 57
+    }
+   },
+   "corr_with_dprime": [
+    {
+     "label": "Social d\u2032 \u00d7 social-recall RT",
+     "r": 0.085,
+     "p": 0.535,
+     "n": 56
+    },
+    {
+     "label": "Monetary d\u2032 \u00d7 monetary-recall RT",
+     "r": 0.142,
+     "p": 0.2973,
+     "n": 56
+    }
+   ],
+   "social_vs_monetary_recall": {
+    "t": 1.2,
+    "p": 0.234,
+    "n": 57
+   }
+  }
+ }
+}
