@@ -6353,8 +6353,8 @@ scripts/permutation_one_extraCov.R       # R script accepting extra covariates v
 
 ## 🔗 Interactive result browsers (open in any browser)
 
-- **[▶ Results Explorer](results_html/results_explorer.html)** — all 208 analyses. Filter by outcome family, condition, tract, hemisphere, metric, or significance; click any result to see the tract, the node-wise t-value profile, the exact significant nodes, laterality (L vs R), cluster statistics, covariates, and the scripts that produced it. Includes the full **maternal demographic + clinical profile** of the cohort.
-- **[▶ Data-Quality & d′ Background](results_html/data_quality.html)** — social vs monetary d′ (correlation, each vs chance, difference), how d′ was calculated (with our end-to-end recomputation), and the response-time confound check.
+- **[▶ Results Explorer](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/results_explorer.html)** — all 208 analyses. Filter by outcome family, condition, tract, hemisphere, metric, or significance; click any result to see the tract, the node-wise t-value profile, the exact significant nodes, laterality (L vs R), cluster statistics, covariates, and the scripts that produced it. Includes the full **maternal demographic + clinical profile** of the cohort.
+- **[▶ Data-Quality & d′ Background](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/data_quality.html)** — social vs monetary d′ (correlation, each vs chance, difference), how d′ was calculated (with our end-to-end recomputation), and the response-time confound check.
 
 ## What we ran
 
