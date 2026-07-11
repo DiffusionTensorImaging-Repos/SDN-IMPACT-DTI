@@ -98,7 +98,7 @@ a.back{color:var(--accent);text-decoration:none;font-size:13px}
 <th data-k="obs_max_cluster">Max cluster</th><th data-k="extent_threshold">Thresh</th>
 <th data-k="best_p">Cluster p</th><th data-k="passed">FWE</th>
 </tr></thead><tbody id="tbody"></tbody></table>
-<div class="legend">FWE = cluster passes permutation extent threshold. Direction: <span class="badge b-pos">Positive</span> higher metric → higher outcome · <span class="badge b-neg">Negative</span> higher metric → lower outcome.</div>
+<div class="legend">FWE = cluster passes permutation extent threshold. Direction: <span class="badge b-pos">Positive</span> higher metric → higher outcome · <span class="badge b-neg">Negative</span> higher metric → lower outcome.<br><b>Node values are partial-regression t-statistics</b> (each node = outcome regressed on that node’s metric + covariates), not zero-order correlations. In the detail view, the <b>Hemispheric node overlap</b> panel stacks the L and R tracts aligned by node so you can see whether the significant nodes fall in the same place; nodes significant on <span style="color:#4ade80">both</span> sides are shown in green.</div>
 </div>
 </div>
 
@@ -203,11 +203,14 @@ function detail(r){
     </div>
     <h4 style="margin-top:16px">Controlled for (covariates)</h4>
     <div class="tag">${r.covariates}</div>
-    <h4 style="margin-top:16px">Laterality <span class="tag">(nodewise-sig nodes, posterior tracts, this metric)</span></h4>
+    <h4 style="margin-top:16px">Laterality <span class="tag">(nodewise-sig nodes, ${r.tract_type} L vs R, ${r.metric})</span></h4>
     <div class="latbar"><div class="L" style="width:${Lp}%">L ${lat.L_sig} (${Lp}%)</div><div class="R" style="width:${Rp}%">R ${lat.R_sig} (${Rp}%)</div></div>
+    <h4 style="margin-top:14px">Hemispheric node overlap <span class="tag">(same outcome+metric, both ${r.tract_type} tracts aligned by node)</span></h4>
+    <div class="nodeviz">${dualLatViz(r)}</div>
+    <div class="tag" style="margin-top:6px">Overlapping significant nodes (sig on <b>both</b> L &amp; R): ${(lat.overlap_nodes&&lat.overlap_nodes.length)?'<span style="color:#4ade80">'+lat.overlap_nodes.join(', ')+'</span>':'none'}</div>
    </div>
    <div class="dcol">
-    <h4>Node-wise t-values <span class="tag">(green = FWE cluster; colored bars = p&lt;0.05)</span></h4>
+    <h4>Node-wise t-values <span class="tag">(partial-regression t, covariate-adjusted — not a raw correlation; green = FWE cluster; colored bars = p&lt;0.05)</span></h4>
     <div class="nodeviz">${nodeViz(r)}</div>
     <h4 style="margin-top:14px">Clusters</h4>${clusters}
     <h4 style="margin-top:14px">Significant nodes (p&lt;0.05, uncorrected)</h4>
@@ -222,6 +225,26 @@ function detail(r){
 5. Parallel runner → ${SCRIPTS.runner}
 Command: Rscript permutation_one.R &lt;csv&gt; ${r.outcome} ${r.metric}_ &lt;out&gt; ${r.id}</div>
  </div></td>`;
+}
+
+
+function siblingOf(r){return DATA.find(x=>x.outcome===r.outcome&&x.metric===r.metric&&x.tract_type===r.tract_type&&x.hemisphere!==r.hemisphere)}
+function miniProfile(r,label,overlap){
+ const W=560,H=64,pad=18,n=100;const ts=r?r.tvals.map(x=>x==null?0:x):new Array(100).fill(0);
+ const mx=Math.max(3,...ts.map(Math.abs));const bw=(W-2*pad)/n;let bars='';
+ for(let i=0;i<n;i++){const t=ts[i];const sig=r&&r.pvals[i]!=null&&r.pvals[i]<0.05;const ov=overlap.includes(i);
+  const h=Math.abs(t)/mx*(H/2-6);const y=t>=0?(H/2-h):(H/2);
+  const col=ov&&sig?'#22c55e':(sig?(t>=0?'#f4664a':'#3b82f6'):'#39404f');
+  bars+=`<rect x="${pad+i*bw}" y="${y}" width="${Math.max(bw-0.4,0.6)}" height="${h}" fill="${col}"><title>node ${i}: t=${t}</title></rect>`;}
+ let shade='';if(r)r.clusters.forEach(c=>{if(c.passes)shade+=`<rect x="${pad+c.start*bw}" y="3" width="${(c.end-c.start+1)*bw}" height="${H-6}" fill="rgba(34,197,94,.08)" stroke="rgba(34,197,94,.35)"/>`;});
+ return `<div style="display:flex;align-items:center;gap:8px"><div style="width:34px;font-size:11px;color:var(--mut);text-align:right">${label}</div>
+  <svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px">${shade}<line x1="${pad}" y1="${H/2}" x2="${W-pad}" y2="${H/2}" stroke="#4a5163"/>${bars}</svg></div>`;
+}
+function dualLatViz(r){
+ const sib=siblingOf(r);const ov=r.laterality.overlap_nodes||[];
+ const Lr=r.hemisphere==='L'?r:sib, Rr=r.hemisphere==='R'?r:sib;
+ return miniProfile(Lr,'L',ov)+miniProfile(Rr,'R',ov)+
+  `<div style="font-size:10px;color:var(--mut);text-align:right;padding-right:2px">node 0 (VTA) ————— node 99 (HPC)</div>`;
 }
 
 let openId=null;

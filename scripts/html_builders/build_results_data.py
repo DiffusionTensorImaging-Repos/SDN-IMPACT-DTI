@@ -72,20 +72,21 @@ for summ in sorted(glob.glob(f'{R}/*_summary.csv')):
         n_perms=int(s['NumPermutations']),passed=passed,best_p=best_p,
         clusters=clusters,sig_node_list=sig_nodes,tvals=tvals,pvals=pvals))
 
-# laterality per (outcome, metric): L vs R sig node counts (posterior tracts primary)
+# laterality per (outcome, metric, tract_type): L vs R within the same tract type
 lat={}
 for r in results:
-    key=(r['outcome'],r['metric'])
+    key=(r['outcome'],r['metric'],r['tract_type'])
     lat.setdefault(key,{'L':0,'R':0,'L_nodes':[],'R_nodes':[]})
-    if r['tract_type']=='posterior':
-        lat[key][r['hemisphere']]+=r['n_sig_nodes']
-        lat[key][r['hemisphere']+'_nodes']=r['sig_node_list']
+    lat[key][r['hemisphere']]=r['n_sig_nodes']
+    lat[key][r['hemisphere']+'_nodes']=r['sig_node_list']
 for r in results:
-    L=lat[(r['outcome'],r['metric'])]
+    L=lat[(r['outcome'],r['metric'],r['tract_type'])]
     tot=L['L']+L['R']
+    overlap=sorted(set(L['L_nodes'])&set(L['R_nodes']))
     r['laterality']={'L_sig':L['L'],'R_sig':L['R'],
         'pct_left':round(100*L['L']/tot,0) if tot else None,
-        'pct_right':round(100*L['R']/tot,0) if tot else None}
+        'pct_right':round(100*L['R']/tot,0) if tot else None,
+        'L_nodes':L['L_nodes'],'R_nodes':L['R_nodes'],'overlap_nodes':overlap}
 
 json.dump(results,open(f'{OUT}/results_data.json','w'))
 print(f"Wrote {len(results)} results")
