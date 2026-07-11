@@ -1,0 +1,118 @@
+{
+ "models": [
+  {
+   "outcome": "Social d\u2032",
+   "side": "Left",
+   "measure": "volume",
+   "type": "matched",
+   "beta": 0.01,
+   "p": 0.8409,
+   "n": 42
+  },
+  {
+   "outcome": "Monetary d\u2032",
+   "side": "Right",
+   "measure": "volume",
+   "type": "matched",
+   "beta": 0.066,
+   "p": 0.2026,
+   "n": 42
+  },
+  {
+   "outcome": "Social d\u2032",
+   "side": "Right",
+   "measure": "volume",
+   "type": "cross",
+   "beta": -0.002,
+   "p": 0.9699,
+   "n": 42
+  },
+  {
+   "outcome": "Monetary d\u2032",
+   "side": "Left",
+   "measure": "volume",
+   "type": "cross",
+   "beta": 0.073,
+   "p": 0.1557,
+   "n": 42
+  },
+  {
+   "outcome": "Social d\u2032",
+   "side": "Left",
+   "measure": "NDI density",
+   "type": "matched",
+   "beta": 0.073,
+   "p": 0.1311,
+   "n": 42
+  },
+  {
+   "outcome": "Monetary d\u2032",
+   "side": "Right",
+   "measure": "NDI density",
+   "type": "matched",
+   "beta": -0.05,
+   "p": 0.2922,
+   "n": 42
+  },
+  {
+   "outcome": "Social d\u2032",
+   "side": "Right",
+   "measure": "NDI density",
+   "type": "cross",
+   "beta": 0.039,
+   "p": 0.4106,
+   "n": 42
+  },
+  {
+   "outcome": "Monetary d\u2032",
+   "side": "Left",
+   "measure": "NDI density",
+   "type": "cross",
+   "beta": -0.092,
+   "p": 0.0578,
+   "n": 42
+  },
+  {
+   "outcome": "Social d\u2032",
+   "side": "Bilateral",
+   "measure": "volume",
+   "type": "bilateral",
+   "beta": 0.005,
+   "p": 0.9242,
+   "n": 42
+  },
+  {
+   "outcome": "Social d\u2032",
+   "side": "Bilateral",
+   "measure": "NDI density",
+   "type": "bilateral",
+   "beta": 0.059,
+   "p": 0.2176,
+   "n": 42
+  },
+  {
+   "outcome": "Monetary d\u2032",
+   "side": "Bilateral",
+   "measure": "volume",
+   "type": "bilateral",
+   "beta": 0.08,
+   "p": 0.1265,
+   "n": 42
+  },
+  {
+   "outcome": "Monetary d\u2032",
+   "side": "Bilateral",
+   "measure": "NDI density",
+   "type": "bilateral",
+   "beta": -0.075,
+   "p": 0.1192,
+   "n": 42
+  }
+ ],
+ "qc": {
+  "L_vol_mean": 3529,
+  "R_vol_mean": 3612,
+  "LR_vol_r": 0.592,
+  "n": 57
+ }
+}

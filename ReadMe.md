@@ -6355,6 +6355,7 @@ scripts/permutation_one_extraCov.R       # R script accepting extra covariates v
 
 - **[▶ Results Explorer](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/results_explorer.html)** — all 208 analyses. Filter by outcome family, condition, tract, hemisphere, metric, or significance; click any result to see the tract, the node-wise t-value profile, the exact significant nodes, laterality (L vs R), cluster statistics, covariates, and the scripts that produced it. Includes the full **maternal demographic + clinical profile** of the cohort.
 - **[▶ Data-Quality & d′ Background](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/data_quality.html)** — social vs monetary d′ (correlation, each vs chance, difference), how d′ was calculated (with our end-to-end recomputation), and the response-time confound check.
+- **[▶ HPC Region vs. Connection — specificity test](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/hpc_region_vs_connection.html)** — does the hippocampus *itself* (FSL-FIRST volume + NODDI density) predict memory, or is the signal specific to the VTA→HPC *pathway*? Includes method documentation references.
 
 ## What we ran
 
