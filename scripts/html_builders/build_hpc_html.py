@@ -9,6 +9,15 @@ def row(m):
 matched=''.join(row(m) for m in M if m['type']=='matched')
 cross=''.join(row(m) for m in M if m['type']=='cross')
 bilat=''.join(row(m) for m in M if m['type']=='bilateral')
+B=d.get('bias_models',[])
+def brow(m):
+    sig='sig' if m['p']<0.05 else ''
+    dirw = 'higher → more +bias' if m['beta']>0 else 'higher → less +bias'
+    return f"<tr class='{sig}'><td>{m['outcome']}</td><td>{m['side']}</td><td>{m['measure']}</td><td>{m['type']}</td><td>{m['beta']:+}</td><td>{m['p']}</td><td>{m['n']}</td><td class='mut'>{dirw}</td></tr>"
+bias_matched=''.join(brow(m) for m in B if m['type']=='matched')
+bias_cross=''.join(brow(m) for m in B if m['type']=='cross')
+bias_bilat=''.join(brow(m) for m in B if m['type']=='bilateral')
+bias_maxp=max((m['p'] for m in B),default=1); bias_minp=min((m['p'] for m in B),default=1)
 
 REFS=[
  ('FSL FIRST — subcortical segmentation','Patenaude, Smith, Kennedy &amp; Jenkinson (2011), <i>NeuroImage</i> 56(3):907–922. A Bayesian model of shape and appearance for subcortical brain segmentation.','https://doi.org/10.1016/j.neuroimage.2011.02.046'),
@@ -74,8 +83,19 @@ d′ = z(hit rate) − z(false-alarm rate)</div>
 <div class="callout key"><b>No hippocampal volume or density measure significantly predicted d′ in either domain</b> (all p &gt; 0.13; nothing survives). Volume betas are weakly positive and consistent across domains (no flip); NDI shows only a faint hint of the same social-vs-monetary asymmetry, but nothing significant.</div>
 </div>
 
+<div class="section"><h2>Results — the hippocampus is also silent for <i>bias</i></h2>
+<p>The tract's most robust findings were not accuracy but <b>positivity bias</b> (FABias — the tendency to falsely "remember" positive events more than negative ones). So the same discriminating test has to be run for bias: does the hippocampal <i>region</i> predict how positively biased a mother's false memories are? Same models — HPC volume and NDI density, hemisphere-matched to the (right-lateralised) bias findings, plus cross-pairings and bilateral, all covariate-adjusted.</p>
+<h3 style="font-size:14px;color:var(--mut)">Hemisphere-matched (right HPC — where the bias findings were)</h3>
+<table><thead><tr><th>Outcome</th><th>HPC side</th><th>Measure</th><th>Match</th><th>β (std)</th><th>p</th><th>n</th><th>direction</th></tr></thead><tbody>{bias_matched}</tbody></table>
+<h3 style="font-size:14px;color:var(--mut)">Cross-pairings</h3>
+<table><thead><tr><th>Outcome</th><th>HPC side</th><th>Measure</th><th>Match</th><th>β (std)</th><th>p</th><th>n</th><th>direction</th></tr></thead><tbody>{bias_cross}</tbody></table>
+<h3 style="font-size:14px;color:var(--mut)">Bilateral (mean L+R)</h3>
+<table><thead><tr><th>Outcome</th><th>HPC side</th><th>Measure</th><th>Match</th><th>β (std)</th><th>p</th><th>n</th><th>direction</th></tr></thead><tbody>{bias_bilat}</tbody></table>
+<div class="callout key"><b>No hippocampal volume or density measure predicted positivity bias either</b> (all p &gt; {bias_minp:.2f}; nothing significant). The region is silent for bias just as it was for accuracy.</div>
+</div>
+
 <div class="section"><h2>Interpretation — what this buys the tract story</h2>
-<div class="callout"><b>The region is silent; the pathway is not.</b> Hippocampal size and neurite density carry no detectable memory signal, yet the VTA→HPC <i>tract</i> does (at cluster level). So the memory-relevant structural variance in this circuit is <b>not</b> attributable to hippocampal bulk properties — it is a feature of the <b>connection</b>. Concretely: the tract effects are not a proxy for "bigger/denser hippocampus," which strengthens the case that the hemispheric tract flip is a genuine, pathway-specific phenomenon rather than a downstream shadow of gray-matter differences.</div>
+<div class="callout"><b>The region is silent for <i>both</i> accuracy and bias; the pathway is not.</b> Hippocampal size and neurite density carry no detectable signal for d′ <i>or</i> for positivity bias, yet the VTA→HPC <i>tract</i> does (at cluster level, for both). So the memory-relevant structural variance in this circuit is <b>not</b> attributable to hippocampal bulk properties — it is a feature of the <b>connection</b>. Concretely: the tract effects are not a proxy for "bigger/denser hippocampus," which strengthens the case that the hemispheric tract flip — and the bias effects — are genuine, pathway-specific phenomena rather than downstream shadows of gray-matter differences.</div>
 <div class="callout" style="border-left-color:#eab308"><b>Honest caveat — this is a null, and nulls are weak.</b> n=42 is underpowered, and hippocampal-volume↔memory effects are small in healthy adults (typically r ≈ 0.1–0.2; see Van Petten 2004). Absence of a region effect here is consistent with pathway-specificity but does <i>not</i> prove the hippocampus is irrelevant — a larger sample could reveal a small region effect. The claim is bounded: "the tract signal is not explained by hippocampal size/density in this sample," not "the hippocampus does not matter."</div>
 </div>
 

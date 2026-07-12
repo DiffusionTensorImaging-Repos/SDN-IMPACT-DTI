@@ -59,7 +59,39 @@ for oc_lbl,oc in [('Social d′','SOCIAL_dprime'),('Monetary d′','MONETARY_dpr
         rows.append(dict(outcome=oc_lbl,side='Bilateral',measure=meas,type='bilateral',beta=round(b,3),p=round(p,4),n=n))
         print(f"  {oc_lbl} ~ {meas}: beta={b:+.3f} p={p:.3f} n={n} {'*' if p<0.05 else ''}")
 
-json.dump({'models':rows,
+# ===== HPC REGION -> POSITIVITY BIAS (FABias) =====
+# The bias findings were the robust ones; test whether the hippocampal REGION
+# (volume + density) predicts positivity bias, exactly as we did for d'.
+grp=pd.read_csv(f'{base}/IMPACT_grouped_export.csv').drop_duplicates('ID').rename(columns={'ID':'Subject'})
+for cond in ['SOCIAL','MONETARY']:
+    fap=pd.to_numeric(grp[f'{cond}_FalseMem_positive'],errors='coerce')/pd.to_numeric(grp[f'{cond}_Total_pos'],errors='coerce')
+    fan=pd.to_numeric(grp[f'{cond}_FalseMem_negative'],errors='coerce')/pd.to_numeric(grp[f'{cond}_Total_neg'],errors='coerce')
+    grp[f'{cond}_FABias']=fap-fan
+df=df.merge(grp[['Subject','SOCIAL_FABias','MONETARY_FABias']],on='Subject',how='left')
+print("\n=== HPC REGION -> BIAS (FABias) ===")
+print(f"{'Outcome':14s} {'HPC side':9s} {'Measure':12s} {'type':8s} {'beta':>7s} {'p':>7s} {'n':>4s}")
+bias_rows=[]
+bias_combos=[
+ ('Social FABias','SOCIAL_FABias','Right','R_HPC_vol','volume','matched'),   # bias findings were right-tract
+ ('Social FABias','SOCIAL_FABias','Left','L_HPC_vol','volume','cross'),
+ ('Social FABias','SOCIAL_FABias','Right','R_HPC_NDI','NDI density','matched'),
+ ('Social FABias','SOCIAL_FABias','Left','L_HPC_NDI','NDI density','cross'),
+ ('Monetary FABias','MONETARY_FABias','Right','R_HPC_vol','volume','matched'),
+ ('Monetary FABias','MONETARY_FABias','Left','L_HPC_vol','volume','cross'),
+ ('Monetary FABias','MONETARY_FABias','Right','R_HPC_NDI','NDI density','matched'),
+ ('Monetary FABias','MONETARY_FABias','Left','L_HPC_NDI','NDI density','cross'),
+]
+for oc_lbl,oc,side,pred,meas,typ in bias_combos:
+    b,p,n=model(oc,pred)
+    star='  *' if p<0.05 else ''
+    print(f"{oc_lbl:14s} {side:9s} {meas:12s} {typ:8s} {b:+.3f} {p:7.3f} {n:4d}{star}")
+    bias_rows.append(dict(outcome=oc_lbl,side=side,measure=meas,type=typ,beta=round(b,3),p=round(p,4),n=n))
+for oc_lbl,oc in [('Social FABias','SOCIAL_FABias'),('Monetary FABias','MONETARY_FABias')]:
+    for pred,meas in [('bilat_vol','volume'),('bilat_ndi','NDI density')]:
+        b,p,n=model(oc,pred)
+        bias_rows.append(dict(outcome=oc_lbl,side='Bilateral',measure=meas,type='bilateral',beta=round(b,3),p=round(p,4),n=n))
+
+json.dump({'models':rows,'bias_models':bias_rows,
    'qc':{'L_vol_mean':round(df['L_HPC_vol'].mean()),'R_vol_mean':round(df['R_HPC_vol'].mean()),
          'LR_vol_r':round(df['L_HPC_vol'].corr(df['R_HPC_vol']),3),
          'n':len(df)}},

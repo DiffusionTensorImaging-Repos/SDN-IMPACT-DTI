@@ -109,6 +109,116 @@
    "n": 42
   }
  ],
+ "bias_models": [
+  {
+   "outcome": "Social FABias",
+   "side": "Right",
+   "measure": "volume",
+   "type": "matched",
+   "beta": -0.014,
+   "p": 0.5539,
+   "n": 41
+  },
+  {
+   "outcome": "Social FABias",
+   "side": "Left",
+   "measure": "volume",
+   "type": "cross",
+   "beta": 0.003,
+   "p": 0.9011,
+   "n": 41
+  },
+  {
+   "outcome": "Social FABias",
+   "side": "Right",
+   "measure": "NDI density",
+   "type": "matched",
+   "beta": -0.019,
+   "p": 0.3815,
+   "n": 41
+  },
+  {
+   "outcome": "Social FABias",
+   "side": "Left",
+   "measure": "NDI density",
+   "type": "cross",
+   "beta": -0.016,
+   "p": 0.4896,
+   "n": 41
+  },
+  {
+   "outcome": "Monetary FABias",
+   "side": "Right",
+   "measure": "volume",
+   "type": "matched",
+   "beta": -0.024,
+   "p": 0.3927,
+   "n": 42
+  },
+  {
+   "outcome": "Monetary FABias",
+   "side": "Left",
+   "measure": "volume",
+   "type": "cross",
+   "beta": -0.035,
+   "p": 0.2056,
+   "n": 42
+  },
+  {
+   "outcome": "Monetary FABias",
+   "side": "Right",
+   "measure": "NDI density",
+   "type": "matched",
+   "beta": 0.014,
+   "p": 0.5719,
+   "n": 42
+  },
+  {
+   "outcome": "Monetary FABias",
+   "side": "Left",
+   "measure": "NDI density",
+   "type": "cross",
+   "beta": -0.004,
+   "p": 0.8865,
+   "n": 42
+  },
+  {
+   "outcome": "Social FABias",
+   "side": "Bilateral",
+   "measure": "volume",
+   "type": "bilateral",
+   "beta": -0.006,
+   "p": 0.8007,
+   "n": 41
+  },
+  {
+   "outcome": "Social FABias",
+   "side": "Bilateral",
+   "measure": "NDI density",
+   "type": "bilateral",
+   "beta": -0.018,
+   "p": 0.4148,
+   "n": 41
+  },
+  {
+   "outcome": "Monetary FABias",
+   "side": "Bilateral",
+   "measure": "volume",
+   "type": "bilateral",
+   "beta": -0.034,
+   "p": 0.2285,
+   "n": 42
+  },
+  {
+   "outcome": "Monetary FABias",
+   "side": "Bilateral",
+   "measure": "NDI density",
+   "type": "bilateral",
+   "beta": 0.005,
+   "p": 0.8371,
+   "n": 42
+  }
+ ],
  "qc": {
   "L_vol_mean": 3529,
   "R_vol_mean": 3612,
