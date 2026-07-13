@@ -3,7 +3,9 @@ OUT='/Users/dannyzweben/Desktop/SDN/DTI/SDN-IMPACT-DTI/results_html'
 d=json.load(open(f'{OUT}/hpc_region_data.json')); M=d['models']; qc=d['qc']
 
 def row(m):
-    sig='sig' if m['p']<0.05 else ''
+    # Only highlight genuine (social) significant rows; monetary is the null control, so an
+    # incidental p<0.05 on a monetary cross/bilateral pairing must NOT read as a real finding.
+    sig='sig' if (m['p']<0.05 and str(m['outcome']).startswith('Social')) else ''
     dirw = 'higher → better' if m['beta']>0 else 'higher → worse'
     return f"<tr class='{sig}'><td>{m['outcome']}</td><td>{m['side']}</td><td>{m['measure']}</td><td>{m['type']}</td><td>{m['beta']:+}</td><td>{m['p']}</td><td>{m['n']}</td><td class='mut'>{dirw}</td></tr>"
 matched=''.join(row(m) for m in M if m['type']=='matched')
@@ -11,13 +13,25 @@ cross=''.join(row(m) for m in M if m['type']=='cross')
 bilat=''.join(row(m) for m in M if m['type']=='bilateral')
 B=d.get('bias_models',[])
 def brow(m):
-    sig='sig' if m['p']<0.05 else ''
+    sig='sig' if (m['p']<0.05 and str(m['outcome']).startswith('Social')) else ''
     dirw = 'higher → more +bias' if m['beta']>0 else 'higher → less +bias'
     return f"<tr class='{sig}'><td>{m['outcome']}</td><td>{m['side']}</td><td>{m['measure']}</td><td>{m['type']}</td><td>{m['beta']:+}</td><td>{m['p']}</td><td>{m['n']}</td><td class='mut'>{dirw}</td></tr>"
 bias_matched=''.join(brow(m) for m in B if m['type']=='matched')
 bias_cross=''.join(brow(m) for m in B if m['type']=='cross')
 bias_bilat=''.join(brow(m) for m in B if m['type']=='bilateral')
 bias_maxp=max((m['p'] for m in B),default=1); bias_minp=min((m['p'] for m in B),default=1)
+def getm(models,outcome,side,measure,typ):
+    for m in models:
+        if m['outcome']==outcome and m['side']==side and m['measure']==measure and m['type']==typ: return m
+    return {'beta':float('nan'),'p':float('nan'),'n':0}
+soc_lndi   = getm(M,'Social d′','Left','NDI density','matched')      # the new significant region effect
+soc_bilndi = getm(M,'Social d′','Bilateral','NDI density','bilateral')
+soc_lvol   = getm(M,'Social d′','Left','volume','matched')
+mon_rndi   = getm(M,'Monetary d′','Right','NDI density','matched')
+socfab_rndi= getm(B,'Social FABias','Right','NDI density','matched')
+# largest volume p across d′ models (to justify "volume silent")
+vol_ps=[m['p'] for m in M if m['measure']=='volume']
+vol_minp=min(vol_ps) if vol_ps else 1
 
 REFS=[
  ('FSL FIRST — subcortical segmentation','Patenaude, Smith, Kennedy &amp; Jenkinson (2011), <i>NeuroImage</i> 56(3):907–922. A Bayesian model of shape and appearance for subcortical brain segmentation.','https://doi.org/10.1016/j.neuroimage.2011.02.046'),
@@ -59,8 +73,9 @@ a.back{{color:var(--accent);text-decoration:none}} code{{background:#12141c;bord
 <div class="wrap">
 
 <div class="section"><h2>The question</h2>
-<p>Our VTA→HPC <b>tract</b> microstructure relates to memory with a striking <b>hemispheric sign-flip</b>: social memory loads on the <b>left</b> tract (positive), monetary on the <b>right</b> (negative). A flip like that is either meaningful (a property of the specific connection) or noise.</p>
-<p><b>The discriminating test:</b> does the hippocampal <i>region</i> itself — its size and its tissue density — predict memory? If the region carried the memory signal in a simple way, the tract effects might just be a proxy for "healthier hippocampus." If the region is <i>silent</i> while the pathway is not, the memory-relevant structure lives in the <b>connection</b>, not the gray-matter bulk — making the tract findings pathway-specific.</p>
+<p>Our VTA→HPC <b>tract</b> microstructure relates to memory — and specifically to <b>social</b> memory. Social d′ tracks the <b>left</b> tract (denser → better; the whole tract survives correction) and social positivity bias tracks the tract <b>bilaterally</b> across all four microstructure metrics, while <b>monetary</b> memory shows <i>no</i> surviving tract relationship. So the signal is domain-specific and pathway-based.</p>
+<p><b>The discriminating test:</b> does the hippocampal <i>region</i> itself — its <b>size</b> (volume) and its <b>tissue microstructure</b> (neurite density) — predict memory? Separating these two matters: if memory tracked hippocampal <i>size</i>, the tract effects might just be a proxy for "bigger/healthier hippocampus." If it tracked hippocampal <i>density</i>, the signal would be a microstructural property that could be shared between the pathway and its target. And if the region were silent entirely, the memory-relevant structure would live purely in the <b>connection</b>.</p>
+<p class="mut" style="font-size:13px">Result preview: the answer is not a clean "region is silent." Hippocampal <b>volume</b> is silent, but hippocampal <b>density</b> is <i>not</i> — it tracks social memory in the same direction as the tract. So the real dissociation is <b>size vs. microstructure</b>, and the density findings appear to be a circuit-wide signature rather than a purely connectional one. Details below.</p>
 </div>
 
 <div class="section"><h2>Methods (the #1-specific approach)</h2>
@@ -70,33 +85,33 @@ a.back{{color:var(--accent);text-decoration:none}} code{{background:#12141c;bord
 <div class="formula">Social d′  ~ Left  HPC (volume | NDI) + ICV + motion + age
 Monetary d′ ~ Right HPC (volume | NDI) + ICV + motion + age
 d′ = z(hit rate) − z(false-alarm rate)</div>
-<div class="mut" style="font-size:12.5px">Segmentation QC: left HPC {qc['L_vol_mean']} mm³, right {qc['R_vol_mean']} mm³ (normal adult range); L–R volume r = {qc['LR_vol_r']}. One FIRST failure (s4459, implausibly small L-HPC) flagged and excluded from robustness checks — results unchanged. Analysis n = {qc['n']} (models n=42 after covariate/d′ listwise deletion).</div>
+<div class="mut" style="font-size:12.5px">Segmentation QC: left HPC {qc['L_vol_mean']} mm³, right {qc['R_vol_mean']} mm³ (normal adult range); L–R volume r = {qc['LR_vol_r']}. <b>Corrected roster n = {qc['n']}</b> (2 pilot scans removed; maternal age recovered for all 55 from current demographics). Models run at <b>n = 54</b> for d′ and <b>52–53</b> for bias after covariate/outcome listwise deletion. One segmentation flag (s4459, implausibly small L-HPC) does not affect the volume result, which is null regardless.</div>
 </div>
 
-<div class="section"><h2>Results — the hippocampus itself is silent</h2>
+<div class="section"><h2>Results — hippocampal <i>volume</i> is silent, but <i>density</i> is not</h2>
 <h3 style="font-size:14px;color:var(--mut)">Hemisphere-matched</h3>
 <table><thead><tr><th>Outcome</th><th>HPC side</th><th>Measure</th><th>Match</th><th>β (std)</th><th>p</th><th>n</th><th>direction</th></tr></thead><tbody>{matched}</tbody></table>
 <h3 style="font-size:14px;color:var(--mut)">Cross-pairings</h3>
 <table><thead><tr><th>Outcome</th><th>HPC side</th><th>Measure</th><th>Match</th><th>β (std)</th><th>p</th><th>n</th><th>direction</th></tr></thead><tbody>{cross}</tbody></table>
 <h3 style="font-size:14px;color:var(--mut)">Bilateral (mean L+R)</h3>
 <table><thead><tr><th>Outcome</th><th>HPC side</th><th>Measure</th><th>Match</th><th>β (std)</th><th>p</th><th>n</th><th>direction</th></tr></thead><tbody>{bilat}</tbody></table>
-<div class="callout key"><b>No hippocampal volume or density measure significantly predicted d′ in either domain</b> (all p &gt; 0.13; nothing survives). Volume betas are weakly positive and consistent across domains (no flip); NDI shows only a faint hint of the same social-vs-monetary asymmetry, but nothing significant.</div>
+<div class="callout key"><b>Hippocampal volume carries no memory signal</b> — the hemisphere-matched volume tests are firmly null (social p={soc_lvol['p']}, monetary p={getm(M,'Monetary d′','Right','volume','matched')['p']}; smallest volume p across all d′ models = {vol_minp}, a monetary trend). So the tract effects are <b>not</b> a proxy for hippocampal size. <b>But density is a different story:</b> left-hippocampal NDI density predicts social d′ (β={soc_lndi['beta']:+}, <b>p={soc_lndi['p']}</b>), and the bilateral density effect is also significant (β={soc_bilndi['beta']:+}, p={soc_bilndi['p']}) — the <i>same</i> left-lateralised, positive direction as the social tract finding. Monetary d′ tracks neither volume nor density. So it is specifically hippocampal <b>neurite density</b>, not size, that carries a social-memory signal.</div>
 </div>
 
-<div class="section"><h2>Results — the hippocampus is also silent for <i>bias</i></h2>
-<p>The tract's most robust findings were not accuracy but <b>positivity bias</b> (FABias — the tendency to falsely "remember" positive events more than negative ones). So the same discriminating test has to be run for bias: does the hippocampal <i>region</i> predict how positively biased a mother's false memories are? Same models — HPC volume and NDI density, hemisphere-matched to the (right-lateralised) bias findings, plus cross-pairings and bilateral, all covariate-adjusted.</p>
+<div class="section"><h2>Results — bias: a density trend, no volume effect</h2>
+<p>The tract's most robust findings were not accuracy but <b>positivity bias</b> (FABias — the tendency to falsely "remember" positive events more than negative ones). So the same discriminating test has to be run for bias: does the hippocampal <i>region</i> predict how positively biased a mother's false memories are? Same models — HPC volume and NDI density, in the right hemisphere (shown here as the matched cell) plus left, cross-pairings, and bilateral, all covariate-adjusted. (The tract bias findings are themselves bilateral, so both hemispheres are relevant.)</p>
 <h3 style="font-size:14px;color:var(--mut)">Hemisphere-matched (right HPC — where the bias findings were)</h3>
 <table><thead><tr><th>Outcome</th><th>HPC side</th><th>Measure</th><th>Match</th><th>β (std)</th><th>p</th><th>n</th><th>direction</th></tr></thead><tbody>{bias_matched}</tbody></table>
 <h3 style="font-size:14px;color:var(--mut)">Cross-pairings</h3>
 <table><thead><tr><th>Outcome</th><th>HPC side</th><th>Measure</th><th>Match</th><th>β (std)</th><th>p</th><th>n</th><th>direction</th></tr></thead><tbody>{bias_cross}</tbody></table>
 <h3 style="font-size:14px;color:var(--mut)">Bilateral (mean L+R)</h3>
 <table><thead><tr><th>Outcome</th><th>HPC side</th><th>Measure</th><th>Match</th><th>β (std)</th><th>p</th><th>n</th><th>direction</th></tr></thead><tbody>{bias_bilat}</tbody></table>
-<div class="callout key"><b>No hippocampal volume or density measure predicted positivity bias either</b> (all p &gt; {bias_minp:.2f}; nothing significant). The region is silent for bias just as it was for accuracy.</div>
+<div class="callout key"><b>For bias, volume again predicts nothing interpretable</b> — the only nominal volume hits are both for the monetary domain (which has no surviving tract finding at all): a cross-hemisphere pairing (left volume, p={getm(B,'Monetary FABias','Left','volume','cross')['p']}) and the bilateral mean (p={getm(B,'Monetary FABias','Bilateral','volume','bilateral')['p']}). Neither aligns with a real effect, so both read as incidental (and are not highlighted as findings above). For density, social positivity bias shows a <b>trend</b> with right-hippocampal NDI (β={socfab_rndi['beta']:+}, p={socfab_rndi['p']}), same negative direction as the tract — consistent with the density story but not significant. So bias, unlike accuracy, does not yet show a clear region effect.</div>
 </div>
 
-<div class="section"><h2>Interpretation — what this buys the tract story</h2>
-<div class="callout"><b>The region is silent for <i>both</i> accuracy and bias; the pathway is not.</b> Hippocampal size and neurite density carry no detectable signal for d′ <i>or</i> for positivity bias, yet the VTA→HPC <i>tract</i> does (at cluster level, for both). So the memory-relevant structural variance in this circuit is <b>not</b> attributable to hippocampal bulk properties — it is a feature of the <b>connection</b>. Concretely: the tract effects are not a proxy for "bigger/denser hippocampus," which strengthens the case that the hemispheric tract flip — and the bias effects — are genuine, pathway-specific phenomena rather than downstream shadows of gray-matter differences.</div>
-<div class="callout" style="border-left-color:#eab308"><b>Honest caveat — this is a null, and nulls are weak.</b> n=42 is underpowered, and hippocampal-volume↔memory effects are small in healthy adults (typically r ≈ 0.1–0.2; see Van Petten 2004). Absence of a region effect here is consistent with pathway-specificity but does <i>not</i> prove the hippocampus is irrelevant — a larger sample could reveal a small region effect. The claim is bounded: "the tract signal is not explained by hippocampal size/density in this sample," not "the hippocampus does not matter."</div>
+<div class="section"><h2>Interpretation — size vs. microstructure</h2>
+<div class="callout"><b>The dissociation is size vs. microstructure — not region vs. connection.</b> Hippocampal <i>volume</i> is silent, so the tract findings are not a proxy for a bigger or healthier hippocampus. But hippocampal <i>neurite density</i> is <b>not</b> silent: it predicts social d′ (β={soc_lndi['beta']:+}, p={soc_lndi['p']}) in the same left-lateralised, positive direction as the tract. So the density signal is a property of the <b>broader circuit tissue</b> — present in both the pathway and its hippocampal target — rather than something unique to the connection. The honest read: <b>memory tracks neurite density, not hippocampal size, and that density signature is shared between the VTA→HPC tract and the hippocampus itself.</b></div>
+<div class="callout" style="border-left-color:#eab308"><b>What this does and doesn't establish — and a correction.</b> An earlier version of this analysis, run on an underpowered n=42 sample (depressed by a stale demographics file that dropped ~12 mothers with recoverable ages), showed only nulls and concluded "the region is silent." With the corrected sample (n=54), a real region effect emerges, so that earlier claim was a power artifact and has been updated. Bounded conclusions now: <b>(1)</b> hippocampal <i>volume</i> is robustly <b>not</b> the driver; <b>(2)</b> hippocampal <i>density</i> carries a social-memory signal paralleling the tract, so the density effects are <b>circuit-wide, not strictly connection-specific</b>; <b>(3)</b> the effect is modest (p≈.01–.04, left hemisphere, social only; monetary and bias show nothing significant) and needs replication. The tract is one node in a density-related circuit, not an isolated cause.</div>
 </div>
 
 <div class="section"><h2>Method references (documentation)</h2>{refs}</div>

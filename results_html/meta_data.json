@@ -1,6 +1,6 @@
 {
  "demographics": {
-  "n_dti": 57,
+  "n_dti": 55,
   "n_with_demo": 55,
   "age": {
    "mean": 45.7,
@@ -84,41 +84,41 @@
  "data_quality": {
   "dprime": {
    "social": {
-    "n": 56,
-    "mean": 0.069,
-    "sd": 0.285,
-    "t_vs0": 1.81,
-    "p_vs0": 0.0763
+    "n": 54,
+    "mean": 0.07,
+    "sd": 0.284,
+    "t_vs0": 1.82,
+    "p_vs0": 0.075
    },
    "monetary": {
-    "n": 56,
-    "mean": 0.211,
-    "sd": 0.316,
-    "t_vs0": 5.01,
+    "n": 54,
+    "mean": 0.205,
+    "sd": 0.313,
+    "t_vs0": 4.8,
     "p_vs0": 0.0
    },
    "correlation": {
-    "r": -0.042,
-    "p": 0.759,
-    "n": 56
+    "r": -0.086,
+    "p": 0.534,
+    "n": 54
    },
    "paired_diff": {
-    "mean_diff": -0.143,
-    "t": -2.46,
-    "p": 0.0171,
-    "wilcoxon_p": 0.0276
+    "mean_diff": -0.134,
+    "t": -2.25,
+    "p": 0.0289,
+    "wilcoxon_p": 0.0462
    }
   },
   "dprime_recompute": [
    {
     "cond": "SOCIAL",
-    "r_with_reported": 0.8105,
-    "n": 55
+    "r_with_reported": 0.8138,
+    "n": 54
    },
    {
     "cond": "MONETARY",
-    "r_with_reported": 0.9875,
-    "n": 55
+    "r_with_reported": 0.9874,
+    "n": 54
    }
   ],
   "rt": {
@@ -134,34 +134,34 @@
      "n": 29
     },
     "recall_social": {
-     "mean": 1.676,
-     "sd": 0.238,
-     "n": 57
+     "mean": 1.659,
+     "sd": 0.223,
+     "n": 55
     },
     "recall_monetary": {
-     "mean": 1.651,
-     "sd": 0.248,
-     "n": 57
+     "mean": 1.634,
+     "sd": 0.232,
+     "n": 55
     }
    },
    "corr_with_dprime": [
     {
      "label": "Social d\u2032 \u00d7 social-recall RT",
-     "r": 0.085,
-     "p": 0.535,
-     "n": 56
+     "r": 0.137,
+     "p": 0.3235,
+     "n": 54
     },
     {
      "label": "Monetary d\u2032 \u00d7 monetary-recall RT",
-     "r": 0.142,
-     "p": 0.2973,
-     "n": 56
+     "r": 0.151,
+     "p": 0.2753,
+     "n": 54
     }
    ],
    "social_vs_monetary_recall": {
-    "t": 1.2,
-    "p": 0.234,
-    "n": 57
+    "t": 1.14,
+    "p": 0.258,
+    "n": 55
    }
   }
  }

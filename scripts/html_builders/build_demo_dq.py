@@ -23,7 +23,9 @@ def income_num(x):
         return v*1000 if v<1000 else v
     except: return np.nan
 
-age=pd.to_numeric(A['demo_poc_51'],errors='coerce')
+# maternal age = the SAME coalesced value used in every analysis (REDCap ∪ newer AllDemographics),
+# read from the corrected analysis roster so the demographic card's N matches the analytic N exactly.
+age=pd.to_numeric(ready.set_index('Subject').reindex(sorted(subs))['maternal_age'],errors='coerce')
 inc=A['demo_poc_57'].map(income_num) if 'demo_poc_57' in A else pd.Series(dtype=float)
 # race checkboxes demo_poc_53___0..5
 race_counts={}

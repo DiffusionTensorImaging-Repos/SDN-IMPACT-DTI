@@ -51,7 +51,7 @@ REFS=[
 refs=''.join(f"<div class='ref'><div class='rt'>{t}</div><div class='rd'>{de}</div><a href='{u}' target='_blank'>{u}</a></div>" for t,de,u in REFS)
 
 html=f'''<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The Flip — Tract Balance vs. Tract Level</title>
+<title>Superseded — Tract Balance vs. Level (archived)</title>
 <style>
 :root{{--bg:#0f1117;--card:#1a1d27;--card2:#232733;--ink:#e6e9ef;--mut:#9aa3b2;--line:#2c3140;--accent:#a78bfa;--yes:#22c55e;--warn:#eab308;}}
 *{{box-sizing:border-box}}body{{margin:0;background:var(--bg);color:var(--ink);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}}
@@ -76,19 +76,25 @@ a.back{{color:var(--accent);text-decoration:none}} code{{background:#12141c;bord
 .vyes{{background:rgba(34,197,94,.15);color:#86efac;border:1px solid rgba(34,197,94,.4)}}
 .figwrap{{text-align:center;background:#12141c;border:1px solid var(--line);border-radius:10px;padding:14px;margin:12px 0}}
 </style></head><body>
-<header><h1>Is the hemispheric &ldquo;flip&rdquo; a laterality effect? <span class="mut" style="font-size:15px">Tract balance vs. tract level</span></h1>
-<div class="sub">Social memory loaded on the <b>left</b> tract, monetary on the <b>right</b> — opposite signs. Is that a left/right <b>balance</b> phenomenon, or something else? &nbsp;·&nbsp; <a class="back" href="results_explorer.html">← Results Explorer</a></div></header>
+<header><h1>Superseded — the &ldquo;flip&rdquo; was a sample artifact <span class="mut" style="font-size:15px">Archived analysis</span></h1>
+<div class="sub">This page tested whether an apparent social-left / monetary-right sign-flip was a laterality effect. &nbsp;·&nbsp; <a class="back" href="results_explorer.html">← Results Explorer</a></div></header>
 <div class="wrap">
 
+<div class="section" style="border:1px solid #eab308;background:#2a2410">
+<h2 style="color:#eab308">⚠ This analysis has been superseded</h2>
+<p>It was built on the earlier result that <b>monetary</b> d′ tracked the <b>right</b> VTA→HPC tract (denser → worse), forming an apparent left/right sign-flip against the social finding. On the <b>corrected roster</b> (55 mothers: 2 pilot scans removed, maternal ages recovered), <b>no monetary tract cluster survives FWE correction</b> — the right-negative monetary effect was a sample artifact. <b>There is no flip to explain.</b> (This particular difference-score model runs at <b>n=52</b>, after also dropping 2 task non-completers and 1 mother without a d′ score.)</p>
+<p>What still holds: higher <b>bilateral</b> VTA→HPC density is associated with relatively better social than monetary memory — but because the monetary side is now null, that difference is driven entirely by the social finding, so this page adds nothing independent beyond the main <a class="back" href="results_explorer.html">social results</a>. It is kept only as a record of the laterality check. Numbers below are recomputed on the corrected sample.</p>
+</div>
+
 <div class="section"><h2>The question</h2>
-<p>The two headline accuracy findings point in opposite directions: <b>social</b> d′ tracks the <b>left</b> VTA→HPC tract (denser → better), <b>monetary</b> d′ tracks the <b>right</b> tract (denser → worse). Read side-by-side, that looks like a <b>laterality</b> story:</p>
-<div class="callout"><b>Hypothesis:</b> do mothers whose <b>left</b> tract is stronger than their right tend to be <b>better at social memory</b> (relative to monetary), while mothers with a stronger <b>right</b> tract are <b>better at monetary</b>? If so, the flip is one real thing — the left/right <i>balance</i> of this pathway sets which kind of memory you are tuned for.</p></div>
-<p>This is worth testing directly, because two opposite-signed correlations sitting next to each other is not, by itself, evidence of a coherent asymmetry. It could be a genuine balance effect — or an artifact of analysing four cells (L/R × social/monetary) separately.</p>
+<p><i>(Framed in the past tense — this was the reasoning at the time, before the correction.)</i> In the earlier run the two headline accuracy findings <b>appeared</b> to point in opposite directions: <b>social</b> d′ tracked the <b>left</b> VTA→HPC tract (denser → better), and <b>monetary</b> d′ <b>appeared</b> to track the <b>right</b> tract (denser → worse). Read side-by-side, that <b>looked like</b> a <b>laterality</b> story:</p>
+<div class="callout"><b>Hypothesis (as posed then):</b> did mothers whose <b>left</b> tract was stronger than their right tend to be <b>better at social memory</b> (relative to monetary), while mothers with a stronger <b>right</b> tract were <b>better at monetary</b>? If so, the flip would be one real thing — the left/right <i>balance</i> of this pathway setting which kind of memory you are tuned for.</p></div>
+<p>We tested it directly. As the banner above notes, the premise itself did not survive correction (the monetary-right effect was an artifact), but the laterality test is recorded below for completeness.</p>
 </div>
 
 <div class="section"><h2>How we tested it</h2>
 <p><b>Tract balance (predictor).</b> For each mother, a <b>laterality index</b> on the deep-white-matter mid-tract (nodes 25–75, avoiding endpoint partial-volume) — computed on <b>both</b> NDI (density) and FA (coherence). Using the whole mid-tract, <i>not</i> the specific significant cluster nodes, so we are not re-selecting the nodes that produced the original finding.</p>
-<p><b>Memory balance (outcome).</b> Social and monetary d′ are first <b>z-scored within-sample</b> (their raw scales differ), then differenced: <code>z(social) − z(monetary)</code> = a mother's relative social-vs-monetary memory advantage. This is a meaningful dimension precisely because the two d′s are essentially <b>uncorrelated</b> (r ≈ −0.04) — the difference is signal, not shared variance.</p>
+<p><b>Memory balance (outcome).</b> Social and monetary d′ are first <b>z-scored within-sample</b> (their raw scales differ), then differenced: <code>z(social) − z(monetary)</code> = a mother's relative social-vs-monetary memory advantage. This is a meaningful dimension precisely because the two d′s are essentially <b>uncorrelated</b> (r ≈ −0.09, p = 0.53) — the difference is signal, not shared variance.</p>
 <div class="formula">Laterality index  LI = (Left − Right) / (Left + Right)      (mid-tract, NDI &amp; FA)
 Memory balance    = z(social d′) − z(monetary d′)
 Test:  memory_balance ~ LI + ICV + motion + age + streamline-count-LI + length-LI</div>
@@ -116,7 +122,7 @@ Test:  memory_balance ~ LI + ICV + motion + age + streamline-count-LI + length-L
 
 <div class="section"><h2>Honest caveats</h2>
 <div class="callout warn"><b>This is a reframing of the same data, not independent replication.</b> The bilateral-level effect is the single interaction that the two original cluster findings logically imply; testing it here characterizes the phenomenon correctly but does not add out-of-sample confirmation. A regression on the difference score <i>is</i> the corresponding domain × predictor interaction test — the balance-null and level-effect are two readouts of the same model, not independent experiments.</div>
-<div class="callout warn"><b>Small sample, mid-range p-values.</b> n≈40 after covariate/d′ listwise deletion; the level effects are p≈0.01–0.03, real but not bulletproof. The direct-question answer (balance = null) is robust across both metrics; the &ldquo;it&rsquo;s the sum&rdquo; conclusion follows algebraically from social(+) and monetary(−) sharing a density substrate and is corroborated empirically here.</div>
+<div class="callout warn"><b>Modest sample, mid-range p-values.</b> n={SUM_NDI['n']} (corrected roster: 55 mothers, 2 pilots removed, 12 recovered ages, minus 2 task non-completers and 1 without d′); the level effects are p≈0.01–0.03, real but not bulletproof. The direct-question answer (balance = null) is robust across both metrics; the &ldquo;it&rsquo;s the sum&rdquo; conclusion follows algebraically from social(+) and monetary(−) sharing a density substrate and is corroborated empirically here.</div>
 </div>
 
 <div class="section"><h2>Method references (documentation)</h2>{refs}</div>

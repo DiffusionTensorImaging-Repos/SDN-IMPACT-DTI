@@ -6062,26 +6062,27 @@ The 80 original tests (`SOCIAL_dprime`, `MONETARY_dprime`, 3 CTQ outcomes) were 
 
 ## Final sample sizes (per outcome after listwise deletion)
 
+Corrected roster: **55 mothers** with complete VTA→HPC tractography (2 pilot scans removed; maternal age recovered for all 55 from current demographics, so age is no longer a source of dropout).
+
 | Outcome | N |
 |---|---|
-| `SOCIAL_dprime`, `MONETARY_dprime` | 42 |
-| `SOCIAL_TrueMemRate`, `SOCIAL_FalseMemRate` | 42 |
-| `MONETARY_TrueMemRate`, `MONETARY_FalseMemRate` | 42 |
-| All 3 CTQ outcomes | 43 |
+| `SOCIAL_dprime`, `MONETARY_dprime` | 54 |
+| `SOCIAL_FABias`, `SOCIAL_HitRateBias` | 52 |
+| `MONETARY_FABias`, `MONETARY_HitRateBias` | 53 |
 
-(57 total subjects; drops are due to missing CTQ + maternal age in 14 of them. The 6 memory outcomes lose 1 extra subject relative to the imaging covariates.)
+(One mother lacks a usable memory score, dropping d′ to 54; a few lack the valence-broken-down counts needed for the bias metrics, dropping those to 52–53. Trauma/CTQ and the raw true/false memory-rate outcomes were removed from scope in this re-run — the analysis was narrowed to d′ + the two positivity-bias metrics.)
 
 ## Social vs Monetary d′ — are they the same construct?
 
-**No — the two d′ scores are essentially independent** (n = 56, Pearson r = **−0.04**, p = 0.76; Spearman r = −0.06, p = 0.65). Reassuring for the tract findings: the social and monetary memory hits are on *opposite hemispheres* (left vs right) and act on *different metrics/directions*, so if the two behavioral scores had been strongly correlated we'd worry about spillover. They aren't, so the tract-level dissociation is defensible.
+**No — the two d′ scores are essentially independent** (n = 54, Pearson r = **−0.09**, p = 0.53). This matters for the tract findings: only the *social* measures track the VTA→HPC tract (monetary is null throughout), and because social and monetary d′ are uncorrelated, that specificity reflects genuinely distinct abilities rather than two views of one signal.
 
 ![Social vs Monetary d'](images/dprime_social_vs_monetary.png)
 
-Distributions (n = 56):
-- SOCIAL d′: mean = 0.07, SD = 0.29 (hugging chance = 0)
-- MONETARY d′: mean = 0.21, SD = 0.32
+Distributions (analysis sample, n = 54):
+- SOCIAL d′: mean = 0.07, SD ≈ 0.29 — only **marginally above chance** (t = 1.82, p = 0.075)
+- MONETARY d′: mean = 0.21, SD ≈ 0.32 — **robustly above chance** (t = 4.8, p < 0.001)
 
-Both hover near chance, which matches Danny's original observation about low variance in successful non-motivated memory — but there is enough spread in both for the DTI signal to have something to explain.
+Monetary discrimination is significantly higher than social (paired t p = 0.029, Wilcoxon p = 0.046). Note the dissociation this creates: it is the **weaker** social measure (and social positivity bias) that tracks the VTA→HPC tract, while the stronger monetary measure does not. The social-d′ tract finding is therefore an individual-differences association across a near-chance group mean — valid because there is real spread in social d′, but worth stating plainly.
 
 ## Pipeline
 
@@ -6102,7 +6103,7 @@ Pulls together:
 - `IMPACT_grouped_export.csv` (d′ outcomes)
 - Pivots each of the 16 (tract × metric) node-wise CSVs from long → wide with columns `Subject + outcomes + covariates + metric_0..metric_99`.
 
-Output: `data.check/analysis_ready/<tract>__<metric>__analysis.csv` × 16 files, each 57 rows × 111 columns.
+Output: `data.check/analysis_ready/<tract>__<metric>__analysis.csv` × 16 files. In the corrected re-run these hold **55 rows** (2 pilot scans removed; maternal age recovered for all 55 mothers from current demographics). The originals are preserved in `data.check/analysis_ready_ORIG_backup/`.
 
 ### 3. Permutation testing (Freedman–Lane, 5000 perms, α=0.05)
 **Script:** `scripts/permutation_one.R` — direct adaptation of Ranesh's `vta_hippocampus_substance_use_noddi_permutation_testing.R`. Identical model structure:
@@ -6125,7 +6126,9 @@ The default cluster (`cla19097`, 48 cores) was contended by other users (load av
 
 **Round 3 — 64 added memory-bias tests** (`scripts/run_perm_bias.sh`): after the behavioral deep-dive we added valence-based positivity bias outcomes (`SOCIAL_HitRateBias`, `SOCIAL_FABias`, `MONETARY_HitRateBias`, `MONETARY_FABias`). Same pattern. `xargs -P 64`, ~45 minutes.
 
-**Total tests: 208** (80 + 64 + 64) across all three rounds. Each test = 5000 Freedman–Lane perms × 100 nodes × `lm()` fits on a single core. Combined results were tarred back from `/data/scratch/dti_perm/results/` and unpacked locally.
+**Total tests (original rounds): 208** (80 + 64 + 64). Each test = 5000 Freedman–Lane perms × 100 nodes × `lm()` fits on a single core.
+
+> **Corrected re-run (authoritative).** After the roster/age correction, the whole analysis was re-run on cr2 on the corrected 55-mother roster, narrowed to the **6 outcomes of interest** (social & monetary d′, `FABias`, `HitRateBias`) × 4 tracts × 4 metrics = **96 analyses**, again at 5000 Freedman–Lane permutations with cluster-extent FWE. This 96-analysis re-run supersedes the earlier 208-test rounds and is the source of every number in the Results section below. (Previous permutation outputs are preserved in `data.check/permutation_results_ORIG_backup/`.)
 
 ### 5. Summarize + plot
 **Scripts:** `scripts/summarize_perms.py`, `scripts/plot_hits.py`.
@@ -6135,55 +6138,63 @@ The default cluster (`cla19097`, 48 cores) was contended by other users (load av
 
 ## Results
 
+> **⚠️ These are the corrected results.** The analysis was re-run after discovering that a stale demographics export had dropped ~12 mothers whose maternal age is recoverable from current demographics, and that 2 pilot scans had been mixed into the roster. The re-run uses the **corrected roster of 55 mothers** (2 pilots removed; maternal age recovered for all 55), narrowed to the **6 outcomes of interest** (social & monetary d′, FABias, HitRateBias) × 4 tracts × 4 metrics = **96 analyses**, 5000 Freedman–Lane permutations each, cluster-extent FWE at α = 0.05. Analytic N: **54** for d′, **52** for the bias metrics after listwise deletion. The earlier (n = 42) results — including all monetary findings and the "hemispheric sign-flip" — did **not** replicate and are retired; see the note at the end of this section.
+
 ### Significant clusters (FWE-corrected at cluster level)
 
-**8 of 208 tests** yielded a cluster passing the permutation-derived extent threshold: 4 from memory-outcome analyses, 4 from memory-bias analyses.
+**12 clusters survive FWE at α = 0.05 (plus one marginal at p = 0.051) — every one is a SOCIAL outcome.** The result is far cleaner than the earlier run: the social findings strengthened and expanded, and the monetary findings vanished entirely.
 
-**Memory outcomes (d′ + FalseMemRate):**
+**Social memory accuracy (d′) — 2 clusters, both LEFT, both NDI, both positive (denser → better):**
 
-| # | Outcome | Tract | Metric | Cluster (nodes) | Size | Direction | Max \|t\| | Cluster p |
-|---|---|---|---|---|---|---|---|---|
-| 1 | SOCIAL d′ | Posterior **Left** VTA→HPC | **NDI** | 4–48 | 45 | **Positive** | 3.02 @ node 22 | **0.014** |
-| 2 | MONETARY d′ | Posterior **Right** VTA→HPC | **NDI** | 36–74 | 39 | **Negative** | 2.72 @ node 49 | **0.017** |
-| 3 | MONETARY FalseMemRate | Posterior **Right** VTA→HPC | **NDI** | 42–79 | 38 | **Positive** | 2.45 @ node 68 | **0.018** |
-| 4 | MONETARY d′ | Anterior **Right** VTA→HPC | **FWF** | 39–58 | 20 | Positive | 2.75 @ node 52 | 0.048 |
+| Outcome | Tract | Metric | Cluster (nodes) | Size | Direction | Cluster p | N |
+|---|---|---|---|---|---|---|---|
+| SOCIAL d′ | Posterior **Left** VTA→HPC | **NDI** | 0–97 | 98 | **Positive** | **<0.0002** | 54 |
+| SOCIAL d′ | Anterior **Left** VTA→HPC | **NDI** | 3–40 | 38 | **Positive** | 0.029 | 54 |
 
-**Positivity-in-false-memory bias outcomes:**
+The posterior-left NDI effect now spans essentially the **whole tract** (nodes 0–97) at p < 0.0002 — up from a single 45-node cluster (p ≈ 0.006) in the underpowered run.
 
-| # | Outcome | Tract | Metric | Cluster (nodes) | Size | Direction | Max \|t\| | Cluster p |
-|---|---|---|---|---|---|---|---|---|
-| 5 | **SOCIAL_FABias** | Posterior **Right** VTA→HPC | **NDI** | 36–67 | 32 | **Negative** | 3.36 @ node 48 | **0.026** |
-| 6 | **SOCIAL_FABias** | Posterior **Right** VTA→HPC | **FA** | 39–63 | 25 | **Negative** | 2.98 @ node 48 | **0.032** |
-| 7 | **MONETARY_FABias** | Posterior **Right** VTA→HPC | **FA** | 1–23 | 23 | **Positive** | 2.58 @ node 17 | **0.039** |
-| 8 | **SOCIAL_FABias** | Posterior **Left** VTA→HPC | **FA** | 43–64 | 22 | **Negative** | 2.46 @ node 48 | 0.047 |
+**Social positivity bias in false memories (FABias) — 11 clusters, BILATERAL, all four metrics:**
+
+| Tract | Metric | Cluster (nodes) | Size | Direction | Cluster p | N |
+|---|---|---|---|---|---|---|
+| Posterior **Right** | **FA** | 24–67 | 44 | Negative | **0.0020** | 52 |
+| Posterior **Right** | **FWF** | 0–45 | 46 | Positive | **0.0024** | 52 |
+| Posterior **Right** | **ODI** | 0–45 | 46 | Negative | **0.0026** | 52 |
+| Posterior **Right** | **NDI** | 24–65 | 42 | Negative | **0.0132** | 52 |
+| Posterior **Left** | **ODI** | 11–39 | 29 | Negative | **0.0218** | 52 |
+| Posterior **Left** | **FA** | 46–73 | 28 | Negative | **0.0232** | 52 |
+| Anterior **Right** | **FA** | 32–74 | 43 | Negative | **0.0020** | 52 |
+| Anterior **Right** | **ODI** | 0–33 | 34 | Negative | **0.0078** | 52 |
+| Anterior **Right** | **NDI** | 35–77 | 43 | Negative | **0.0190** | 52 |
+| Anterior **Left** | **FA** | 52–75 | 24 | Negative | **0.0350** | 52 |
+| Anterior **Right** | **FWF** | 0–21 | 22 | Positive | 0.0506 *(marginal)* | 52 |
+
+**Direction is coherent across all 11:** FA/NDI/ODI clusters are **negative** and FWF clusters are **positive** — i.e. denser, more-coherent, lower-free-water tract tissue is associated with **less** positive-skew in a mother's social false memories.
+
+**Monetary: nothing.** Zero surviving clusters for monetary d′, monetary FABias, or either HitRateBias. The earlier "monetary d′ / FalseMemRate loads negatively on the right posterior tract" finding does **not** survive on the corrected sample.
 
 Notably:
-- **All 4 new hits involve `FABias` (positivity bias in false alarms), not `HitRateBias`.** Zero HitRateBias hits across all 32 HitRateBias tests. The microstructure story about positivity bias is specifically about the *false-memory* side, not the *correct-memory* side.
-- **FA finally shows up.** In the 144 memory tests, no FA cluster survived; here we have 3 FA clusters. FA appears specifically sensitive to false-memory valence bias — this is a new finding worth highlighting to Ranesh/Blake.
-- **Right-posterior tract emerges as a bias hub.** Three of the 4 bias hits are on the same right posterior tract that also carried the monetary d′ and FalseMemRate signals — this tract seems to shape multiple aspects of monetary and social memory quality.
-- **Direction: SOCIAL_FABias hits are all negative.** Higher microstructure = LESS positivity bias in social false memories → tighter/denser tracts = more balanced/less positive-skewed misremembering.
-
-![Permutation hits](images/perm_hits.png)
+- **The entire result set is social.** Both accuracy findings and all 11 bias findings are on social outcomes; monetary is null throughout. This is a clean **domain-specificity** result — the VTA→HPC circuit tracks *social* motivated memory, not monetary — which fits the cohort (mothers of socially anxious children) and the motivated-memory framing.
+- **Accuracy is left-lateralized; bias is bilateral.** Social d′ tracks the left tract only, whereas social positivity bias tracks both hemispheres and both tract segments (anterior + posterior).
+- **All four microstructure metrics converge for bias.** FA, NDI, ODI, and FWF all flag the social-bias effect in the same direction (higher tissue integrity → less positive bias), which is stronger evidence than any single metric.
+- **`FABias`, not `HitRateBias`.** As before, the bias signal is specific to the *false-memory* side (positivity in false alarms); no HitRateBias cluster survives. The microstructure relates to how positively skewed a mother's *false* memories are, not her correct ones.
 
 ### What didn't pass
 
-- **No trauma outcome** (full CTQ total, abuse, or neglect) produced any FWE-passing cluster across any tract/metric.
-- **No SOCIAL TrueMemRate, SOCIAL FalseMemRate, or MONETARY TrueMemRate** outcome produced an FWE-passing cluster.
-- **No `HitRateBias` (positivity in correct memories) hit** on any tract/metric. All 4 bias findings come from `FABias` (positivity in false alarms).
-- **FA is still null for the primary memory outcomes** (d′ / FalseMemRate). Its 3 significant clusters are exclusively on FABias.
-
-`ALL_summaries_compact.csv` lists more tests with ≥5 nodewise-significant nodes that fell below the permutation-derived extent threshold — many on right-hemisphere MONETARY analyses.
+- **No monetary outcome** (d′, FABias, or HitRateBias) produced any FWE-passing cluster on any tract/metric.
+- **No `HitRateBias`** (positivity in correct memories) hit on any tract/metric.
+- Trauma (CTQ) and the raw true/false memory-rate outcomes were **dropped from scope** in this re-run (the analysis was narrowed to d′ + the two bias metrics); the earlier run found no CTQ or memory-rate clusters.
 
 ### Interpretive notes
 
-- **The posterior right NDI cluster carries a coherent monetary-memory-specificity signal.** Hits #2 and #3 are on the **same tract** (posterior right VTA→HPC), **same metric** (NDI), and the cluster regions **overlap heavily** (36–74 vs. 42–79). Direction is consistent across them once you read it the same way: higher NDI along this tract → lower d′ (#2) AND higher false-alarm rate (#3). Both indicate **less precise monetary memory** with higher neurite density there. This is a *signal-detection-style dissociation* on a single tract.
-- **Lateralization splits by reward type.** The social-memory hit is on the LEFT posterior tract; all monetary hits are on the RIGHT (posterior NDI × 2, anterior FWF). Worth discussing with Ingrid/Ranesh/Blake — left/right asymmetries in mesolimbic memory-related tracts have been described, and our tracts aren't designed to test lateralization explicitly.
-- **NDI direction flips between social and monetary memory.** Higher NDI in the LEFT posterior tract = *better* social d′ (positive cluster); higher NDI in the RIGHT posterior tract = *worse* monetary d′ AND *more* false memories. Could be a real social/monetary dissociation, could be sample-size sensitivity at n=42. Replication / robustness checks warranted.
-- **All hits sit in deep-WM nodes (away from VTA/HPC endpoints).** Cluster centers: node 22 (#1), 49 (#2), 68 (#3), 52 (#4). All comfortably in the deep-WM portion of the tract where partial-volume contamination from gray matter is minimized.
-- **CTQ null is genuine null in this sample.** N=43 for trauma is fine for cluster-level permutation; we just don't see effects in these specific VTA→HPC tracts.
-- **TrueMemRate is null even though d′ is significant.** Suggests the d′ signal is being driven primarily by the *false-alarm* component of d′ rather than the hit rate. Consistent with the FalseMemRate finding (#3) which is specifically about false alarms.
+- **A social-specific VTA→HPC memory circuit.** Denser and more-coherent VTA→HPC white matter is associated with (a) sharper social memory accuracy (left tract) and (b) less positively-biased social false memories (bilateral). Monetary memory shows no relationship — a built-in specificity control.
+- **The earlier sign-flip was a sample artifact.** In the n = 42 run, monetary d′ appeared to load *negatively* on the right tract, producing an apparent social-left / monetary-right "flip." On the corrected n = 54 sample the monetary side is null, so there is no flip; the companion "Flip" explorer page has been archived accordingly.
+- **The whole-tract social-d′ cluster (0–97) is broad.** Because it spans every node including the endpoints, read it as a diffuse, tract-wide association rather than a focal deep-WM locus. The bias clusters are more spatially specific (deep-WM mid-tract for the posterior tracts).
+- **Robustness.** The surviving social clusters are unchanged when recall-RT is added as a covariate (see the response-time section and the Data-Quality explorer), so they are not a response-caution artifact.
 
 ## Behavioral deep-dive (added after the initial permutation results)
+
+> **Read this as historical context.** The tables below were computed during the earlier exploration, mostly on the **full behavioral cohort (n = 145)**, not the imaging analysis sample (n = 54). Two things to keep in mind: (a) in the **imaging analysis sample** the d′ pattern is the reverse of the n = 145 cohort — monetary d′ is robustly above chance and social d′ is only marginal (see the [Data-Quality explorer](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/data_quality.html) for the authoritative analysis-sample numbers); (b) the corrected re-run finds **no monetary tract clusters**, so the RT-confound concern below (which was specific to the monetary findings) is now moot. The behavioral SDT facts themselves still stand.
 
 Before writing this up formally, we did a set of follow-up behavioral sanity checks. Six questions:
 
@@ -6213,9 +6224,11 @@ d′ = z(H) − z(F)
 c  = −0.5 × (z(H) + z(F))
 ```
 
-Correlation with the exported values:
+Correlation with the exported values (Snodgrass–Corwin formula on the full behavioral cohort):
 - **SOCIAL:** r = **+0.92** (n = 145)
 - **MONETARY:** r = **+0.96** (n = 145)
+
+*(The [Data-Quality explorer](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/data_quality.html) reports the authoritative end-to-end validation computed a different way — directly from the raw trial files on the n = 54 analysis sample — giving r = 0.81 social / 0.99 monetary. Different method, different sample, same conclusion: the exported d′ is a standard recognition d′.)*
 
 Very close (nearly 1-to-1 with a small offset), so their formula is essentially standard SDT with Snodgrass–Corwin correction. We keep the exported values as the primary measure and derive `SOCIAL_bias_c` / `MONETARY_bias_c` as new outcomes from our own calculation.
 
@@ -6259,20 +6272,16 @@ Paired tests (n = 41 with all 4 phases available):
 | SOCIAL bias c | encoding social | −0.19 | 0.042 |
 | MONETARY bias c | encoding monetary | −0.03 | 0.78 |
 
-**⚠️ MONETARY d′ correlates strongly with RT (r ≈ 0.62–0.67).** Subjects who took longer had substantially better monetary discrimination. Our permutation models controlled for imaging covariates but **did not include behavioral RT.** For the write-up, we should rerun the monetary-hit sensitivity checks with mean RT as an added covariate, otherwise the tract findings for monetary d′ / FalseMemRate could partly reflect a "response caution" trait rather than a memory-specific one. Social RT correlations are weaker (r ~ 0.2) but non-zero.
+**Note (pooled RT sample, n = 111): MONETARY d′ correlated with RT here (r ≈ 0.62–0.67).** This originally motivated a monetary RT-confound check. It no longer matters, for two reasons: (a) the corrected re-run finds **no monetary tract clusters** to defend, and (b) in the imaging analysis sample (n = 54) neither social nor monetary d′ is significantly related to recall RT (both p > 0.27; see the Data-Quality explorer). The surviving **social** clusters were nonetheless re-run with recall-RT as a covariate and are unchanged — see the response-time section below.
 
 ### (6) Laterality of significant nodes
 
-Even though only 4 clusters passed FWE correction, the pattern of *nodewise-significant* nodes across the 144 tests is overwhelmingly asymmetric:
+> **⚠️ Retired.** The original version of this section reported an "overwhelming" left-vs-right nodewise asymmetry (social ≈ 94% left, monetary ≈ 86–96% right) from the earlier n = 42 run and the now-dropped `FalseMemRate` outcomes. That pattern was part of the same monetary/sign-flip signal that **did not survive** the corrected re-run — monetary produces zero FWE clusters — so those counts are no longer evidence of anything and have been removed.
 
-| Outcome | Left tract nodes | Right tract nodes | Split |
-|---|---|---|---|
-| SOCIAL_dprime | **83** | 5 | 94% left |
-| SOCIAL_FalseMemRate | **18** | 5 | 78% left |
-| MONETARY_dprime | 19 | **115** | 86% right |
-| MONETARY_FalseMemRate | 5 | **119** | 96% right |
-
-**Social memory → strongly left-lateralized VTA→HPC. Monetary memory → strongly right-lateralized.** The 4 FWE-passing clusters just happen to be one instance each of this broader pattern. Formal binomial test on the 4 clusters alone (1 L, 3 R) is p = 0.31 — small N — but the node-level pattern above is overwhelming.
+**Laterality on the corrected results (12 surviving clusters, all social):**
+- **Social memory accuracy (d′)** is **left-lateralized** — both surviving d′ clusters are on the left tract (posterior-left NDI whole-tract; anterior-left NDI).
+- **Social positivity bias (FABias)** is **bilateral** — 11 clusters spread across both hemispheres and both tract segments.
+- There is no monetary laterality pattern to report, because no monetary outcome survives correction.
 
 ### (7) Cluster-mean metric vs outcome (scatterplots for each hit)
 
@@ -6300,7 +6309,7 @@ scripts/pull_rt_summary.py            # Cluster script: compute per-subject RT f
 
 ## Caveats & next steps
 
-- **No multiple-comparison correction across the 144 tests.** Cluster-extent correction is *within* each test only. If we want strict FWE across the family of 144, options include Bonferroni (very conservative for spatially correlated outcomes/metrics), Benjamini-Hochberg FDR on the 144 cluster p-values, or restricting to pre-registered hypothesis-driven contrasts. Worth deciding before formal write-up.
+- **No multiple-comparison correction across the 96 analyses.** Cluster-extent correction is *within* each analysis only. If we want strict FWE across the family of 96, options include Bonferroni (very conservative for spatially correlated outcomes/metrics), Benjamini-Hochberg FDR on the 96 cluster p-values, or restricting to pre-registered hypothesis-driven contrasts. Worth deciding before formal write-up. That said, the social bias effect is corroborated by **all four metrics** and **both hemispheres**, which is far stronger than any single test.
 - **Handedness uncontrolled** (not collected — verified across all available data sources).
 - **Trauma analyses use the same sample for 3 outcomes that are not independent** (total = abuse + neglect). When reporting, mention which one is primary.
 - **VTA→striatum control tract is still not run** (Ranesh's accumbens atlas pending). That control would directly test the dopamine-specificity vs memory-network-generality of the social NDI finding.
@@ -6323,21 +6332,22 @@ data/
 images/perm_hits.png                # 4-panel t-value plots for the hits
 ```
 
-## Sensitivity analysis — MONETARY hits with `recall_monetary_rt_mean` covariate
+## Sensitivity analysis — surviving SOCIAL clusters with recall-RT covariate
 
-The behavioral deep-dive turned up a substantial RT ↔ MONETARY d′ correlation (r ≈ 0.65) even though RT itself was not different between conditions. To test whether the monetary tract findings could be explained by a "careful responder" trait rather than tract microstructure, we reran all 3 monetary hits with `recall_monetary_rt_mean` added as an extra covariate in the same Freedman–Lane 5000-permutation framework.
+All surviving findings are social, and in the imaging sample social d′ is only weakly related to recall RT (r = +0.14, p = 0.32), so response caution is not even a candidate confound. To confirm it directly, each headline social cluster (mean of its significant nodes) was re-fit with recall-RT added to the covariate set. **Every one survives essentially unchanged:**
 
-**Result: all 3 hits survived and got slightly stronger.** The tract-microstructure signal is independent of the RT variance.
-
-| Test | Original cluster (nodes, p) | + RT covariate (nodes, p) | Δ |
+| Social cluster (cluster-mean regression) | p, covariate-adjusted | p, + recall-RT | n |
 |---|---|---|---|
-| MONETARY d′ × posterior R NDI | 36–74, **p = 0.017** (size 39) | 36–78, **p = 0.011** (size 43) | slightly larger + more significant |
-| MONETARY FalseMemRate × posterior R NDI | 42–79, **p = 0.018** (size 38) | 42–80, **p = 0.014** (size 39) | slightly larger + more significant |
-| MONETARY d′ × anterior R FWF | 39–58, **p = 0.048** (size 20) | 38–59, **p = 0.037** (size 22) | slightly larger + more significant |
+| Social d′ · Posterior L · NDI (whole tract) | <0.001 | **<0.001** | 54 |
+| Social d′ · Anterior L · NDI | 0.022 | **0.022** | 54 |
+| Social bias · Posterior R · FA | 0.001 | **0.002** | 52 |
+| Social bias · Posterior R · ODI | <0.001 | **0.001** | 52 |
+| Social bias · Anterior R · FA | 0.003 | **0.007** | 52 |
+| Social bias · Posterior L · FA | <0.001 | **<0.001** | 52 |
 
-Every one of the three grew (more nodewise-significant nodes, larger cluster, lower cluster p-value) once RT was residualized out. The direction and cluster location are essentially unchanged. This is the opposite of what you'd see if the tract-microstructure signal were an artifact of a "slow-and-careful" trait — in that world, adding RT would attenuate/dissolve the clusters.
+(These are covariate-adjusted cluster-mean regressions — a robustness read on effect strength, not the permutation cluster-extent p. The point is that adding recall-RT leaves every social effect intact.)
 
-**Interpretation for the write-up:** RT is a real dimension of individual variation in this cohort (r ≈ 0.65 with monetary d′), but it doesn't overlap with the tract-microstructure variance. The monetary posterior-right NDI and anterior-right FWF findings speak to something in the microstructure of these tracts that shapes monetary memory *independently of* the person's response caution.
+**Interpretation for the write-up:** the social tract-microstructure signal is independent of response speed. There is no monetary sensitivity analysis anymore, because no monetary cluster survives correction on the corrected sample.
 
 **Files:**
 ```
@@ -6349,14 +6359,14 @@ scripts/permutation_one_extraCov.R       # R script accepting extra covariates v
 
 # 📊 Analysis Outline, Significant Results & Interactive Explorers
 
-> This section is the **clean capstone**: what we ran, the scripts, and the results that **survived correction**. For the *complete* run-down — every one of the 208 analyses (significant or not), clickable node-level detail, laterality, and full stats — open the interactive HTMLs linked below.
+> This section is the **clean capstone**: what we ran, the scripts, and the results that **survived correction**. For the *complete* run-down — every one of the 96 analyses (significant or not), clickable node-level detail, laterality, and full stats — open the interactive HTMLs linked below.
 
 ## 🔗 Interactive result browsers (open in any browser)
 
-- **[▶ Results Explorer](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/results_explorer.html)** — all 208 analyses. Filter by outcome family, condition, tract, hemisphere, metric, or significance; click any result to see the tract, the node-wise t-value profile, the exact significant nodes, laterality (L vs R), cluster statistics, covariates, and the scripts that produced it. Includes the full **maternal demographic + clinical profile** of the cohort.
-- **[▶ Data-Quality & d′ Background](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/data_quality.html)** — social vs monetary d′ (correlation, each vs chance, difference), how d′ was calculated (with our end-to-end recomputation), and the response-time confound check.
-- **[▶ HPC Region vs. Connection — specificity test](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/hpc_region_vs_connection.html)** — does the hippocampus *itself* (FSL-FIRST volume + NODDI density) predict memory *or bias*, or is the signal specific to the VTA→HPC *pathway*? Includes method documentation references.
-- **[▶ The "Flip": Tract Balance vs. Tract Level](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/asymmetry.html)** — is the social-left / monetary-right sign-flip a left/right **laterality** effect (do left-dominant mothers favor social memory)? Directly tested: **no** — it is the **bilateral level** of the pathway, not its balance, that shifts memory toward the social domain. Reframes the two opposite-signed findings as one individual-differences axis.
+- **[▶ Results Explorer](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/results_explorer.html)** — all **96 analyses** (6 outcomes × 4 tracts × 4 metrics) on the corrected roster. Filter by outcome family, condition, tract, hemisphere, metric, or significance; click any result to see the tract, the node-wise t-value profile, the exact significant nodes, laterality (L vs R), cluster statistics, covariates, and the scripts that produced it. Includes the full **maternal demographic + clinical profile** of the cohort.
+- **[▶ Data-Quality & d′ Background](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/data_quality.html)** — social vs monetary d′ (correlation, each vs chance, difference), how d′ was calculated (with our end-to-end recomputation), and the response-time confound check (now run on the surviving social clusters).
+- **[▶ HPC Region vs. Connection — specificity test](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/hpc_region_vs_connection.html)** — does the hippocampus *itself* (FSL-FIRST volume + NODDI density) predict memory *or bias*, or is the signal specific to the VTA→HPC *pathway*? On the corrected sample the answer is nuanced: hippocampal **volume** is silent, but hippocampal **NDI density** does track social d′ — a *size-vs-microstructure* dissociation.
+- **[▶ Tract Balance vs. Level (archived)](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/asymmetry.html)** — *superseded.* This page tested whether an apparent social-left / monetary-right "sign-flip" was a laterality effect. On the corrected sample **no monetary tract cluster survives**, so there is no flip to explain; the page is kept only as an archived record of that check.
 
 ## What we ran
 
@@ -6404,31 +6414,37 @@ Positive value → better memory for positive material. This is the *accuracy* s
 | `scripts/run_perm_cr2.sh` | parallel runner (cr2, 128 cores) |
 | `scripts/summarize_perms.py` · `plot_hits.py` | pool results, plot significant clusters |
 
-## Significant findings (7 of 96 passed FWE correction)
+## Significant findings (12 of 96 passed FWE correction, +1 marginal — all social)
 
-**Memory:**
-
-| Outcome | Tract | Metric | Cluster (nodes) | Direction | Cluster p |
-|---|---|---|---|---|---|
-| Social d′ | Posterior **Left** | NDI | 4–48 | Positive | 0.014 |
-| Monetary d′ | Posterior **Right** | NDI | 36–74 | Negative | 0.017 |
-| Monetary d′ | Anterior **Right** | FWF | 39–58 | Positive | 0.048 |
-
-**Positivity bias in false memories (`FABias`):**
+**Memory accuracy (`d′`) — 2 clusters, both left, both NDI, positive:**
 
 | Outcome | Tract | Metric | Cluster (nodes) | Direction | Cluster p |
 |---|---|---|---|---|---|
-| Social FA-bias | Posterior **Right** | NDI | 36–67 | Negative | 0.026 |
-| Social FA-bias | Posterior **Right** | FA | 39–63 | Negative | 0.032 |
-| Monetary FA-bias | Posterior **Right** | FA | 1–23 | Positive | 0.039 |
-| Social FA-bias | Posterior **Left** | FA | 43–64 | Negative | 0.047 |
+| Social d′ | Posterior **Left** | NDI | 0–97 | Positive | **<0.0002** |
+| Social d′ | Anterior **Left** | NDI | 3–40 | Positive | 0.029 |
 
-**Null across every tract/metric:** positivity bias in *correct* memories (`HitRateBias`). *(Trauma, true-memory rate, and false-memory rate were explored in earlier passes and are documented in git history but are not part of this outcome set.)*
+**Positivity bias in false memories (`FABias`) — 11 clusters, bilateral, all four metrics:**
+
+| Outcome | Tract | Metric | Cluster (nodes) | Direction | Cluster p |
+|---|---|---|---|---|---|
+| Social FA-bias | Posterior **Right** | FA | 24–67 | Negative | 0.0020 |
+| Social FA-bias | Posterior **Right** | FWF | 0–45 | Positive | 0.0024 |
+| Social FA-bias | Posterior **Right** | ODI | 0–45 | Negative | 0.0026 |
+| Social FA-bias | Posterior **Right** | NDI | 24–65 | Negative | 0.0132 |
+| Social FA-bias | Posterior **Left** | ODI | 11–39 | Negative | 0.0218 |
+| Social FA-bias | Posterior **Left** | FA | 46–73 | Negative | 0.0232 |
+| Social FA-bias | Anterior **Right** | FA | 32–74 | Negative | 0.0020 |
+| Social FA-bias | Anterior **Right** | ODI | 0–33 | Negative | 0.0078 |
+| Social FA-bias | Anterior **Right** | NDI | 35–77 | Negative | 0.0190 |
+| Social FA-bias | Anterior **Left** | FA | 52–75 | Negative | 0.0350 |
+| Social FA-bias | Anterior **Right** | FWF | 0–21 | Positive | 0.0506 *(marginal)* |
+
+**Null across every tract/metric:** all **monetary** outcomes (d′, FABias, HitRateBias) and social `HitRateBias`. *(Trauma and the raw true/false memory-rate outcomes were dropped from scope in this re-run; they are documented in git history.)*
 
 ## How to read these (honest framing)
 
-- **Social memory = left tract; monetary memory = right tract** — a clean hemispheric split by reward type (see laterality bars in the Explorer: social-accuracy signal is ~94% left, monetary ~86–96% right).
-- The **right-posterior tract is a "memory-quality hub"** — the same NDI band (~nodes 40–75) tracks monetary accuracy (−) and social positivity-bias (−): denser tract → messier/more valence-skewed memory.
-- **Robustness:** the social bias findings survive leave-one-out and principled exclusions; the monetary findings are real but **fragile** (borderline p, single-subject-sensitive) with a biologically unusual negative direction — treat as suggestive. Sample is n≈42 (underpowered for small brain–behavior effects). Full per-analysis stats, node lists, and fragility live in the Results Explorer.
+- **The whole result set is social.** Social memory accuracy (left tract) and social positivity bias (bilateral, all four metrics) track VTA→HPC microstructure; monetary memory shows nothing. Read this as **domain-specificity**, not a hemispheric split — the earlier "social-left / monetary-right flip" was a sample artifact and does not survive correction.
+- **Direction is coherent for bias:** FA/NDI/ODI negative, FWF positive → denser, more-coherent, lower-free-water tract tissue = **less** positively-skewed social false memories. Accuracy: denser left-tract NDI = **better** social d′.
+- **Robustness:** the social findings survive adding recall-RT as a covariate (Data-Quality explorer) and are corroborated across all four metrics and both hemispheres for bias. Caveats worth stating: social d′ sits only marginally above chance at the group level (the tract association is an individual-differences effect), and the sample is modest (n = 54 for d′, 52 for bias). Full per-analysis stats, node lists, and directions live in the Results Explorer.
 
 ---

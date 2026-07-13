@@ -78,6 +78,8 @@ a.back{color:var(--accent);text-decoration:none;font-size:13px}
 <div class="wrap">
 
 <div class="section"><h2>Sample — mothers (DTI analysis cohort)</h2>
+<div class="note" style="background:#232733;border-left:3px solid #a78bfa;border-radius:6px;padding:11px 14px;margin:2px 0 14px;font-size:12.5px;color:#c9d1e0">
+<b>One consistent roster.</b> 55 mothers with complete VTA→HPC tractography (2 pilot scans removed). Maternal age was recovered for <b>all 55</b> from current demographics, so every covariate-adjusted analysis below runs on the same base sample: <b>n=54</b> for d′ (one mother lacks a memory score) and <b>n=52–53</b> for the bias metrics (a few lack valence-broken-down counts), after listwise deletion. The per-analysis N is shown on every row. Clinical/trait measures have their own availability (n listed per scale).</div>
 <div id="demo"></div></div>
 
 <div class="section"><h2>Outcomes analysed — definitions</h2>
@@ -128,7 +130,7 @@ const SCRIPTS=__SCRIPTS__;
  const d=META.demographics; const el=document.getElementById('demo');
  function dist(o){return Object.entries(o).map(([k,v])=>`<span class="pill">${k}: ${v}</span>`).join('')}
  let h='<div class="grid demo-grid">';
- h+=`<div class="stat"><div class="k">N (DTI cohort)</div><div class="v">${d.n_dti}</div><div class="d">mothers with tractography</div></div>`;
+ h+=`<div class="stat"><div class="k">N (DTI roster)</div><div class="v">${d.n_dti}</div><div class="d">mothers w/ tractography (2 pilots excluded)</div></div>`;
  h+=`<div class="stat"><div class="k">Maternal age</div><div class="v">${d.age.mean} ± ${d.age.sd}</div><div class="d">range ${d.age.min}–${d.age.max} (n=${d.age.n})</div></div>`;
  if(d.income&&d.income.median)h+=`<div class="stat"><div class="k">Household income</div><div class="v">$${(d.income.median/1000).toFixed(0)}k</div><div class="d">median · range $${(d.income.min/1000).toFixed(0)}k–$${(d.income.max/1000).toFixed(0)}k</div></div>`;
  h+='</div>';
@@ -169,6 +171,7 @@ function passFilters(r){
 ['f_family','f_cond','f_tract','f_hemi','f_metric','f_sig','f_search'].forEach(id=>document.getElementById(id).oninput=render);
 
 function dirBadge(d){return d==='Positive'?'<span class="badge b-pos">Positive</span>':'<span class="badge b-neg">Negative</span>'}
+function fmtP(p){return (p===0||p===0.0)?'<0.0002':p}  // permutation p of 0 = 0/5000 → floor to <1/nperm
 
 function nodeViz(r){
  // inline SVG bar of t-values, sig nodes highlighted
@@ -198,7 +201,7 @@ function detail(r){
  const lat=r.laterality;
  const Lp=lat.pct_left!=null?lat.pct_left:0, Rp=lat.pct_right!=null?lat.pct_right:0;
  let clusters=r.clusters.length?('<table style="width:auto"><thead><tr><th>Nodes</th><th>Size</th><th>Dir</th><th>mean t</th><th>max|t|</th><th>@node</th><th>cluster p</th><th>FWE</th></tr></thead><tbody>'+
-   r.clusters.map(c=>`<tr><td>${c.start}–${c.end}</td><td>${c.size}</td><td>${dirBadge(c.dir)}</td><td>${c.mean_t}</td><td>${c.max_abs_t}</td><td>${c.max_abs_t_node}</td><td>${c.p}</td><td>${c.passes?'<span class="badge b-sig">PASS</span>':'<span class="badge b-ns">no</span>'}</td></tr>`).join('')+'</tbody></table>')
+   r.clusters.map(c=>`<tr><td>${c.start}–${c.end}</td><td>${c.size}</td><td>${dirBadge(c.dir)}</td><td>${c.mean_t}</td><td>${c.max_abs_t}</td><td>${c.max_abs_t_node}</td><td>${fmtP(c.p)}</td><td>${c.passes?'<span class="badge b-sig">PASS</span>':'<span class="badge b-ns">no</span>'}</td></tr>`).join('')+'</tbody></table>')
    :'<span class="tag">No contiguous clusters formed.</span>';
  const signodes=r.sig_node_list.length?r.sig_node_list.join(', '):'none';
  return `<td colspan="13" class="detail"><div class="dbox">
@@ -215,7 +218,7 @@ function detail(r){
      <div class="k">Nodewise-significant nodes</div><div>${r.n_sig_nodes} / 100</div>
      <div class="k">Observed max cluster</div><div>${r.obs_max_cluster} nodes</div>
      <div class="k">Extent threshold (95th %ile null)</div><div>${r.extent_threshold} nodes</div>
-     <div class="k">FWE verdict</div><div>${r.passed?'<span class="badge b-sig">SIGNIFICANT</span> (cluster p='+r.best_p+')':'<span class="badge b-ns">n.s.</span>'}</div>
+     <div class="k">FWE verdict</div><div>${r.passed?'<span class="badge b-sig">SIGNIFICANT</span> (cluster p='+fmtP(r.best_p)+')':'<span class="badge b-ns">n.s.</span>'}</div>
     </div>
     <h4 style="margin-top:16px">Controlled for (covariates)</h4>
     <div class="tag">${r.covariates}</div>
@@ -277,7 +280,7 @@ function render(){
   tr.innerHTML=`<td><b>${r.outcome_label}</b></td><td>${r.family}</td><td>${r.condition}</td>
    <td>${r.tract_label}</td><td class="hemi ${r.hemisphere==='L'?'':''}">${r.hemisphere}</td><td>${r.tract_type}</td>
    <td>${r.metric}</td><td>${r.N}</td><td>${r.n_sig_nodes}</td><td>${r.obs_max_cluster}</td><td>${r.extent_threshold}</td>
-   <td>${r.best_p!=null?r.best_p+' '+(dir?dirBadge(dir.dir):''):'<span class="tag">—</span>'}</td>
+   <td>${r.best_p!=null?fmtP(r.best_p)+' '+(dir?dirBadge(dir.dir):''):'<span class="tag">—</span>'}</td>
    <td>${r.passed?'<span class="badge b-sig">✓</span>':'<span class="badge b-ns">·</span>'}</td>`;
   tr.onclick=()=>{
    const nx=tr.nextSibling;
