@@ -62,12 +62,14 @@ dq={'dprime':{
  'monetary':{'n':int(md.notna().sum()),'mean':round(md.mean(),3),'sd':round(md.std(),3),'t_vs0':round(tM,2),'p_vs0':round(pM,4)},
  'correlation':{'r':round(r,3),'p':round(p,3),'n':len(both)},
  'paired_diff':{'mean_diff':round((paired.iloc[:,0]-paired.iloc[:,1]).mean(),3),'t':round(tp,2),'p':round(pp,4),'wilcoxon_p':round(pw,4)}}}
+# Validation: the analysis d′ (recomputed from raw trial files) vs the study's exported d′,
+# on the clean analysis roster. Single source of truth — no fragile downstream overwrite.
 recomp=[]
-for cond in ['SOCIAL','MONETARY']:
-    TM=pd.to_numeric(G[f'{cond}_TrueMem'],errors='coerce'); FM=pd.to_numeric(G[f'{cond}_FalseMem'],errors='coerce')
-    TP=pd.to_numeric(G[f'{cond}_TruePred'],errors='coerce'); FP=pd.to_numeric(G[f'{cond}_FalsePred'],errors='coerce')
-    H=TM/(TM+TP); F=FM/(FM+FP); dpm=pd.Series(z(H.values)-z(F.values),index=H.index); rep=pd.to_numeric(G[f'{cond}_dprime'],errors='coerce')
-    d=pd.concat([dpm,rep],axis=1).dropna(); rr,_=pearsonr(d.iloc[:,0],d.iloc[:,1])
+_val=ready.merge(G[['Subject','SOCIAL_dprime','MONETARY_dprime']].rename(
+        columns={'SOCIAL_dprime':'SOC_exp','MONETARY_dprime':'MON_exp'}),on='Subject',how='left')
+for cond,expc in [('SOCIAL','SOC_exp'),('MONETARY','MON_exp')]:
+    a=pd.to_numeric(_val[f'{cond}_dprime'],errors='coerce'); e=pd.to_numeric(_val[expc],errors='coerce')
+    d=pd.concat([a.rename('a'),e.rename('e')],axis=1).dropna(); rr,_=pearsonr(d['a'],d['e'])
     recomp.append({'cond':cond,'r_with_reported':round(rr,4),'n':len(d)})
 dq['dprime_recompute']=recomp
 rt=pd.read_csv('/Users/dannyzweben/Desktop/SDN/DTI/Impact-Analyses/rt_summary.csv'); rt=rt[rt['Subject'].isin(subs)]

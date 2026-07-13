@@ -45,8 +45,7 @@ for cond in ['SOCIAL','MONETARY']:
 print("Recompute vs reported:",res)
 # save sample rows for HTML (subjects with both)
 df.to_json('/Users/dannyzweben/Desktop/SDN/DTI/SDN-IMPACT-DTI/results_html/dprime_recompute.json',orient='records')
-# update meta_data recompute
-meta=json.load(open('/Users/dannyzweben/Desktop/SDN/DTI/SDN-IMPACT-DTI/results_html/meta_data.json'))
-meta['data_quality']['dprime_recompute']=[{'cond':c,'r_with_reported':res[c]['r'],'n':res[c]['n']} for c in ['SOCIAL','MONETARY']]
-json.dump(meta,open('/Users/dannyzweben/Desktop/SDN/DTI/SDN-IMPACT-DTI/results_html/meta_data.json','w'),indent=1)
-print("updated meta_data")
+# NOTE: does NOT write meta_data['data_quality']['dprime_recompute'] — build_demo_dq.py is the
+# single source of truth for that value (analysis d′ vs export on the clean roster). This script's
+# recompute↔export r can include DQ-excluded sessions and must not clobber the published value.
+print("NOTE: meta_data recompute is owned by build_demo_dq.py; not overwriting here.")

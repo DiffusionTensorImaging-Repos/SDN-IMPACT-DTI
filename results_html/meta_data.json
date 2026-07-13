@@ -112,12 +112,12 @@
   "dprime_recompute": [
    {
     "cond": "SOCIAL",
-    "r_with_reported": -0.4298,
-    "n": 54
+    "r_with_reported": 0.9632,
+    "n": 53
    },
    {
     "cond": "MONETARY",
-    "r_with_reported": -0.0023,
+    "r_with_reported": 0.9874,
     "n": 54
    }
   ],
