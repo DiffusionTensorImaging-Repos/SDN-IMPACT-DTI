@@ -1,13 +1,12 @@
 import json
 OUT='/Users/dannyzweben/Desktop/SDN/DTI/SDN-IMPACT-DTI/results_html'
 meta=json.load(open(f'{OUT}/meta_data.json'))
-dq=meta['data_quality']; dp=dq['dprime']; rc=dq['dprime_recompute']
+dq=meta['data_quality']; dp=dq['dprime']
 bd=json.load(open(f'{OUT}/dprime_breakdown.json'))
 
 def pf(p):
     p=float(p); return '&lt;0.001' if p<0.001 else f'{p:g}'
 def chip(p): return '<span class="yes">above chance</span>' if float(p)<0.05 else '<span class="no">at chance</span>'
-recomp_rows=''.join(f"<tr><td>{r['cond'].title()}</td><td>r = {r['r_with_reported']}</td><td>{r['n']}</td></tr>" for r in rc)
 
 def brow(label,c,hint):
     diff=c['diff']; sig='yes' if c['p']<0.05 else 'no'
@@ -48,8 +47,7 @@ a.back{{color:var(--accent);text-decoration:none}} .mut{{color:var(--mut)}}
 false-alarm (F) = "remember" responses to NEW items / # NEW items
 
 d′ = z(H) − z(F)        <span class="mut"># z = inverse-normal (probit)</span></div>
-<div class="callout">We compute d′ <b>directly from the raw trial files</b> with this standard formula (not from a pre-scored export). As a cross-check it matches the study's separately-exported d′ — monetary near-perfectly, social strongly:
-<table style="margin-top:8px"><thead><tr><th>Condition</th><th>r (ours vs exported)</th><th>n</th></tr></thead><tbody>{recomp_rows}</tbody></table></div>
+<div class="callout">d′ is computed <b>directly from each mother's raw trial files</b> with this standard formula — one transparent computation, straight from the responses.</div>
 </div>
 
 <div class="section">

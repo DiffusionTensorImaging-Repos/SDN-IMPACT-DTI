@@ -109,18 +109,6 @@
     "wilcoxon_p": 0.105
    }
   },
-  "dprime_recompute": [
-   {
-    "cond": "SOCIAL",
-    "r_with_reported": 0.9632,
-    "n": 53
-   },
-   {
-    "cond": "MONETARY",
-    "r_with_reported": 0.9874,
-    "n": 54
-   }
-  ],
   "rt": {
    "phase_means": {
     "encoding_social": {

@@ -12,7 +12,8 @@ def rowhtml(m,biasdir=False):
     sig='sig' if m['p']<0.05 else ''
     if biasdir: dirw='higher → more +bias' if m['beta']>0 else 'higher → less +bias'
     else: dirw='higher → better' if m['beta']>0 else 'higher → worse'
-    return f"<tr class='{sig}'><td>{m['outcome']}</td><td>{m['side']}</td><td>{m['measure']}</td><td>{m['type']}</td><td>{m['beta']:+}</td><td>{pf(m['p'])}</td><td>{m['n']}</td><td class='mut'>{dirw}</td></tr>"
+    b=0.0 if m['beta']==0 else m['beta']  # avoid "-0.0" negative-zero artifact
+    return f"<tr class='{sig}'><td>{m['outcome']}</td><td>{m['side']}</td><td>{m['measure']}</td><td>{m['type']}</td><td>{b:+}</td><td>{pf(m['p'])}</td><td>{m['n']}</td><td class='mut'>{dirw}</td></tr>"
 
 soc_ndi=getm(M,'Social d′','Left','NDI','matched')
 socfab_ndi=getm(B,'Social FABias','Right','NDI','matched')

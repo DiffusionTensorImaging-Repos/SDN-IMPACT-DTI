@@ -6050,7 +6050,7 @@ Handedness was not collected in IMPACT (verified across REDCap, DICOM/JSON, and 
 
 ## 2 · Memory data — computed & cleaned
 
-Memory outcomes are **recomputed directly from each mother's raw trial files** with the standard signal-detection d′ formula — not taken from the pre-scored export (which was missing one subject and mis-scored others). Our recompute matches the export where it exists (monetary r = 0.99, social r = 0.81).
+Memory outcomes are **computed directly from each mother's raw trial files** with the standard signal-detection d′ formula — one transparent computation, straight from the responses.
 
 **Two recall sessions are excluded on data-quality grounds** (they dragged social d′ artificially toward chance):
 
