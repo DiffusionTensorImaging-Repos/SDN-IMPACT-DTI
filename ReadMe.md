@@ -6033,7 +6033,7 @@ Does white-matter microstructure along the VTA→hippocampus pathway track how w
 | **4 · Tract analyses** | d′ + bias × FA + NODDI (NDI/ODI/FWF), node-wise permutation FWE | **96 analyses** → surviving clusters |
 | **5 · Hippocampus (NDI)** | Region vs. connection specificity | HPC density tracks social memory too |
 
-Interactive browsers: **[Results Explorer](https://dannyzweben.github.io/SDN-IMPACT-DTI/results_html/results_explorer.html)** · **[Memory data & d′](https://dannyzweben.github.io/SDN-IMPACT-DTI/results_html/data_quality.html)** · **[Hippocampus NDI](https://dannyzweben.github.io/SDN-IMPACT-DTI/results_html/hpc_region_vs_connection.html)**
+Interactive browsers: **[Results Explorer](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/results_explorer.html)** · **[Memory data & d′](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/data_quality.html)** · **[Hippocampus NDI](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/hpc_region_vs_connection.html)**
 
 ---
 
@@ -6088,7 +6088,7 @@ They **do not differ significantly** (paired t p = 0.073) and are **uncorrelated
 | **Hit rate** (remembered correctly) | 0.568 | 0.548 | no (p = 0.40) |
 | **False-alarm rate** (false positives) | 0.536 | 0.470 | **yes (p = 0.008)** |
 
-Social and monetary items are remembered **equally well** — identical hit rates. The lower social d′ is driven **entirely by more false alarms**: mothers more often falsely "remember" social faces they never chose. That is exactly the phenomenon the tract findings capture — the robust VTA→HPC effect is on **social positivity bias in false memories**. Full breakdown: **[Memory data & d′](https://dannyzweben.github.io/SDN-IMPACT-DTI/results_html/data_quality.html)**.
+Social and monetary items are remembered **equally well** — identical hit rates. The lower social d′ is driven **entirely by more false alarms**: mothers more often falsely "remember" social faces they never chose. That is exactly the phenomenon the tract findings capture — the robust VTA→HPC effect is on **social positivity bias in false memories**. Full breakdown: **[Memory data & d′](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/data_quality.html)**.
 
 ## 4 · Tract analyses — the main test
 
@@ -6125,7 +6125,7 @@ Each node's observed t on `metric_node` is compared against **5000 Freedman–La
 
 **Monetary is null throughout** — no monetary d′ or monetary bias cluster survives FWE on any tract or metric. Because social and monetary d′ are uncorrelated and remembered equally well, this is genuine domain-specificity: the pathway tracks *social* motivated memory, with monetary as a built-in control.
 
-Browse every analysis (surviving or not), node profiles, and laterality: **[Results Explorer](https://dannyzweben.github.io/SDN-IMPACT-DTI/results_html/results_explorer.html)**.
+Browse every analysis (surviving or not), node profiles, and laterality: **[Results Explorer](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/results_explorer.html)**.
 
 ## 5 · Hippocampus (NDI) — region vs. connection
 
@@ -6133,7 +6133,7 @@ Is the memory signal specific to the *pathway*, or does the hippocampal *region*
 
 Among the three NODDI compartments, **only neurite density (NDI) tracks social memory** — left-hippocampal NDI predicts social d′ (β = +0.09, p = 0.04), the same direction as the tract, with a matching social-bias trend (p ≈ 0.06). **ODI (dispersion) and FWF (free water) are silent, and monetary tracks nothing.** So the memory-relevant density signal is **shared between the pathway and its hippocampal target** — a circuit-wide neurite-density signature, not a size effect (hippocampal volume is not used).
 
-Details: **[Hippocampus NDI](https://dannyzweben.github.io/SDN-IMPACT-DTI/results_html/hpc_region_vs_connection.html)**.
+Details: **[Hippocampus NDI](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/hpc_region_vs_connection.html)**.
 
 ---
 
