@@ -6070,7 +6070,9 @@ The formula was **never changed** — only genuinely broken sessions were remove
 | `SOCIAL_FABias`, `SOCIAL_HitRateBias` | 51 |
 | `MONETARY_FABias`, `MONETARY_HitRateBias` | 53 |
 
-(Social d′ drops the 2 broken sessions; monetary drops only s1694. Bias drops those plus a couple of mothers with no negative-valence recall trials, for whom a *positivity* score is undefined.)
+Why the Ns differ (all justified, none are bugs):
+- **Exclusions are per task** (social and monetary are separate recall sessions). **s1694** blew both (social recall corrupted — only 16% of "recalled" items were ever shown at encoding; monetary recall >½ missed) → out of both. **s1350** missed **40.5% of the social recall** → out of social, but did the monetary task cleanly (16.7% missed) → kept for monetary. Hence social d′ = 53, monetary d′ = 54.
+- **Bias drops two more** (s4127, s4210): across the whole social recall they never gave a single **"loss" (negative)** response — only "win" or "neutral." Positivity bias is a positive-minus-negative contrast, so with zero negative responses it is **mathematically undefined** for them (they are maximal-positivity responders), not missing data. Their d′ is unaffected. Hence social bias = 51.
 
 ## 3 · d′ statistics — is memory real, and why do the conditions differ?
 
