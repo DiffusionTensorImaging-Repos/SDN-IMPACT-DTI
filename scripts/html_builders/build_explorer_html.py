@@ -73,13 +73,13 @@ a.back{color:var(--accent);text-decoration:none;font-size:13px}
 </style></head><body>
 <header>
 <h1>IMPACT · VTA→HPC Tract Microstructure — Results Explorer</h1>
-<div class="sub">All 96 node-wise permutation analyses — 6 outcomes (social &amp; monetary × d′, positivity bias in false memories, positivity bias in correct memories) × 4 tracts × 4 metrics. Freedman–Lane, 5000 permutations, cluster-extent FWE at α=0.05. Click any row for the tract, significant nodes, laterality, stats, and scripts. &nbsp;·&nbsp; <a class="back" href="data_quality.html">→ Data-quality &amp; d′ background</a></div>
+<div class="sub">All 96 node-wise permutation analyses — 6 outcomes (social &amp; monetary × d′, positivity bias in false memories, positivity bias in correct memories) × 4 tracts × 4 metrics (FA + NODDI: NDI, ODI, FWF). Freedman–Lane, 5000 permutations, cluster-extent FWE at α=0.05. Click any row for the tract, significant nodes, laterality, stats, and scripts. &nbsp;·&nbsp; <a class="back" href="data_quality.html">→ Memory data &amp; d′</a></div>
 </header>
 <div class="wrap">
 
 <div class="section"><h2>Sample — mothers (DTI analysis cohort)</h2>
 <div class="note" style="background:#232733;border-left:3px solid #a78bfa;border-radius:6px;padding:11px 14px;margin:2px 0 14px;font-size:12.5px;color:#c9d1e0">
-<b>One consistent roster.</b> 55 mothers with complete VTA→HPC tractography (2 pilot scans removed). Maternal age was recovered for <b>all 55</b> from current demographics, so every covariate-adjusted analysis below runs on the same base sample: <b>n=54</b> for d′ (one mother lacks a memory score) and <b>n=52–53</b> for the bias metrics (a few lack valence-broken-down counts), after listwise deletion. The per-analysis N is shown on every row. Clinical/trait measures have their own availability (n listed per scale).</div>
+<b>One consistent roster.</b> 55 mothers with complete VTA→HPC tractography (2 pilot scans removed; maternal age recovered for all 55 from current demographics). Memory outcomes were recomputed directly from the raw trial files with the standard signal-detection d′ formula, and <b>2 sessions with corrupted or heavily-missed recall were excluded on data-quality grounds</b>. Resulting per-outcome N: <b>social d′ = 53, monetary d′ = 54</b>; bias metrics <b>51–53</b> (a few mothers also lack the valence-broken-down counts a bias score needs). The exact N is shown on every result row.</div>
 <div id="demo"></div></div>
 
 <div class="section"><h2>Outcomes analysed — definitions</h2>
@@ -138,9 +138,6 @@ const SCRIPTS=__SCRIPTS__;
  h+='<div style="margin-top:8px"><div class="clbl">Ethnicity</div>'+dist(d.ethnicity)+'</div>';
  h+='<div style="margin-top:8px"><div class="clbl">Education</div>'+dist(d.education)+'</div>';
  h+='<div style="margin-top:8px"><div class="clbl">Marital status</div>'+dist(d.marital)+'</div>';
- h+='<div style="margin-top:12px"><div class="clbl">Clinical / trait snapshot (mean ± SD)</div><div class="grid demo-grid" style="margin-top:6px">';
- for(const[k,v]of Object.entries(d.clinical))h+=`<div class="stat"><div class="k">${k}</div><div class="v">${v.mean} ± ${v.sd}</div><div class="d">n=${v.n}</div></div>`;
- h+='</div></div>';
  el.innerHTML=h;
 })();
 

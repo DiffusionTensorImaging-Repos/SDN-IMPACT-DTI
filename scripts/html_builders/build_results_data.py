@@ -9,7 +9,7 @@ TRACTS={'l_vta_l_hipp':('Posterior Left VTA→HPC','L','posterior'),
         'r_vta_r_hipp':('Posterior Right VTA→HPC','R','posterior'),
         'anterior_l_vta_l_hipp':('Anterior Left VTA→HPC','L','anterior'),
         'anterior_r_vta_r_hipp':('Anterior Right VTA→HPC','R','anterior')}
-METRICS=['FA','NDI','ODI','FWF']
+METRICS=['FA','NDI','ODI','FWF']  # FA + full NODDI family (NDI, ODI, FWF)
 
 FAMILY={'SOCIAL_dprime':('Memory accuracy (d′)','SOCIAL'),
         'MONETARY_dprime':('Memory accuracy (d′)','MONETARY'),
@@ -31,6 +31,7 @@ for summ in sorted(glob.glob(f'{R}/*_summary.csv')):
             tract=t; rest=base[len(t)+2:]; break
     if tract is None: continue
     metric=rest.split('__')[0]; outcome=rest[len(metric)+2:]
+    if metric not in METRICS: continue
     if outcome not in FAMILY: continue
     s=pd.read_csv(summ).iloc[0]
     # clusters

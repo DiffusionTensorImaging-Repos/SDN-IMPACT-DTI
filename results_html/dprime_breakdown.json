@@ -1,0 +1,28 @@
+{
+ "n": 53,
+ "hit": {
+  "social": 0.568,
+  "monetary": 0.548,
+  "diff": 0.021,
+  "t": 0.86,
+  "p": 0.395
+ },
+ "fa": {
+  "social": 0.536,
+  "monetary": 0.47,
+  "diff": 0.066,
+  "t": 2.76,
+  "p": 0.0079
+ },
+ "dprime": {
+  "social": 0.097,
+  "monetary": 0.214,
+  "diff": -0.117,
+  "t": -1.83,
+  "p": 0.0727
+ },
+ "social_H": 0.568,
+ "social_F": 0.536,
+ "monetary_H": 0.548,
+ "monetary_F": 0.47
+}

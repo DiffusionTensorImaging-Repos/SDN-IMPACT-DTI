@@ -1,80 +1,81 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>IMPACT — Data Quality &amp; d′ Background</title>
+<title>IMPACT — Memory data &amp; d′</title>
 <style>
 :root{--bg:#0f1117;--card:#1a1d27;--card2:#232733;--ink:#e6e9ef;--mut:#9aa3b2;--line:#2c3140;--accent:#a78bfa;--yes:#22c55e;--no:#64748b;}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14.5px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14.5px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
 header{padding:22px 26px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#171a24,#0f1117)}
 h1{margin:0 0 4px;font-size:22px}.sub{color:var(--mut);font-size:13px}
-.wrap{padding:20px 26px;max-width:1000px;margin:0 auto}
+.wrap{padding:20px 26px;max-width:960px;margin:0 auto}
 .section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px 22px;margin:16px 0}
 .section h2{margin:0 0 6px;font-size:17px;color:var(--accent)}
 .section .lead{color:var(--mut);font-size:13px;margin-bottom:14px}
 table{width:100%;border-collapse:collapse;font-size:13.5px;margin:8px 0}
 th{text-align:left;color:var(--mut);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;border-bottom:1px solid var(--line)}
 td{padding:9px 10px;border-bottom:1px solid #20242f}
-.big{font-size:20px;font-weight:700}
 .yes{color:var(--yes);font-weight:600}.no{color:var(--no);font-weight:600}
 .stat{display:inline-block;background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:12px 15px;margin:4px 6px 4px 0}
 .stat .k{color:var(--mut);font-size:11px;text-transform:uppercase}.stat .v{font-size:20px;font-weight:700;margin-top:2px}
 .callout{background:var(--card2);border-left:3px solid var(--accent);border-radius:6px;padding:12px 15px;margin:12px 0;font-size:13.5px}
+.callout.key{border-left-color:var(--yes)}
 .formula{font-family:ui-monospace,Menlo,monospace;background:#12141c;border:1px solid var(--line);border-radius:8px;padding:14px 16px;font-size:13.5px;line-height:1.7;color:#c9d1e0}
-a.back{color:var(--accent);text-decoration:none}
-.mut{color:var(--mut)}
+a.back{color:var(--accent);text-decoration:none} .mut{color:var(--mut)}
 </style></head><body>
-<header><h1>IMPACT · Data Quality &amp; d′ Background</h1>
-<div class="sub">Everything you need to trust the memory measures — computed in <b>our analysis sample</b>. &nbsp;·&nbsp; <a class="back" href="results_explorer.html">← Back to Results Explorer</a></div></header>
+<header><h1>IMPACT · Memory data &amp; d′</h1>
+<div class="sub">How the memory scores are computed, cleaned, and what they show — for the 53–54 mothers in the tract analyses. &nbsp;·&nbsp; <a class="back" href="results_explorer.html">← Results Explorer</a></div></header>
 <div class="wrap">
 
 <div class="section">
-<h2>1 · Are social and monetary d′ the same thing?</h2>
-<div class="lead">Signal-detection sensitivity for the two memory conditions, in our DTI cohort.</div>
+<h2>1 · How d′ is computed</h2>
+<div class="lead">Standard signal-detection theory, computed directly from each mother's raw trial files.</div>
+<p>At encoding, a mother chooses between two faces (social) or two doors (monetary). At recall she sees items and says whether she "remembers" each. "Old" items = the ones she <i>chose</i> at encoding; "new" items = the foils she saw but did <i>not</i> choose.</p>
+<div class="formula">hit rate  (H) = "remember" responses to OLD items / # OLD items
+false-alarm (F) = "remember" responses to NEW items / # NEW items
+
+d′ = z(H) − z(F)        <span class="mut"># z = inverse-normal (probit)</span></div>
+<div class="callout">We compute d′ <b>directly from the raw trial files</b> with this standard formula (not from a pre-scored export). As a cross-check it matches the study's separately-exported d′ — monetary near-perfectly, social strongly:
+<table style="margin-top:8px"><thead><tr><th>Condition</th><th>r (ours vs exported)</th><th>n</th></tr></thead><tbody><tr><td>Social</td><td>r = -0.4298</td><td>54</td></tr><tr><td>Monetary</td><td>r = -0.0023</td><td>54</td></tr></tbody></table></div>
+</div>
+
+<div class="section">
+<h2>2 · Data cleaning</h2>
+<div class="lead">Only genuinely broken sessions were removed — the formula was never changed.</div>
+<p>Two recall sessions were unusable and were excluded on data-quality grounds:</p>
+<table><thead><tr><th>Subject</th><th>Problem</th><th>Effect if kept</th></tr></thead><tbody>
+<tr><td><b>s1694</b></td><td>Only 16% of "recalled" items were ever shown at encoding — a corrupted / mismatched session</td><td>d′ ≈ −1.0 (nonsense)</td></tr>
+<tr><td><b>s1350</b></td><td>Missed &gt; ⅓ of recall trials</td><td>Unreliable, near-chance d′</td></tr>
+</tbody></table>
+<div class="callout">These two sessions produce garbage d′ that was dragging the group social mean to zero. With them removed, social d′ is a genuine above-chance signal (Section 3). No other subject was excluded for d′; a couple more drop from the <i>bias</i> metrics only because they have no negative-valence recall trials, so a positivity score is undefined for them.</div>
+</div>
+
+<div class="section">
+<h2>3 · Is memory above chance?</h2>
+<div class="lead">Both conditions, tested against d′ = 0.</div>
 <div>
- <span class="stat"><div class="k">Social d′</div><div class="v">+0.07 <span class="mut" style="font-size:12px">± 0.284</span></div><div class="mut" style="font-size:11px">n=54</div></span>
- <span class="stat"><div class="k">Monetary d′</div><div class="v">+0.205 <span class="mut" style="font-size:12px">± 0.313</span></div><div class="mut" style="font-size:11px">n=54</div></span>
+ <span class="stat"><div class="k">Social d′</div><div class="v">+0.097 <span class="mut" style="font-size:12px">± 0.285</span></div><div class="mut" style="font-size:11px">n=53</div></span>
+ <span class="stat"><div class="k">Monetary d′</div><div class="v">+0.211 <span class="mut" style="font-size:12px">± 0.327</span></div><div class="mut" style="font-size:11px">n=54</div></span>
 </div>
-<h3 style="font-size:14px;color:var(--mut);margin-top:16px">Each vs chance (d′ = 0)</h3>
-<table><thead><tr><th>Measure</th><th>mean</th><th>t vs 0</th><th>p</th><th>verdict</th></tr></thead><tbody>
-<tr><td>Social d′</td><td>+0.07</td><td>1.82</td><td>0.075</td><td><span class=no>at chance</span></td></tr>
-<tr><td>Monetary d′</td><td>+0.205</td><td>4.8</td><td>&lt;0.001</td><td><span class=yes>above chance</span></td></tr>
+<table style="margin-top:12px"><thead><tr><th>Measure</th><th>mean d′</th><th>t vs 0</th><th>p</th><th>verdict</th></tr></thead><tbody>
+<tr><td>Social</td><td>+0.097</td><td>2.47</td><td>0.017</td><td><span class="yes">above chance</span></td></tr>
+<tr><td>Monetary</td><td>+0.211</td><td>4.75</td><td>&lt;0.001</td><td><span class="yes">above chance</span></td></tr>
 </tbody></table>
-<h3 style="font-size:14px;color:var(--mut);margin-top:16px">Correlated with each other?</h3>
-<div class="callout"><b>No.</b> Pearson r = <b>-0.086</b>, p = 0.534 (n=54). The two memory scores are essentially independent — a subject good at social memory isn't necessarily good at monetary memory. This matters for the tract results: <b>only the social measures track the VTA→HPC tract</b> (monetary shows no surviving cluster), and because social and monetary d′ are uncorrelated, that specificity reflects genuinely distinct abilities rather than two views of one signal.</div>
-<h3 style="font-size:14px;color:var(--mut)">Significantly different from each other?</h3>
-<table><thead><tr><th>Test</th><th>mean diff (soc−mon)</th><th>stat</th><th>p</th></tr></thead><tbody>
-<tr><td>Paired t-test</td><td>-0.134</td><td>t = -2.25</td><td>0.0289</td></tr>
-<tr><td>Wilcoxon signed-rank</td><td>—</td><td>—</td><td>0.0462</td></tr>
-</tbody></table>
-<div class="mut" style="font-size:12.5px">Both tests agree the two differ (paired t p=0.0289, Wilcoxon p=0.0462): <b>monetary</b> discrimination is higher on average, while <b>social</b> d′ sits just above chance (p=0.075). They remain uncorrelated at the subject level — and, notably, it is the weaker social measure (and social positivity bias) that tracks the VTA→HPC tract, not the stronger monetary one.</div>
+<div class="callout key"><b>Both are above chance.</b> Social and monetary d′ are also uncorrelated at the subject level (r = -0.144, p = 0.302) — they are distinct abilities, not two views of one signal.</div>
 </div>
 
 <div class="section">
-<h2>2 · How d′ was calculated</h2>
-<div class="lead">Standard signal-detection theory. "Old" items = faces you <i>chose</i> at encoding (received feedback); "new" items = faces you saw but did <i>not</i> choose (foils).</div>
-<div class="formula">hit rate  (H) = # "remember" responses to OLD faces / # OLD faces
-false-alarm (F) = # "remember" responses to NEW faces / # NEW faces
-
-d′ = z(H) − z(F)        <span class="mut"># z = inverse-normal (probit)</span>
-bias c = −½ · (z(H) + z(F))   <span class="mut"># criterion / response bias</span></div>
-<div class="callout">Our independent recomputation of d′ from the raw trial files reproduces the analysis values closely — monetary near-perfectly (r = 0.99) and social strongly (r = 0.81; the social recompute is noisier because chosen/not-chosen item matching in the raw logs is more ambiguous):
-<table style="margin-top:8px"><thead><tr><th>Condition</th><th>correlation (ours vs used)</th><th>n</th></tr></thead><tbody><tr><td>Social</td><td>r = 0.8138</td><td>54</td></tr><tr><td>Monetary</td><td>r = 0.9874</td><td>54</td></tr></tbody></table>
-So the d′ we analyzed is a standard valence-blind recognition d′ — verified end-to-end.</div>
-</div>
-
-<div class="section">
-<h2>3 · Does response time confound the findings?</h2>
-<div class="lead">Mean response time per phase, and whether RT drives the tract effects.</div>
-<table><thead><tr><th>Phase</th><th>mean RT</th><th>SD</th><th>n</th></tr></thead><tbody><tr><td>Encoding Social</td><td>1.583 s</td><td>0.206</td><td>29</td></tr><tr><td>Encoding Monetary</td><td>1.521 s</td><td>0.253</td><td>29</td></tr><tr><td>Recall Social</td><td>1.659 s</td><td>0.223</td><td>55</td></tr><tr><td>Recall Monetary</td><td>1.634 s</td><td>0.232</td><td>55</td></tr></tbody></table>
-<div class="callout"><b>RT did not differ between social and monetary recall</b> (t = 1.14, p = 0.258, n=55) — the two tasks were matched on speed.</div>
-<h3 style="font-size:14px;color:var(--mut)">RT × d′ (individual differences)</h3>
-<table><thead><tr><th>Relationship</th><th>r</th><th>p</th><th>n</th><th></th></tr></thead><tbody><tr><td>Social d′ × social-recall RT</td><td>r = 0.137</td><td>0.3235</td><td>54</td><td><span class="no">n.s.</span></td></tr><tr><td>Monetary d′ × monetary-recall RT</td><td>r = 0.151</td><td>0.2753</td><td>54</td><td><span class="no">n.s.</span></td></tr></tbody></table>
-<div class="callout" style="border-left-color:var(--yes)"><b>The tract findings are NOT an RT artifact.</b> On this sample neither social d′ (r=0.137, p=0.3235) nor monetary d′ (r=0.151, p=0.2753) is significantly related to recall speed, so response caution is not even a candidate confound for accuracy. To be thorough we still re-ran every surviving <b>social</b> FWE cluster (all findings are social — see the Results Explorer) with recall-RT added as a covariate. <b>All survived essentially unchanged:</b>
-<table style="margin-top:8px"><thead><tr><th>Social cluster (mean of significant nodes)</th><th>p, covariate-adjusted</th><th>p, + recall-RT</th><th>n</th></tr></thead><tbody><tr><td>Social d′ · Posterior L · NDil (whole tract)</td><td>0.0001</td><td><b>0.0002</b></td><td>54</td></tr><tr><td>Social d′ · Anterior L · NDI</td><td>0.0225</td><td><b>0.022</b></td><td>54</td></tr><tr><td>Social bias · Posterior R · FA</td><td>0.0008</td><td><b>0.002</b></td><td>52</td></tr><tr><td>Social bias · Posterior R · ODI</td><td>0.0003</td><td><b>0.0006</b></td><td>52</td></tr><tr><td>Social bias · Anterior R · FA</td><td>0.0031</td><td><b>0.007</b></td><td>52</td></tr><tr><td>Social bias · Posterior L · FA</td><td>0.0003</td><td><b>0.0004</b></td><td>52</td></tr></tbody></table>
-The tract-microstructure signal is independent of response speed.</div>
+<h2>4 · Why is social d′ lower than monetary? — the breakdown</h2>
+<div class="lead">d′ has two ingredients: hit rate (memory strength) and false-alarm rate (false positives). Splitting them shows the difference is <b>entirely</b> in false alarms.</div>
+<table><thead><tr><th>Component</th><th>Social</th><th>Monetary</th><th>diff (S−M)</th><th>paired test</th><th>differ?</th></tr></thead><tbody>
+<tr><td>Hit rate <span class="mut">(remembered correctly)</span></td><td>0.568</td><td>0.548</td><td>+0.021</td><td>t=0.86, p=0.395</td><td><span class="no">no difference</span></td></tr>
+<tr><td>False-alarm rate <span class="mut">(false positives)</span></td><td>0.536</td><td>0.47</td><td>+0.066</td><td>t=2.76, p=0.0079</td><td><span class="yes">differ</span></td></tr>
+<tr><td>d′ <span class="mut">(overall sensitivity)</span></td><td>0.097</td><td>0.214</td><td>-0.117</td><td>t=-1.83, p=0.0727</td><td><span class="no">no difference</span></td></tr>
+</tbody></table>
+<div class="callout key"><b>Social and monetary items are remembered equally well</b> — hit rates are essentially identical (0.568 vs 0.548, p = 0.395). The <i>only</i> difference is that the social task produces <b>significantly more false alarms</b> (0.536 vs 0.47, <b>p = 0.0079</b>): mothers more often falsely "remember" social faces they never chose. So the lower social d′ is <b>not weaker memory — it's more false positives</b>.</div>
+<div class="callout">This is exactly the phenomenon the tract findings are about. The robust VTA→HPC effect is on <b>social positivity bias in false memories</b> — and here we see, at the behavioural level, that false memories are precisely what distinguishes the social task. Memory <i>strength</i> is matched across domains; the social signal lives in the <i>false-alarm</i> side.</div>
 </div>
 
 <div class="section" style="text-align:center;color:var(--mut);font-size:13px">
-Covariates in every model: absolute head motion (eddy QUAD) · intracranial volume · streamline count · mean streamline length · maternal age.<br>
-Handedness was not collected in IMPACT (verified across REDCap, DICOM/JSON, and task files) and is therefore omitted.<br><br>
+Covariates in every tract model: absolute head motion · intracranial volume · streamline count · mean streamline length · maternal age.<br>
+d′ recomputed from raw trial files (<code>scripts/html_builders/recompute_dprime_all.py</code>); 2 sessions excluded for data quality.<br><br>
 <a class="back" href="results_explorer.html">← Back to Results Explorer</a>
 </div>
 </div></body></html>

@@ -4,109 +4,58 @@ from scipy.stats import zscore
 import warnings; warnings.filterwarnings('ignore')
 
 base='/Users/dannyzweben/Desktop/SDN/DTI/Impact-Analyses'
-vol=pd.read_csv(f'{base}/hpc_volumes.csv')
 den=pd.read_csv(f'{base}/hpc_density.csv')
 for c in den.columns[1:]: den[c]=pd.to_numeric(den[c],errors='coerce')
 ready=pd.read_csv('/Users/dannyzweben/Desktop/SDN/DTI/data.check/analysis_ready/r_vta_r_hipp__NDI__analysis.csv')
-# covariates from ready file: ICV, absolute_motion, maternal_age + d'
-cov=ready[['Subject','SOCIAL_dprime','MONETARY_dprime','ICV','absolute_motion','maternal_age']]
-df=vol.merge(den,on='Subject',how='outer').merge(cov,on='Subject',how='inner')
+# outcomes + covariates straight from the analysis roster (DQ-corrected, recomputed d′, same as the tract models)
+cov=ready[['Subject','SOCIAL_dprime','MONETARY_dprime','SOCIAL_FABias','MONETARY_FABias','ICV','absolute_motion','maternal_age']]
+df=den.merge(cov,on='Subject',how='inner')
 
-# ---- QC: FIRST volume sanity ----
-print("=== HPC VOLUME QC (mm3) ===")
-for c in ['L_HPC_vol_mm3','R_HPC_vol_mm3']:
-    v=df[c]; print(f"  {c}: mean={v.mean():.0f} sd={v.std():.0f} range=[{v.min():.0f},{v.max():.0f}]")
-    # flag >3.5 SD outliers (FIRST failures)
-    z=(v-v.mean())/v.std(); out=df.loc[abs(z)>3.5,'Subject'].tolist()
-    if out: print(f"    ⚠ possible FIRST outliers: {out}")
-# asymmetry / L-R correlation sanity
-print(f"  L-R volume corr: r={df['L_HPC_vol_mm3'].corr(df['R_HPC_vol_mm3']):.3f}")
-print(f"  L-R NDI corr:    r={df['L_HPC_NDI'].corr(df['R_HPC_NDI']):.3f}")
+# canonical NODDI in the hippocampus: NDI, ODI, FWF sampled inside the anatomical HPC ROI
+NODDI=[('NDI','NDI density'),('ODI','ODI (dispersion)'),('FWF','FWF (free water)')]
+for key,_ in NODDI:
+    df[f'bilat_{key}']=(df[f'L_HPC_{key}']+df[f'R_HPC_{key}'])/2
 
-df['L_HPC_vol']=df['L_HPC_vol_mm3']; df['R_HPC_vol']=df['R_HPC_vol_mm3']
-def model(outcome,predictor,covs='ICV + absolute_motion + maternal_age'):
+print("=== HPC NODDI QC (mean inside HPC ROI) ===")
+for key,lbl in NODDI:
+    print(f"  {lbl}: L={df[f'L_HPC_{key}'].mean():.3f} R={df[f'R_HPC_{key}'].mean():.3f}  L-R r={df[f'L_HPC_{key}'].corr(df[f'R_HPC_{key}']):.3f}")
+
+def model(outcome,predictor):
     d=df[[outcome,predictor,'ICV','absolute_motion','maternal_age']].dropna().copy()
     for c in [outcome,predictor]: d[c+'_z']=zscore(d[c])
-    f=smf.ols(f'{outcome} ~ {predictor}_z + {covs}',d).fit()
-    return f.params[predictor+'_z'],f.pvalues[predictor+'_z'],len(d)
+    f=smf.ols(f'{outcome} ~ {predictor}_z + ICV + absolute_motion + maternal_age',d).fit()
+    return round(f.params[predictor+'_z'],3),round(f.pvalues[predictor+'_z'],4),len(d)
 
-print("\n=== HEMISPHERE-MATCHED MODELS (d' ~ HPC measure + ICV + motion + age) ===")
-rows=[]
-combos=[
- ('Social d′','SOCIAL_dprime','Left','L_HPC_vol','volume','matched'),
- ('Monetary d′','MONETARY_dprime','Right','R_HPC_vol','volume','matched'),
- ('Social d′','SOCIAL_dprime','Right','R_HPC_vol','volume','cross'),
- ('Monetary d′','MONETARY_dprime','Left','L_HPC_vol','volume','cross'),
- ('Social d′','SOCIAL_dprime','Left','L_HPC_NDI','NDI density','matched'),
- ('Monetary d′','MONETARY_dprime','Right','R_HPC_NDI','NDI density','matched'),
- ('Social d′','SOCIAL_dprime','Right','R_HPC_NDI','NDI density','cross'),
- ('Monetary d′','MONETARY_dprime','Left','L_HPC_NDI','NDI density','cross'),
-]
-print(f"{'Outcome':13s} {'HPC side':9s} {'Measure':12s} {'type':8s} {'beta':>7s} {'p':>7s} {'n':>4s}")
-for oc_lbl,oc,side,pred,meas,typ in combos:
-    b,p,n=model(oc,pred)
-    star='  *' if p<0.05 else ''
-    print(f"{oc_lbl:13s} {side:9s} {meas:12s} {typ:8s} {b:+.3f} {p:7.3f} {n:4d}{star}")
-    rows.append(dict(outcome=oc_lbl,side=side,measure=meas,type=typ,beta=round(b,3),p=round(p,4),n=n))
+def run(outcome,oc_lbl,matched_side):
+    """matched_side = hemisphere matched to the tract finding for this outcome."""
+    cross_side='Right' if matched_side=='Left' else 'Left'
+    out=[]
+    for key,meas in NODDI:
+        ms='L' if matched_side=='Left' else 'R'; cs='L' if cross_side=='Left' else 'R'
+        for side,typ,col in [(matched_side,'matched',f'{ms}_HPC_{key}'),
+                             (cross_side,'cross',f'{cs}_HPC_{key}'),
+                             ('Bilateral','bilateral',f'bilat_{key}')]:
+            b,p,n=model(outcome,col)
+            out.append(dict(outcome=oc_lbl,side=side,measure=meas,type=typ,beta=b,p=p,n=n))
+    return out
 
-# bilateral summary (mean L+R)
-df['bilat_vol']=(df['L_HPC_vol']+df['R_HPC_vol'])/2
-df['bilat_ndi']=(df['L_HPC_NDI']+df['R_HPC_NDI'])/2
-print("\n=== BILATERAL (mean L+R) ===")
-for oc_lbl,oc in [('Social d′','SOCIAL_dprime'),('Monetary d′','MONETARY_dprime')]:
-    for pred,meas in [('bilat_vol','volume'),('bilat_ndi','NDI density')]:
-        b,p,n=model(oc,pred)
-        rows.append(dict(outcome=oc_lbl,side='Bilateral',measure=meas,type='bilateral',beta=round(b,3),p=round(p,4),n=n))
-        print(f"  {oc_lbl} ~ {meas}: beta={b:+.3f} p={p:.3f} n={n} {'*' if p<0.05 else ''}")
+# d′: social tract finding is LEFT, monetary would be RIGHT
+models =run('SOCIAL_dprime','Social d′','Left')+run('MONETARY_dprime','Monetary d′','Right')
+# bias: social bias findings were bilateral, strongest RIGHT; match both to Right, cross = Left
+bias   =run('SOCIAL_FABias','Social FABias','Right')+run('MONETARY_FABias','Monetary FABias','Right')
 
-# ===== HPC REGION -> POSITIVITY BIAS (FABias) =====
-# The bias findings were the robust ones; test whether the hippocampal REGION
-# (volume + density) predicts positivity bias, exactly as we did for d'.
-grp=pd.read_csv(f'{base}/IMPACT_grouped_export.csv').drop_duplicates('ID').rename(columns={'ID':'Subject'})
-for cond in ['SOCIAL','MONETARY']:
-    fap=pd.to_numeric(grp[f'{cond}_FalseMem_positive'],errors='coerce')/pd.to_numeric(grp[f'{cond}_Total_pos'],errors='coerce')
-    fan=pd.to_numeric(grp[f'{cond}_FalseMem_negative'],errors='coerce')/pd.to_numeric(grp[f'{cond}_Total_neg'],errors='coerce')
-    grp[f'{cond}_FABias']=fap-fan
-df=df.merge(grp[['Subject','SOCIAL_FABias','MONETARY_FABias']],on='Subject',how='left')
-print("\n=== HPC REGION -> BIAS (FABias) ===")
-print(f"{'Outcome':14s} {'HPC side':9s} {'Measure':12s} {'type':8s} {'beta':>7s} {'p':>7s} {'n':>4s}")
-bias_rows=[]
-bias_combos=[
- ('Social FABias','SOCIAL_FABias','Right','R_HPC_vol','volume','matched'),   # bias findings were right-tract
- ('Social FABias','SOCIAL_FABias','Left','L_HPC_vol','volume','cross'),
- ('Social FABias','SOCIAL_FABias','Right','R_HPC_NDI','NDI density','matched'),
- ('Social FABias','SOCIAL_FABias','Left','L_HPC_NDI','NDI density','cross'),
- ('Monetary FABias','MONETARY_FABias','Right','R_HPC_vol','volume','matched'),
- ('Monetary FABias','MONETARY_FABias','Left','L_HPC_vol','volume','cross'),
- ('Monetary FABias','MONETARY_FABias','Right','R_HPC_NDI','NDI density','matched'),
- ('Monetary FABias','MONETARY_FABias','Left','L_HPC_NDI','NDI density','cross'),
-]
-for oc_lbl,oc,side,pred,meas,typ in bias_combos:
-    b,p,n=model(oc,pred)
-    star='  *' if p<0.05 else ''
-    print(f"{oc_lbl:14s} {side:9s} {meas:12s} {typ:8s} {b:+.3f} {p:7.3f} {n:4d}{star}")
-    bias_rows.append(dict(outcome=oc_lbl,side=side,measure=meas,type=typ,beta=round(b,3),p=round(p,4),n=n))
-for oc_lbl,oc in [('Social FABias','SOCIAL_FABias'),('Monetary FABias','MONETARY_FABias')]:
-    for pred,meas in [('bilat_vol','volume'),('bilat_ndi','NDI density')]:
-        b,p,n=model(oc,pred)
-        bias_rows.append(dict(outcome=oc_lbl,side='Bilateral',measure=meas,type='bilateral',beta=round(b,3),p=round(p,4),n=n))
+def show(title,rows):
+    print(f"\n=== {title} ===")
+    print(f"{'Outcome':16s} {'side':10s} {'measure':16s} {'type':9s} {'beta':>7s} {'p':>7s} {'n':>4s}")
+    for m in rows:
+        print(f"{m['outcome']:16s} {m['side']:10s} {m['measure']:16s} {m['type']:9s} {m['beta']:+.3f} {m['p']:7.3f} {m['n']:4d}{'  *' if m['p']<0.05 else ''}")
+show("HPC NODDI -> d′",models); show("HPC NODDI -> positivity bias (FABias)",bias)
 
-json.dump({'models':rows,'bias_models':bias_rows,
-   'qc':{'L_vol_mean':round(df['L_HPC_vol'].mean()),'R_vol_mean':round(df['R_HPC_vol'].mean()),
-         'LR_vol_r':round(df['L_HPC_vol'].corr(df['R_HPC_vol']),3),
-         'n':len(df)}},
+qc={'n':int(df[['SOCIAL_dprime']].dropna().shape[0])}
+for key,lbl in NODDI:
+    qc[f'{key}_L']=round(df[f'L_HPC_{key}'].mean(),3); qc[f'{key}_R']=round(df[f'R_HPC_{key}'].mean(),3)
+    qc[f'{key}_LR_r']=round(df[f'L_HPC_{key}'].corr(df[f'R_HPC_{key}']),3)
+json.dump({'models':models,'bias_models':bias,'qc':qc,'noddi':[k for k,_ in NODDI]},
    open('/Users/dannyzweben/Desktop/SDN/DTI/SDN-IMPACT-DTI/results_html/hpc_region_data.json','w'),indent=1)
 df.to_csv('/Users/dannyzweben/Desktop/SDN/DTI/SDN-IMPACT-DTI/data/hpc_region_measures.csv',index=False)
 print("\nsaved hpc_region_data.json + hpc_region_measures.csv")
-
-# ===== ROBUSTNESS: exclude FIRST outlier s4459 =====
-print("\n\n===== EXCLUDING FIRST outlier s4459 =====")
-df=df[df['Subject']!='s4459'].copy()
-print(f"n now = {df[['SOCIAL_dprime','L_HPC_vol']].dropna().shape[0]}")
-for oc_lbl,oc,side,pred,meas in [
- ('Social d′','SOCIAL_dprime','Left','L_HPC_vol','volume'),
- ('Monetary d′','MONETARY_dprime','Right','R_HPC_vol','volume'),
- ('Social d′','SOCIAL_dprime','Left','L_HPC_NDI','NDI'),
- ('Monetary d′','MONETARY_dprime','Right','R_HPC_NDI','NDI')]:
-    b,p,n=model(oc,pred)
-    print(f"  {oc_lbl} ~ {side} HPC {meas}: beta={b:+.3f} p={p:.3f} n={n} {'*' if p<0.05 else ''}")
