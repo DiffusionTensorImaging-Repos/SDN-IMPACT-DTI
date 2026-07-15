@@ -1,8 +1,35 @@
-import json
+import json, csv
 OUT='/Users/dannyzweben/Desktop/SDN/DTI/SDN-IMPACT-DTI/results_html'
 meta=json.load(open(f'{OUT}/meta_data.json'))
 dq=meta['data_quality']; dp=dq['dprime']
 bd=json.load(open(f'{OUT}/dprime_breakdown.json'))
+
+def compliance_svg():
+    rows=[]
+    with open('/Users/dannyzweben/Desktop/SDN/DTI/SDN-IMPACT-DTI/data/compliance_screen.csv') as f:
+        for r in csv.DictReader(f):
+            if r['condition']=='SOCIAL': rows.append((r['Subject'],float(r['remember_rate'])*100))
+    rows.sort(key=lambda x:x[1]); n=len(rows)
+    W,H,PL,PR,PT,PB=640,250,44,14,16,34
+    def sx(i): return PL+(W-PL-PR)*i/(n-1)
+    def sy(v): return PT+(H-PT-PB)*(1-v/105)
+    dots=''
+    for i,(sub,rate) in enumerate(rows):
+        if rate>=95: c,r='#e34948',5
+        elif sub=='s4127': c,r='#1baf7a',6
+        else: c,r='#9aa3b2',3.2
+        dots+=f'<circle cx="{sx(i):.1f}" cy="{sy(rate):.1f}" r="{r}" fill="{c}"/>'
+        if rate>=95 or sub=='s4127':
+            dots+=f'<text x="{sx(i):.1f}" y="{sy(rate)-9:.1f}" fill="{c}" font-size="10" text-anchor="middle">{sub}</text>'
+    thr=sy(95)
+    yt=''.join(f'<text x="{PL-7}" y="{sy(v)+3:.0f}" fill="#6b7280" font-size="9" text-anchor="end">{v}%</text><line x1="{PL-3}" y1="{sy(v):.0f}" x2="{PL}" y2="{sy(v):.0f}" stroke="#3a3f4b"/>' for v in [0,50,95])
+    return (f'<svg viewBox="0 0 {W} {H}" width="100%" style="max-width:640px" role="img" aria-label="Sorted remember-rate per mother; s4210 and s1350 exceed the 95% compliance cutoff">'
+      f'<line x1="{PL}" y1="{thr:.1f}" x2="{W-PR}" y2="{thr:.1f}" stroke="#e34948" stroke-width="1.3" stroke-dasharray="6 5"/>'
+      f'<text x="{W-PR}" y="{thr-5:.0f}" fill="#e34948" font-size="10" text-anchor="end">95% cutoff → excluded</text>'
+      f'<line x1="{PL}" y1="{PT}" x2="{PL}" y2="{H-PB}" stroke="#3a3f4b"/><line x1="{PL}" y1="{H-PB}" x2="{W-PR}" y2="{H-PB}" stroke="#3a3f4b"/>'
+      f'{yt}{dots}'
+      f'<text x="{(PL+W-PR)/2:.0f}" y="{H-6}" fill="#9aa3b2" font-size="10" text-anchor="middle">55 mothers, ranked by "remember" rate (social recall)</text></svg>')
+CSVG=compliance_svg()
 
 def pf(p):
     p=float(p); return '&lt;0.001' if p<0.001 else f'{p:g}'
@@ -51,14 +78,26 @@ d′ = z(H) − z(F)        <span class="mut"># z = inverse-normal (probit)</spa
 </div>
 
 <div class="section">
-<h2>2 · Data cleaning</h2>
-<div class="lead">Only genuinely broken sessions were removed — the formula was never changed.</div>
-<p>Two recall sessions were unusable and were excluded on data-quality grounds:</p>
-<table><thead><tr><th>Subject</th><th>Problem</th><th>Effect if kept</th></tr></thead><tbody>
-<tr><td><b>s1694</b></td><td>Only 16% of "recalled" items were ever shown at encoding — a corrupted / mismatched session</td><td>d′ ≈ −1.0 (nonsense)</td></tr>
-<tr><td><b>s1350</b></td><td>Missed &gt; ⅓ of recall trials</td><td>Unreliable, near-chance d′</td></tr>
+<h2>2 · Data cleaning — two screens, applied before any analysis</h2>
+<div class="lead">Nothing was removed to chase a result. Two objective screens catch unusable sessions; the d′ formula never changes. Both are run <i>before</i> the tract analyses (catching them late forces re-runs).</div>
+
+<h3 style="font-size:14px;color:var(--mut);margin-top:6px">Screen 1 — broken sessions</h3>
+<table><thead><tr><th>Subject</th><th>Problem</th><th>Excluded from</th></tr></thead><tbody>
+<tr><td><b>s1694</b></td><td>Only 16% of "recalled" items were ever shown at encoding — a corrupted / mismatched session (and >½ missed on monetary)</td><td>both conditions</td></tr>
+<tr><td><b>s1350</b></td><td>Missed &gt; ⅓ of the <i>social</i> recall trials (monetary session clean)</td><td>social only</td></tr>
 </tbody></table>
-<div class="callout">These two sessions produce garbage d′ that was dragging the group social mean to zero. With them removed, social d′ is a genuine above-chance signal (Section 3). No other subject was excluded for d′. <b>Two additional mothers drop from the <i>bias</i> metrics only</b> (s4127, s4210): across the entire social recall they never once judged a face as a "loss" (negative) outcome — every response was "win" or "neutral." Positivity bias is a positive-minus-<b>negative</b> contrast, so with zero negative responses it is mathematically undefined for them (not missing data — they are maximal-positivity responders). d′ is unaffected and keeps them.</div>
+
+<h3 style="font-size:14px;color:var(--mut);margin-top:16px">Screen 2 — compliance ("yes-to-everything")</h3>
+<p>A mother who presses "remember" to nearly every item — the new foils <i>and</i> the old items — isn't discriminating at all: her hit rate and false-alarm rate are both ≈ 1, so her d′ ≈ 0 carries no memory signal (it's a stuck "yes," not memory). We exclude any condition where the "remember" rate is <b>≥ 95%</b> (equivalently, a false-alarm rate ≥ 95% — saying "remember" to nearly every new foil). Script: <code>scripts/compliance_screen.py</code>.</p>
+<table><thead><tr><th>Subject</th><th>"Remember" rate</th><th>Excluded from</th></tr></thead><tbody>
+<tr><td><b>s4210</b></td><td>100% social &amp; 100% monetary (FA rate 100%) — pressed "remember" to every single item</td><td>both conditions (all outcomes)</td></tr>
+</tbody></table>
+<div style="margin:14px 0 4px">{CSVG}</div>
+<div class="callout"><b>s4210 is non-compliant, not biased.</b> It's important not to confuse her with a genuinely positive responder: she said "remember" to <i>everything</i>, so her d′ and her bias are both meaningless. She is removed from every memory outcome.</div>
+
+<h3 style="font-size:14px;color:var(--mut);margin-top:16px">Bias scoring — the zero-valence rule</h3>
+<p>Each positivity bias is a <b>positive-rate − negative-rate</b> contrast. A <i>valid</i> mother who simply never used one valence (e.g. never judged a face a "loss") has a <code>0 ÷ 0</code> negative term. We set that term to <b>0</b> — she produced zero negative memories, so her negative rate is 0, not undefined — giving her a <b>defined, maximal-positivity</b> score instead of dropping her. This changes only zero-valence subjects; every other score is identical to the plain difference, and (because compliance is screened first) it never rescues a "yes-to-everything" responder. Script: <code>scripts/compute_bias_scores.py</code>.</p>
+<div class="callout key"><b>Example — s4127.</b> Compliant (55% "remember" rate, real discrimination) but never once attributed a memory to "loss" — the most positively-biased mother in the sample. The rule gives her <b>FABias = +0.27</b> and <b>HitRateBias = +0.17</b> (≈ 90th percentile), so she is <i>kept</i> and scored, rather than lost to a divide-by-zero.</div>
 </div>
 
 <div class="section">

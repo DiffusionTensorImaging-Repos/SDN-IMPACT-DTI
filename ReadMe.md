@@ -6050,29 +6050,37 @@ Handedness was not collected in IMPACT (verified across REDCap, DICOM/JSON, and 
 
 ## 2 · Memory data — computed & cleaned
 
-Memory outcomes are **computed directly from each mother's raw trial files** with the standard signal-detection d′ formula — one transparent computation, straight from the responses.
+Memory outcomes are **computed directly from each mother's raw trial files** with the standard signal-detection d′ formula — one transparent computation, straight from the responses. The d′ formula is **never changed**; two objective screens (below) run **before** the tract analyses, because a bad session caught late forces a full re-run.
 
-**Two recall sessions are excluded on data-quality grounds** (they dragged social d′ artificially toward chance):
+**Screen 1 — broken sessions.**
 
-| Subject | Problem | d′ if kept |
+| Subject | Problem | Excluded from |
 |---|---|---|
-| **s1694** | Only 16% of "recalled" items were ever shown at encoding (corrupted session) | ≈ −1.0 (nonsense) |
-| **s1350** | Missed > ⅓ of recall trials | near-chance / unreliable |
+| **s1694** | Only 16% of "recalled" items were ever shown at encoding (corrupted session); also >½ missed on monetary | both conditions |
+| **s1350** | Missed **40.5%** of the **social** recall; monetary session clean (16.7% missed) | social only |
 
-The formula was **never changed** — only genuinely broken sessions were removed.
+**Screen 2 — compliance ("yes-to-everything").** A mother who presses "remember" to nearly every item — the new foils *and* the old — isn't discriminating: her hit and false-alarm rates are both ≈ 1, so d′ ≈ 0 is a stuck "yes," not memory. We exclude any condition with a **≥ 95% "remember" rate** (equivalently, false-alarm rate ≥ 95%). Script: `scripts/compliance_screen.py` → `data/compliance_screen.csv`.
 
-**Outcomes (per condition):** `d′` (memory accuracy), `FABias` (positivity bias in false memories), `HitRateBias` (positivity bias in correct memories). Final Ns after listwise deletion:
+| Subject | "Remember" rate | Excluded from |
+|---|---|---|
+| **s4210** | 100% social & 100% monetary — pressed "remember" to every single item | both conditions (all outcomes) |
+
+> **s4210 is non-compliant, not biased** — don't confuse her with a genuine positive responder. She said "remember" to *everything*, so her d′ **and** her bias are meaningless. Removed from every memory outcome. (See the compliance-screen figure in the [Memory data & d′ page](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/data_quality.html).)
+
+**Bias scoring — the zero-valence rule.** Each positivity bias is a **positive-rate − negative-rate** contrast (`FABias` on false memories, `HitRateBias` on correct memories). A *valid* mother who simply never used one valence (e.g. never judged a face a "loss") has a `0 ÷ 0` negative term. We set that term to **0** (she made zero negative memories → 0 rate, not undefined), giving her a **defined, maximal-positivity score** rather than dropping her. This touches only zero-valence subjects; every other score is identical to the plain difference, and — because compliance is screened first — it never rescues a "yes-to-everything" responder. Script: `scripts/compute_bias_scores.py`.
+
+> **Example — s4127.** Compliant (55% "remember" rate, real discrimination) but never attributed a memory to "loss" — the most positively-biased mother in the sample. The rule gives her `FABias` **+0.27** and `HitRateBias` **+0.17** (≈ 90th percentile), so she is **kept and scored**, not lost to a divide-by-zero.
+
+**Outcomes (per condition):** `d′` (memory accuracy), `FABias` (positivity bias in false memories), `HitRateBias` (positivity bias in correct memories). Final Ns after both screens + listwise deletion:
 
 | Outcome | N |
 |---|---|
-| `SOCIAL_dprime` | 53 |
-| `MONETARY_dprime` | 54 |
-| `SOCIAL_FABias`, `SOCIAL_HitRateBias` | 51 |
+| `SOCIAL_dprime` | 52 |
+| `MONETARY_dprime` | 53 |
+| `SOCIAL_FABias`, `SOCIAL_HitRateBias` | 52 |
 | `MONETARY_FABias`, `MONETARY_HitRateBias` | 53 |
 
-Why the Ns differ (all justified, none are bugs):
-- **Exclusions are per task** (social and monetary are separate recall sessions). **s1694** blew both (social recall corrupted — only 16% of "recalled" items were ever shown at encoding; monetary recall >½ missed) → out of both. **s1350** missed **40.5% of the social recall** → out of social, but did the monetary task cleanly (16.7% missed) → kept for monetary. Hence social d′ = 53, monetary d′ = 54.
-- **Bias drops two more** (s4127, s4210): across the whole social recall they never gave a single **"loss" (negative)** response — only "win" or "neutral." Positivity bias is a positive-minus-negative contrast, so with zero negative responses it is **mathematically undefined** for them (they are maximal-positivity responders), not missing data. Their d′ is unaffected. Hence social bias = 51.
+Why the Ns differ (all justified, none are bugs): exclusions are **per task** (social and monetary are separate recall sessions). Social loses **s1694** (corrupted), **s1350** (missed 40% of social), and **s4210** (non-compliant) → 52. Monetary loses only **s1694** and **s4210** (s1350's monetary session was clean) → 53. Bias tracks d′ exactly, now that the zero-valence rule keeps valid mothers like s4127 in.
 
 ## 3 · d′ statistics — is memory real, and why do the conditions differ?
 
@@ -6107,25 +6115,25 @@ Each node's observed t on `metric_node` is compared against **5000 Freedman–La
 
 | Outcome | Tract | Metric | Nodes | p (FWE) | Association |
 |---|---|---|---|---|---|
-| **Social d′** (accuracy) | Posterior L VTA→HPC | NDI | 1–56 | **0.0048** | denser neurites → **sharper** memory |
-| **Social positivity bias**<br>(false memories) | Anterior R VTA→HPC | FA | 32–76 | 0.001 | more coherent/dense WM → **less** positive bias |
-|   | Posterior R VTA→HPC | FA | 24–67 | 0.0012 | more coherent/dense WM → **less** positive bias |
-|   | Posterior R VTA→HPC | FWF | 0–44 | 0.0016 | more free water → **more** positive bias |
-|   | Posterior R VTA→HPC | ODI | 0–45 | 0.0046 | more coherent/dense WM → **less** positive bias |
-|   | Anterior R VTA→HPC | ODI | 0–33 | 0.0132 | more coherent/dense WM → **less** positive bias |
-|   | Posterior R VTA→HPC | NDI | 25–66 | 0.0158 | more coherent/dense WM → **less** positive bias |
-|   | Anterior R VTA→HPC | NDI | 36–78 | 0.023 | more coherent/dense WM → **less** positive bias |
-|   | Posterior L VTA→HPC | FA | 47–73 | 0.0252 | more coherent/dense WM → **less** positive bias |
-|   | Posterior L VTA→HPC | ODI | 14–38 | 0.0332 | more coherent/dense WM → **less** positive bias |
-|   | Anterior L VTA→HPC | FA | 53–74 | 0.0428 | more coherent/dense WM → **less** positive bias |
-|   | Anterior R VTA→HPC | FWF | 0–20 | 0.0496 | more free water → **more** positive bias |
+| **Social d′** (accuracy) | Posterior L VTA→HPC | NDI | 0–54 | **0.0032** | denser neurites → **sharper** memory |
+| **Social positivity bias**<br>(false memories) | Posterior R VTA→HPC | FWF | 0–45 | 0.0008 | more free water → **more** positive bias |
+|   | Anterior R VTA→HPC | FA | 32–77 | 0.0016 | more coherent/dense WM → **less** positive bias |
+|   | Posterior R VTA→HPC | FA | 24–66 | 0.0026 | more coherent/dense WM → **less** positive bias |
+|   | Posterior R VTA→HPC | ODI | 0–39 | 0.0064 | more coherent/dense WM → **less** positive bias |
+|   | Anterior R VTA→HPC | ODI | 0–32 | 0.012 | more coherent/dense WM → **less** positive bias |
+|   | Posterior R VTA→HPC | NDI | 25–65 | 0.014 | more coherent/dense WM → **less** positive bias |
+|   | Anterior R VTA→HPC | NDI | 38–77 | 0.026 | more coherent/dense WM → **less** positive bias |
+|   | Posterior L VTA→HPC | FA | 46–74 | 0.0264 | more coherent/dense WM → **less** positive bias |
+|   | Posterior L VTA→HPC | ODI | 15–38 | 0.0402 | more coherent/dense WM → **less** positive bias |
+|   | Anterior L VTA→HPC | FA | 52–75 | 0.0444 | more coherent/dense WM → **less** positive bias |
+|   | Anterior R VTA→HPC | FWF | 0–21 & 35–56 | 0.047 | more free water → **more** positive bias |
+| Monetary bias *(isolated)* | Posterior L VTA→HPC | ODI | 63–86 | 0.0404 | 1 of 32 monetary tests — likely noise |
 
-**All 12 surviving clusters are social — monetary is null on every tract and metric.**
+**13 social clusters; monetary is null but for one isolated blip.**
 
-- **Social memory accuracy** tracks the **left posterior** VTA→HPC pathway's **neurite density** (NDI): denser neurites along the tract → sharper social memory (nodes 1–56, p = 0.005).
-- **Social positivity bias** — falsely "remembering" positive social events more than negative ones — is the most robust result: **11 clusters, bilateral, across all four metrics**. More coherent / denser white matter (higher FA, NDI, ODI) predicts *less* positive bias; more free water (FWF) predicts *more*. It is strongest on the **right** posterior and anterior tracts (FA and FWF p ≈ 0.001–0.002) and also appears on the left.
-
-**Monetary is null throughout** — no monetary d′ or monetary bias cluster survives FWE on any tract or metric. Because social and monetary d′ are uncorrelated and remembered equally well, this is genuine domain-specificity: the pathway tracks *social* motivated memory, with monetary as a built-in control.
+- **Social memory accuracy** tracks the **left posterior** VTA→HPC pathway's **neurite density** (NDI): denser neurites → sharper social memory (nodes 0–54, p = 0.003).
+- **Social positivity bias** — falsely "remembering" positive social events more than negative — is the most robust result: **12 clusters, bilateral, across all four metrics**. More coherent / denser white matter (↑FA, NDI, ODI) predicts *less* positive bias; more free water (↑FWF) predicts *more*. Strongest on the **right** (FWF p = 0.0008, FA p ≈ 0.002), also present on the left.
+- **Monetary** produces **one** borderline cluster (monetary FABias, left-posterior ODI, p = 0.040). With 32 monetary bias tests, one hit right at the α = 0.05 threshold — with no coherent pattern across metrics or tracts — is what you expect by chance. We report it, but it does not indicate a monetary circuit; social and monetary d′ are uncorrelated and equally well remembered, so the pathway's relationship is domain-specific to **social** motivated memory.
 
 Browse every analysis (surviving or not), node profiles, and laterality: **[Results Explorer](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/results_explorer.html)**.
 

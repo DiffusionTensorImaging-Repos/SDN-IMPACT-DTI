@@ -84,26 +84,26 @@
  "data_quality": {
   "dprime": {
    "social": {
-    "n": 53,
-    "mean": 0.097,
-    "sd": 0.285,
+    "n": 52,
+    "mean": 0.098,
+    "sd": 0.288,
     "t_vs0": 2.47,
     "p_vs0": 0.017
    },
    "monetary": {
-    "n": 54,
-    "mean": 0.211,
-    "sd": 0.327,
-    "t_vs0": 4.75,
+    "n": 53,
+    "mean": 0.215,
+    "sd": 0.329,
+    "t_vs0": 4.77,
     "p_vs0": 0.0
    },
    "correlation": {
-    "r": -0.144,
-    "p": 0.302,
-    "n": 53
+    "r": -0.15,
+    "p": 0.29,
+    "n": 52
    },
    "paired_diff": {
-    "mean_diff": -0.117,
+    "mean_diff": -0.119,
     "t": -1.83,
     "p": 0.0727,
     "wilcoxon_p": 0.105
@@ -135,15 +135,15 @@
    "corr_with_dprime": [
     {
      "label": "Social d\u2032 \u00d7 social-recall RT",
-     "r": 0.055,
-     "p": 0.694,
-     "n": 53
+     "r": 0.045,
+     "p": 0.7511,
+     "n": 52
     },
     {
      "label": "Monetary d\u2032 \u00d7 monetary-recall RT",
-     "r": 0.175,
-     "p": 0.2045,
-     "n": 54
+     "r": 0.162,
+     "p": 0.2467,
+     "n": 53
     }
    ],
    "social_vs_monetary_recall": {

@@ -1,28 +1,24 @@
 {
- "n": 53,
+ "n": 52,
  "hit": {
-  "social": 0.568,
-  "monetary": 0.548,
+  "social": 0.56,
+  "monetary": 0.539,
   "diff": 0.021,
   "t": 0.86,
-  "p": 0.395
+  "p": 0.3951
  },
  "fa": {
-  "social": 0.536,
-  "monetary": 0.47,
-  "diff": 0.066,
-  "t": 2.76,
+  "social": 0.527,
+  "monetary": 0.46,
+  "diff": 0.067,
+  "t": 2.77,
   "p": 0.0079
  },
  "dprime": {
-  "social": 0.097,
-  "monetary": 0.214,
-  "diff": -0.117,
+  "social": 0.098,
+  "monetary": 0.218,
+  "diff": -0.119,
   "t": -1.83,
   "p": 0.0727
- },
- "social_H": 0.568,
- "social_F": 0.536,
- "monetary_H": 0.548,
- "monetary_F": 0.47
+ }
 }

@@ -79,7 +79,7 @@ a.back{color:var(--accent);text-decoration:none;font-size:13px}
 
 <div class="section"><h2>Sample — mothers (DTI analysis cohort)</h2>
 <div class="note" style="background:#232733;border-left:3px solid #a78bfa;border-radius:6px;padding:11px 14px;margin:2px 0 14px;font-size:12.5px;color:#c9d1e0">
-<b>One consistent roster.</b> 55 mothers with complete VTA→HPC tractography (2 pilot scans removed; maternal age recovered for all 55 from current demographics). Memory outcomes were recomputed directly from the raw trial files with the standard signal-detection d′ formula, and <b>2 sessions with corrupted or heavily-missed recall were excluded on data-quality grounds</b>. Resulting per-outcome N: <b>social d′ = 53, monetary d′ = 54</b>; bias metrics <b>51–53</b> (a few mothers also lack the valence-broken-down counts a bias score needs). The exact N is shown on every result row.</div>
+<b>One consistent roster.</b> 55 mothers with complete VTA→HPC tractography (2 pilot scans removed; maternal age recovered for all 55). Memory outcomes are computed directly from the raw trial files, then two data-quality screens run before analysis: <b>broken sessions</b> (corrupted / heavily-missed recall) and a <b>compliance screen</b> that removes one "yes-to-everything" responder (s4210, who pressed "remember" to every item). Resulting per-outcome N: <b>social d′ = 52, monetary d′ = 53, social bias = 52, monetary bias = 53</b>. Details and the compliance figure are on the <a href="data_quality.html" style="color:#a78bfa">Memory data &amp; d′ page</a>. The exact N is shown on every result row.</div>
 <div id="demo"></div></div>
 
 <div class="section"><h2>Outcomes analysed — definitions</h2>
