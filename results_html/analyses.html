@@ -1,0 +1,98 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMPACT — Analyses</title>
+<link rel="stylesheet" href="_pres.css">
+</head><body>
+<nav class="topnav">
+  <span class="brand">IMPACT · <span>VTA→HPC</span> &amp; Motivated Memory</span>
+  <a href="intro.html">Overview</a>
+  <a href="background.html">Background</a>
+  <a href="pipeline.html">Pipeline</a>
+  <a href="analyses.html" class="active">Analyses</a>
+  <a href="results_explorer.html" class="results">Results ↗</a>
+</nav>
+<div class="wrap">
+  <p class="eyebrow">03 · Analyses</p>
+  <h1>Scoring memory, and testing it against the tract</h1>
+  <p class="lead">Two parts: how the memory outcomes are built from the recognition task, and how each is tested against the along-tract microstructure.</p>
+
+  <!-- ============ 1 · CALCULATING MEMORY ============ -->
+  <div class="section">
+    <h2>1 · Calculating memory</h2>
+    <p>From the feedback task's encoding + recall, each mother gets, <b>per condition</b> (social faces / monetary doors): one accuracy score and two positivity-bias scores.</p>
+
+    <h3>Accuracy — d′</h3>
+    <div class="formula"><span class="lbl">d′</span> = z(hit rate) − z(false-alarm rate)<br><span class="note">signal-detection accuracy; z = inverse-normal. Higher = better discrimination of seen vs. unseen items.</span></div>
+    <p>Recomputed from raw trials as a transparency check — matched the study's export closely (social r ≈ 0.96, monetary r ≈ 0.99), confirming a clean, standard recognition d′.</p>
+
+    <h3>Positivity bias — two scores</h3>
+    <div class="two">
+      <div class="formula"><span class="lbl">HitRateBias</span><br>= TrueMem<sub>pos</sub>/Total<sub>pos</sub> − TrueMem<sub>neg</sub>/Total<sub>neg</sub><br><span class="note">positivity skew in <b>correct</b> memories</span></div>
+      <div class="formula"><span class="lbl">FABias</span><br>= FalseMem<sub>pos</sub>/Total<sub>pos</sub> − FalseMem<sub>neg</sub>/Total<sub>neg</sub><br><span class="note">positivity skew in <b>false</b> memories</span></div>
+    </div>
+    <p class="small">Zero-valence rule: a term whose denominator is 0 (a mother who produced no memories of one valence) is set to 0, giving her a defined, maximally-positive score rather than dropping her. Affects only those subjects; compliance is screened first, so it never rescues a yes-to-everything responder.</p>
+
+    <h3>The scores, across mothers</h3>
+    <table class="dtable"><thead><tr><th>Score</th><th>Social — M ± SD</th><th>Monetary — M ± SD</th><th>n</th></tr></thead><tbody>
+      <tr><td>d′ (accuracy)</td><td>0.10 ± 0.29</td><td>0.22 ± 0.33</td><td>52 / 53</td></tr>
+      <tr><td>HitRateBias</td><td>+0.12 ± 0.19</td><td>+0.12 ± 0.16</td><td>52 / 53</td></tr>
+      <tr><td>FABias</td><td>+0.07 ± 0.19</td><td>+0.07 ± 0.16</td><td>52 / 53</td></tr>
+    </tbody></table>
+    <p class="small">Both bias scores are positive in both domains — a consistent positivity skew in what these mothers remember.</p>
+
+    <h3>Why monetary d′ &gt; social d′ — it's a false-alarm story</h3>
+    <p>The conditions differ in accuracy (0.22 vs 0.10), but not where you'd think. <b>Hit rates are equal</b>; mothers simply <b>false-alarm more to social faces</b> — saying "remember" to faces they never saw — which drags social d′ down. The monetary "advantage" is really social recognition being pulled down by positively-skewed false memories.</p>
+    <table class="dtable"><thead><tr><th>Component</th><th>Social</th><th>Monetary</th><th>diff</th><th>p</th></tr></thead><tbody>
+      <tr><td>Hit rate</td><td>0.560</td><td>0.539</td><td>+0.021</td><td>0.40</td></tr>
+      <tr><td>False-alarm rate</td><td>0.527</td><td>0.460</td><td>+0.067</td><td class="sig">0.008</td></tr>
+      <tr><td>d′</td><td>0.098</td><td>0.218</td><td>−0.119</td><td>0.073</td></tr>
+    </tbody></table>
+    <p class="small">Paired t-tests, n = 52.</p>
+
+    <h3>How the scores relate</h3>
+    <table class="dtable"><thead><tr><th>Pair</th><th>r</th><th>p</th><th>reading</th></tr></thead><tbody>
+      <tr><td>Social d′ × Monetary d′</td><td>−0.15</td><td>0.29</td><td>independent — not one "good memory" factor</td></tr>
+      <tr><td>HitRateBias: social × monetary</td><td class="sig">+0.40</td><td class="sig">0.004</td><td>positivity in correct memories is trait-like across domains</td></tr>
+      <tr><td>Social d′ × Social HitRateBias</td><td>+0.28</td><td>0.043</td><td>better social accuracy ↔ more positive correct memories</td></tr>
+      <tr><td>d′ × FABias (within domain)</td><td>≈ −0.13</td><td>ns</td><td>accuracy unrelated to false-memory skew</td></tr>
+    </tbody></table>
+    <p class="small">Pearson, n = 52. The social/monetary independence is what makes monetary a clean within-subject specificity control.</p>
+  </div>
+
+  <!-- ============ 2 · ANALYSES ============ -->
+  <div class="section">
+    <h2>2 · Analyses</h2>
+    <p>Six outcomes (social/monetary × d′, HitRateBias, FABias) tested against each tract's along-node microstructure, for all four metrics.</p>
+
+    <h3>Model, per node</h3>
+    <p>At <b>each of the 100 nodes</b>, a linear model of the outcome on that node's microstructure value plus five nuisance covariates — <b>ICV</b>, <b>tract streamline count</b> and <b>mean length</b> (so a result isn't just "bigger/denser tract"), <b>head motion</b>, and <b>maternal age</b>:</p>
+    <div class="formula"><span class="lbl">full</span>&nbsp;&nbsp;&nbsp; y ~ node + ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age<br><span class="lbl">reduced</span>&nbsp; y ~ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age</div>
+
+    <h3>Correction — cluster-extent FWE by permutation</h3>
+    <p>Neighboring significant nodes form a <b>cluster</b>. To keep testing 100 nodes from inflating false positives, the null is built by <b>Freedman–Lane</b> permutation: take the reduced model's residuals, shuffle them, re-run all 100 nodes — <b>5,000 times</b> — recording the largest chance cluster each time. An observed cluster counts only if it beats 95% of those. Run across <b>6 outcomes × 4 tracts × 4 metrics = 96 analyses</b>, one core each on the cluster.</p>
+
+    <details class="step"><summary><span class="cmd">permutation_one.R</span><span class="pkg">R</span></summary>
+      <div class="stepbody">
+        <div class="block info"><div class="blabel">Info</div><p>Ported from Ranesh's permutation script. Node-wise t on the tract term, cluster-forming at p&lt;0.05, Freedman–Lane null over 5,000 shuffles, cluster-extent FWE.</p></div>
+        <div class="block"><div class="blabel">Script (core)</div><pre><span class="c"># for each node: fit full vs reduced, record t on the node term</span>
+full    &lt;- lm(y ~ node + ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age)
+reduced &lt;- lm(y ~        ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age)
+
+<span class="c"># observed clusters = runs of adjacent nodes with p &lt; 0.05</span>
+<span class="c"># Freedman–Lane null:</span>
+res  &lt;- residuals(reduced)
+for (i in 1:5000) {
+  y_perm &lt;- fitted(reduced) + sample(res)      <span class="c"># shuffle reduced-model residuals</span>
+  <span class="c"># re-fit all 100 nodes, record size of largest chance cluster</span>
+}
+<span class="c"># p_FWE = fraction of permuted max-clusters ≥ observed cluster size</span></pre></div>
+      </div>
+    </details>
+
+    <h3>Hippocampus control — region vs. connection</h3>
+    <p>The same regression framework, but predicting memory from the <b>mean NODDI inside the hippocampus ROI itself</b> (hemisphere-matched, same covariates) instead of along the tract. This asks whether a memory signal is specific to the <em>pathway</em> or just reflects hippocampal <em>tissue</em>.</p>
+
+    <div class="callout">The findings live in the interactive site → <a href="results_explorer.html">Results browser</a> · <a href="data_quality.html">data quality</a> · <a href="hpc_region_vs_connection.html">hippocampus</a></div>
+  </div>
+</div>
+</body></html>

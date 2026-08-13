@@ -1,0 +1,280 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMPACT — Pipeline</title>
+<link rel="stylesheet" href="_pres.css">
+</head><body>
+<nav class="topnav">
+  <span class="brand">IMPACT · <span>VTA→HPC</span> &amp; Motivated Memory</span>
+  <a href="intro.html">Overview</a>
+  <a href="background.html">Background</a>
+  <a href="pipeline.html" class="active">Pipeline</a>
+  <a href="analyses.html">Analyses</a>
+  <a href="results_explorer.html" class="results">Results ↗</a>
+</nav>
+<div class="wrap">
+  <p class="eyebrow">02 · Pipeline</p>
+  <h1>From raw scans to tract microstructure</h1>
+  <p class="lead">Three stages: <b>preprocessing</b> (standard diffusion cleanup + fiber modeling), <b>tractography</b> (drawing the VTA→HPC tract, then cleaning it), and <b>microstructure</b> (FA + NODDI profiled along each tract). Every step is a command — expand for the rationale, key output, and script.</p>
+  <p class="mut" style="font-size:12.5px">57 subjects, run in parallel on the Temple cluster inside <span class="mono">tmux</span>. Full scripts + audits in the <a href="https://github.com/diffusiontensorimaging-repos/SDN-IMPACT-DTI">repo ReadMe</a> (Steps 1–30).</p>
+
+  <!-- ============ PREPROCESSING ============ -->
+  <details class="catgroup" open>
+    <summary><span class="cnum">A</span><span class="cname">Preprocessing</span><span class="cdesc">standard cleanup + fiber model · MRtrix / FSL / ANTs</span></summary>
+    <div class="catbody">
+    <p class="mut" style="font-size:12.5px;margin:6px 6px 2px">Customary diffusion preprocessing — the cleanup every DTI study runs before anything interesting. Concise here; none of it is the contribution.</p>
+
+    <div class="subhead">Clean the raw data</div>
+
+    <details class="step"><summary><span class="cmd">dcm2niix</span><span class="pkg">dcm2niix</span></summary>
+      <div class="stepbody">
+        <div class="block info"><div class="blabel">Info</div><p>Convert the scanner's raw DICOM to NIfTI. Only subjects with all four required scans (T1, diffusion, AP/PA fieldmaps) were kept.</p></div>
+        <div class="block output"><div class="blabel">Output</div><p>57 usable subjects; 5 dropped here for missing scans (s1253, s1476, s578, s820, s999-pilot).</p></div>
+        <div class="block"><div class="blabel">Script</div><pre>dcm2niix -o "$out/$target" -f "${subj}_${label}" "$scan_dir"</pre></div>
+      </div>
+    </details>
+
+    <details class="step"><summary><span class="cmd">antsBrainExtraction.sh</span><span class="pkg">ANTs</span></summary>
+      <div class="stepbody">
+        <div class="block info"><div class="blabel">Info</div><p>Skull-strip the T1 by warping a brain-only template onto each subject. Used the <b>NKI adult template</b> (appropriate for grown women). Every stripped brain eyeballed in FSLeyes.</p></div>
+        <div class="block"><div class="blabel">Script</div><pre>antsBrainExtraction.sh -d 3 -a "$T1" -e "$TEMPLATE" -m "$TEMPLATE_MASK" -o "$out/"</pre></div>
+      </div>
+    </details>
+
+    <details class="step"><summary><span class="cmd">topup</span><span class="pkg">FSL</span></summary>
+      <div class="stepbody">
+        <div class="block info"><div class="blabel">Info</div><p>Correct susceptibility distortion. Stack the first b=0 of the opposed AP/PA fieldmaps, then estimate the distortion field. Output feeds <span class="mono">eddy</span> so volumes get un-distorted in the same pass.</p></div>
+        <div class="block"><div class="blabel">Script</div><pre><span class="c"># build the AP/PA pair, then estimate the field</span>
+fslroi ${subj}_fmapAP a2p_b0 0 1 ; fslroi ${subj}_fmapPA p2a_b0 0 1
+fslmerge -t merged_b0s a2p_b0 p2a_b0
+topup --imain=merged_b0s --datain=acqp.txt --config=b02b0_1.cnf \
+      --out=${subj}_topup --iout=${subj}_topup_corrected_b0 --fout=${subj}_topup_fieldmap</pre></div>
+      </div>
+    </details>
+
+    <details class="step"><summary><span class="cmd">fslmaths -Tmean · bet</span><span class="pkg">FSL</span></summary>
+      <div class="stepbody">
+        <div class="block info"><div class="blabel">Info</div><p>Average the corrected b=0 volumes into a clean reference, then make a brain mask from it. Downstream steps compute only inside the mask.</p></div>
+        <div class="block"><div class="blabel">Script</div><pre>fslmaths ${subj}_topup_corrected_b0 -Tmean ${subj}_topup_Tmean
+bet ${subj}_topup_Tmean brain -m -f 0.2 -g 0.1 -R</pre></div>
+      </div>
+    </details>
+
+    <details class="step"><summary><span class="cmd">dwidenoise · mrdegibbs · dwiextract</span><span class="pkg">MRtrix3</span></summary>
+      <div class="stepbody">
+        <div class="block info"><div class="blabel">Info</div><p>Remove thermal noise (MP-PCA) and Gibbs ringing, then drop the unstable <b>b=250</b> shell (Olson-lab convention). Kept shells: 0, 1000, 2000, 3250, 5000.</p></div>
+        <div class="block"><div class="blabel">Script</div><pre>dwidenoise -mask brain_mask dwi denoised
+mrdegibbs denoised denoised_degibbs
+dwiextract denoised_degibbs -fslgrad bvec bval -shells 0,1000,2000,3250,5000 dwi_no_b250 \
+           -export_grad_fsl dwi_no_b250.bvec dwi_no_b250.bval</pre></div>
+      </div>
+    </details>
+
+    <details class="step"><summary><span class="cmd">eddy --repol</span><span class="pkg">FSL (+ QUAD/SQUAD)</span></summary>
+      <div class="stepbody">
+        <div class="block info"><div class="blabel">Info</div><p>The big correction: head motion, eddy-current distortion, and the TOPUP susceptibility field, all at once, with outlier-slice replacement (<span class="mono">--repol</span>). Three QC layers followed: <span class="mono">eddy_quad</span> (per-subject), <span class="mono">eddy_squad</span> (group), and a manual FSLeyes scroll-through.</p></div>
+        <div class="block output"><div class="blabel">Output</div><p>Motion low across the board — group mean absolute motion <b>0.27 mm</b>; exclusion rule was &gt;2 mm, nobody hit it. Per-subject <span class="mono">qc_mot_abs</span> becomes a covariate.</p></div>
+        <div class="block"><div class="blabel">Script</div><pre>eddy --imain=dwi_no_b250 --mask=brain_mask --acqp=acqp.txt --index=index.txt \
+     --bvecs=dwi_no_b250.bvec --bvals=dwi_no_b250.bval --topup=${subj}_topup \
+     --out=${subj}_eddy --repol --cnr_maps</pre></div>
+      </div>
+    </details>
+
+    <div class="subhead">Build the fiber model</div>
+
+    <details class="step"><summary><span class="cmd">dwiextract · dtifit</span><span class="pkg">MRtrix3 · FSL</span></summary>
+      <div class="stepbody">
+        <div class="block info"><div class="blabel">Info</div><p>Fit the diffusion tensor on the low shells (b=0,1000) → <b>FA</b> (and MD, RD). FA is one of the four microstructure metrics carried to the analyses.</p></div>
+        <div class="block"><div class="blabel">Script</div><pre>dwiextract data -fslgrad bvecs bvals -shells 0,1000 data_1000 -export_grad_fsl ...
+dtifit -k data_1000 -o DTI -m brain_mask -r bvecs_1000 -b bvals_1000
+fslmaths DTI_L2 -add DTI_L3 -div 2 DTI_RD</pre></div>
+      </div>
+    </details>
+
+    <details class="step"><summary><span class="cmd">flirt · convert_xfm</span><span class="pkg">FSL</span></summary>
+      <div class="stepbody">
+        <div class="block info"><div class="blabel">Info</div><p>Build the linear transforms between diffusion, T1, and MNI space, and invert the set. The one reused later is <b>str2diff</b> (T1→diffusion), to bring the ROIs into the DWI grid.</p></div>
+        <div class="block"><div class="blabel">Script</div><pre>flirt -in b0_brain -ref t1_brain -omat diff2str.mat -dof 6          <span class="c"># rigid</span>
+flirt -in t1_brain -ref MNI152_T1_2mm_brain -omat str2standard.mat -dof 12  <span class="c"># affine</span>
+convert_xfm -omat str2diff.mat -inverse diff2str.mat</pre></div>
+      </div>
+    </details>
+
+    <details class="step"><summary><span class="cmd">Atropos · fslstats -V</span><span class="pkg">ANTs · FSL</span></summary>
+      <div class="stepbody">
+        <div class="block info"><div class="blabel">Info</div><p>Estimate intracranial volume: segment the T1 into CSF/GM/WM and sum. <b>ICV</b> is a covariate so a finding isn't just "bigger heads."</p></div>
+        <div class="block"><div class="blabel">Script</div><pre>Atropos -d 3 -a brain -x mask -i KMeans[3] -o [seg.nii.gz,prob%02d.nii.gz]
+fslstats prob01 -V   <span class="c"># sum CSF+GM+WM = ICV</span></pre></div>
+      </div>
+    </details>
+
+    <details class="step"><summary><span class="cmd">mrconvert · dwi2response (dhollander)</span><span class="pkg">MRtrix3</span></summary>
+      <div class="stepbody">
+        <div class="block info"><div class="blabel">Info</div><p>Repackage into MRtrix <span class="mono">.mif</span> (gradients in the header), then estimate the single-fiber / GM / CSF <b>response functions</b> from each subject's own data (Dhollander, no atlas).</p></div>
+        <div class="block"><div class="blabel">Script</div><pre>mrconvert data.nii.gz -fslgrad bvecs bvals dwi.mif
+dwi2response dhollander dwi.mif wm_response.txt gm_response.txt csf_response.txt -mask mask.mif</pre></div>
+      </div>
+    </details>
+
+    <details class="step"><summary><span class="cmd">responsemean</span><span class="pkg">MRtrix3</span></summary>
+      <div class="stepbody">
+        <div class="block info"><div class="blabel">Info</div><p>Average every subject's three response functions into one shared group set — so later differences reflect biology, not per-subject response noise.</p></div>
+        <div class="block"><div class="blabel">Script</div><pre>responsemean */wm_response.txt group_wm_response.txt   <span class="c"># and gm, csf</span></pre></div>
+      </div>
+    </details>
+
+    <details class="step"><summary><span class="cmd">dwi2fod msmt_csd · mtnormalise</span><span class="pkg">MRtrix3</span></summary>
+      <div class="stepbody">
+        <div class="block info"><div class="blabel">Info</div><p>The core fiber model. <b>MSMT-CSD</b> (multi-shell multi-tissue constrained spherical deconvolution) turns each voxel's signal into an FOD; <span class="mono">mtnormalise</span> rescales them to be comparable across tissue and across people. The normalized WM FOD is the input to tractography.</p></div>
+        <div class="block"><div class="blabel">Script</div><pre>dwi2fod -mask mask.mif msmt_csd dwi.mif \
+        group_wm_response.txt wm_fod.mif group_gm_response.txt gm_fod.mif \
+        group_csf_response.txt csf_fod.mif
+mtnormalise wm_fod.mif wm_fod_norm.mif gm_fod.mif gm_fod_norm.mif \
+        csf_fod.mif csf_fod_norm.mif -mask mask.mif</pre></div>
+      </div>
+    </details>
+    </div>
+  </details>
+
+  <!-- ============ TRACTOGRAPHY ============ -->
+  <details class="catgroup">
+    <summary><span class="cnum">B</span><span class="cname">Tractography</span><span class="cdesc">draw the VTA→HPC tract, then clean it · MRtrix3 / ANTs / pyAFQ</span></summary>
+    <div class="catbody">
+    <p class="mut" style="font-size:12.5px;margin:6px 6px 2px">The hands-on core. Grow streamlines from the <b>VTA</b> to the <b>hippocampus</b> in each hemisphere, constrained to an anatomically plausible corridor, then prune outliers.</p>
+
+    <div class="callout" style="margin:10px 6px"><b>The three ROI inputs</b> (from Ranesh Mopuru, Olson lab; all MNI space).
+      <b>Seed</b> = VTA, Pauli atlas @ 25%. <b>Target</b> = hippocampus, Harvard–Oxford @ 50%.
+      <b>Tract atlas</b> = his VTA→HPC group mean (GroupMean_thr50), built from ~170 HCP 7T subjects — used to build the exclusion corridor below.</div>
+
+    <div class="subhead">Fiber drawing</div>
+
+    <details class="step"><summary><span class="cmd">antsRegistrationSyNQuick.sh</span><span class="pkg">ANTs (SyN)</span></summary>
+      <div class="stepbody">
+        <div class="block info"><div class="blabel">Info</div><p>ROIs live in MNI; tracking happens in each subject's diffusion space. First a <b>nonlinear</b> (SyN) warp MNI→T1 — needed because our T1s aren't already diffusion-aligned, unlike the HCP data the atlas came from.</p></div>
+        <div class="block"><div class="blabel">Script</div><pre>antsRegistrationSyNQuick.sh -d 3 -f ${subj}_T1_brain -m MNI152_T1_1mm_brain -o reg/mni2t1_</pre></div>
+      </div>
+    </details>
+
+    <details class="step"><summary><span class="cmd">antsApplyTransforms · flirt</span><span class="pkg">ANTs · FSL</span></summary>
+      <div class="stepbody">
+        <div class="block info"><div class="blabel">Info</div><p>Push all six ROIs (VTA, HPC, tract atlas × L/R) MNI→T1→diffusion, chaining the SyN warp then the <b>str2diff</b> matrix. Nearest-neighbor interpolation (binary masks), re-binarized after. Visually QC'd on the diffusion image.</p></div>
+        <div class="block"><div class="blabel">Script</div><pre>antsApplyTransforms -d 3 -i roi_mni -r t1_brain -o roi_t1 \
+    -t mni2t1_1Warp.nii.gz -t mni2t1_0GenericAffine.mat -n NearestNeighbor
+flirt -in roi_t1 -ref diff_ref -applyxfm -init str2diff.mat -out roi_diff -interp nearestneighbour
+fslmaths roi_diff -thr 0.5 -bin roi_diff</pre></div>
+      </div>
+    </details>
+
+    <details class="step"><summary><span class="cmd">fslmaths — exclusion mask</span><span class="pkg">FSL</span></summary>
+      <div class="stepbody">
+        <div class="block info"><div class="blabel">Info</div><p>Ranesh's original pipeline used 13 separate anatomical exclusion ROIs. His approved shortcut: take the group tract atlas, <b>dilate</b> 2 voxels into a corridor, add VTA + HPC, <b>invert</b> → one exclusion mask per hemisphere (allowed = corridor, excluded = everything else). This single mask is what lets us drop the FOD cutoff so low (next step).</p></div>
+        <div class="block output"><div class="blabel">Output</div><p>57/57 pass all 7 audit checks. Inclusion corridor ≈ 1,526–1,934 voxels (mean ~1,720) — a narrow, consistent VTA→HPC corridor. VTA and HPC fully contained.</p></div>
+        <div class="block"><div class="blabel">Script</div><pre><span class="c"># per hemisphere (left shown; right identical with r_ inputs)</span>
+fslmaths left_tract_atlas_diff -dilM -dilM l_atlas_dilated        <span class="c"># widen corridor 2 voxels</span>
+fslmaths l_atlas_dilated -add left_VTA_diff -add left_HPC_diff -bin l_inclusion_zone
+fslmaths l_inclusion_zone -binv exclusion_mask_l                  <span class="c"># invert: outside = excluded</span></pre></div>
+      </div>
+    </details>
+
+    <details class="step"><summary><span class="cmd">tckgen — FOD-cutoff test (5 subjects)</span><span class="pkg">MRtrix3</span></summary>
+      <div class="stepbody">
+        <div class="block info"><div class="blabel">Info</div><p>The one tuned parameter: the FOD amplitude <b>cutoff</b> (when tracking stops). Ranesh used 0.06 at 7T; 3T is noisier, so we tested 0.1 / 0.08 / 0.06 / 0.01 on 5 pilot subjects × both hemispheres. Because the exclusion corridor already constrains tracking, the usual downside of a low cutoff (spurious fibers) doesn't apply — so we could go lower than expected.</p></div>
+        <div class="block output"><div class="blabel">Output — streamlines hit (target 1000)</div>
+          <table class="dtable"><thead><tr><th>cutoff</th><th>runs hitting 1000</th><th>note</th></tr></thead><tbody>
+          <tr><td>0.1</td><td>2 / 10</td><td>too strict for 3T</td></tr>
+          <tr><td>0.08</td><td>~5 / 10</td><td>inconsistent (s606 L = 309)</td></tr>
+          <tr><td>0.06</td><td>10 / 10</td><td>reliable</td></tr>
+          <tr><td><b>0.01</b></td><td><b>10 / 10</b></td><td>reliable + ~5× more seed-efficient</td></tr>
+          </tbody></table>
+          <p style="margin-top:8px">Paths virtually identical to 0.06 (same VTA→HPC arc; length ~44 vs ~47 mm). 0.01 gives a slightly thicker TDI — which <b>cleaning tightens below the 0.06 bundle anyway</b>. <b>Chose 0.01</b>; Ranesh confirmed it's robust with the atlas mask.</p>
+        </div>
+        <div class="block"><div class="blabel">Script</div><pre><span class="c"># looped over cutoff ∈ {0.1, 0.08, 0.06, 0.01}, both hemispheres, 5 subjects</span>
+tckgen wm_fod_norm.mif l_vta_l_hipp_${cutoff}.tck \
+    -seed_image left_VTA_diff.nii.gz -seed_unidirectional \
+    -include  left_HPC_diff.nii.gz \
+    -exclude  exclusion_mask_l.nii.gz \
+    -select 1000 -seeds 5000000 -cutoff $cutoff \
+    -minlength 35 -maxlength 65 -stop -nthreads 8</pre></div>
+      </div>
+    </details>
+
+    <details class="step"><summary><span class="cmd">tckgen — full run (all 57)</span><span class="pkg">MRtrix3</span></summary>
+      <div class="stepbody">
+        <div class="block info"><div class="blabel">Info</div><p>Same command at production budget: <b>2,500 streamlines</b> from up to <b>25M</b> seed attempts, cutoff 0.01. Later added an <b>anterior</b> VTA→HPC tract with a second atlas Ranesh provided — identical pipeline — giving <b>4 tracts</b>: posterior L/R and anterior L/R.</p></div>
+        <div class="block output"><div class="blabel">Output</div><p>All 114 posterior tracts (57 × 2) reached the full 2,500 streamlines; all 114 anterior masks/tracts passed QC. Four tracts per subject.</p></div>
+        <div class="block"><div class="blabel">Script</div><pre>tckgen wm_fod_norm.mif l_vta_l_hipp_0.01.tck \
+    -seed_image left_VTA_diff -seed_unidirectional -include left_HPC_diff \
+    -exclude exclusion_mask_l -select 2500 -seeds 25000000 \
+    -cutoff 0.01 -minlength 35 -maxlength 65 -stop</pre></div>
+      </div>
+    </details>
+
+    <div class="subhead">Cleaning</div>
+
+    <details class="step"><summary><span class="cmd">clean_bundle (Mahalanobis)</span><span class="pkg">pyAFQ</span></summary>
+      <div class="stepbody">
+        <div class="block info"><div class="blabel">Info</div><p>Prune anatomically weird streamlines by <b>Mahalanobis distance</b> — anything &gt;3 SD from the bundle's core shape, or &gt;2 SD off in length, dropped over 5 rounds. Ported from Ranesh's cleaning script.</p></div>
+        <div class="block output"><div class="blabel">Output</div><p>Retention ~30–45% of streamlines; the rest trimmed as outliers. Cleaned bundles are tighter than the conservative-0.06 version — confirming the low cutoff cost nothing.</p></div>
+        <div class="block"><div class="blabel">Script</div><pre>sft = load_tractogram(in_tck, ref_img, bbox_valid_check=False)
+cleaned_sft, idx = clean_bundle(
+    sft, n_points=100, clean_rounds=5,
+    distance_threshold=3,   <span class="c"># 3 SD Mahalanobis</span>
+    length_threshold=2,     <span class="c"># 2 SD from mean length</span>
+    stat='mean', return_idx=True)</pre></div>
+      </div>
+    </details>
+
+    <details class="step"><summary><span class="cmd">tckmap — visual QC</span><span class="pkg">MRtrix3</span></summary>
+      <div class="stepbody">
+        <div class="block info"><div class="blabel">Info</div><p>For every cleaned tract, a <b>TDI</b> (track-density heatmap) overlaid on the b=0 to eyeball the shape; auto-flags catch anything too sparse or too diffuse.</p></div>
+        <div class="block output"><div class="blabel">Output</div><p>All tracts passed and show the expected VTA→hippocampus arc. See the <a href="results_explorer.html">Results browser</a> for per-subject renders.</p></div>
+        <div class="block"><div class="blabel">Script</div><pre>tckmap cleaned.tck tdi.nii.gz -template left_VTA_diff.nii.gz</pre></div>
+      </div>
+    </details>
+    </div>
+  </details>
+
+  <!-- ============ MICROSTRUCTURE ============ -->
+  <details class="catgroup">
+    <summary><span class="cnum">C</span><span class="cname">Microstructure</span><span class="cdesc">FA + NODDI along each tract · dipy / AMICO</span></summary>
+    <div class="catbody">
+    <p class="mut" style="font-size:12.5px;margin:6px 6px 2px">Measure the tissue along each tract — not one number per tract, but a 100-point <b>profile</b> from the VTA end to the hippocampus end. Four metrics: FA (tensor) + NDI, ODI, FWF (NODDI).</p>
+
+    <details class="step"><summary><span class="cmd">afq_profile — FA</span><span class="pkg">dipy</span></summary>
+      <div class="stepbody">
+        <div class="block info"><div class="blabel">Info</div><p>Sample FA at <b>100 nodes</b> evenly spaced along the tract. Every streamline is oriented the same way (so node 1 is always the same end), resampled to 100 points, and Gaussian-weighted (core streamlines count more). Analyses use the middle nodes (~25–75); the ends are dropped for partial-volume contamination. Ported from Ranesh's <span class="mono">nodewise_noddi.py</span>.</p></div>
+        <div class="block"><div class="blabel">Script</div><pre>oriented = orient_by_streamline(streamlines, quickbundles_centroid)
+fa = afq_profile(FA_map, oriented, affine, nb_points=100,
+                 weights=gaussian_weights(oriented))</pre></div>
+      </div>
+    </details>
+
+    <details class="step"><summary><span class="cmd">NODDI fit (modulated maps)</span><span class="pkg">AMICO</span></summary>
+      <div class="stepbody">
+        <div class="block info"><div class="blabel">Info</div><p>Fit NODDI on all shells, giving three interpretable maps per voxel: <b>NDI</b> (neurite density), <b>ODI</b> (orientation dispersion), <b>FWF</b> (free-water fraction). Saved the <b>modulated</b> NDI/ODI (partial-volume-corrected, per Parker 2021) — the version Ranesh used.</p></div>
+        <div class="block"><div class="blabel">Script</div><pre>amico.util.fsl2scheme(bvals, bvecs, bStep=200)
+<span class="c"># NODDI fit: b0_thr=100, doSaveModulatedMaps=True</span>
+<span class="c"># → fit_NDI_modulated, fit_ODI_modulated, fit_FWF</span></pre></div>
+      </div>
+    </details>
+
+    <details class="step"><summary><span class="cmd">afq_profile — NDI · ODI · FWF</span><span class="pkg">dipy</span></summary>
+      <div class="stepbody">
+        <div class="block info"><div class="blabel">Info</div><p>The FA-profiling step again, on the three NODDI maps. This produces the main microstructure measurements the statistics use: per subject, per tract, per metric — a 100-node profile.</p></div>
+        <div class="block output"><div class="blabel">Output</div><p>16 tidy tables (4 tracts × 4 metrics); each row a subject, 100 node columns. These feed the <a href="analyses.html">analyses</a>.</p></div>
+        <div class="block"><div class="blabel">Script</div><pre><span class="c"># same orient + gaussian-weighted afq_profile, applied to</span>
+<span class="c"># fit_NDI_modulated / fit_ODI_modulated / fit_FWF</span></pre></div>
+      </div>
+    </details>
+
+    <details class="step"><summary><span class="cmd">fslstats -k HPC -M</span><span class="pkg">FSL</span></summary>
+      <div class="stepbody">
+        <div class="block info"><div class="blabel">Info</div><p>One extra measurement for a control analysis: the <b>mean NODDI inside the hippocampus ROI itself</b> (the region, not the pathway). Same Harvard–Oxford hippocampus, warped to diffusion space. Lets us ask whether memory tracks the <em>tract</em> specifically or just hippocampal <em>tissue</em> in general.</p></div>
+        <div class="block"><div class="blabel">Script</div><pre>fslstats fit_NDI_modulated.nii.gz -k left_HPC_diff.nii.gz -M   <span class="c"># mean NDI in L hippocampus; same ODI, FWF, L/R</span></pre></div>
+      </div>
+    </details>
+    </div>
+  </details>
+
+  <div class="callout" style="margin-top:22px">Next: <a href="analyses.html">how memory is scored, and how it's tested against the tract →</a></div>
+</div>
+</body></html>
