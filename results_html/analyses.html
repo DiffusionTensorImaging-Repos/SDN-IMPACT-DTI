@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>IMPACT — Analyses</title>
+<title>IMPACT · Analyses</title>
 <link rel="stylesheet" href="_pres.css">
 </head><body>
 <nav class="topnav">
@@ -12,87 +12,94 @@
   <a href="results_explorer.html" class="results">Results ↗</a>
 </nav>
 <div class="wrap">
-  <p class="eyebrow">03 · Analyses</p>
-  <h1>Scoring memory, and testing it against the tract</h1>
+  <h1>Analyses</h1>
   <p class="lead">Two parts: how the memory outcomes are built from the recognition task, and how each is tested against the along-tract microstructure.</p>
 
   <!-- ============ 1 · CALCULATING MEMORY ============ -->
-  <div class="section">
-    <h2>1 · Calculating memory</h2>
-    <p>From the feedback task's encoding + recall, each mother gets, <b>per condition</b> (social faces / monetary doors): one accuracy score and two positivity-bias scores.</p>
+  <h2>1 · Calculating memory</h2>
+  <p>From the feedback task, each mother gets, per condition (social faces, monetary doors), one accuracy score and two positivity-bias scores.</p>
 
-    <h3>Accuracy — d′</h3>
-    <div class="formula"><span class="lbl">d′</span> = z(hit rate) − z(false-alarm rate)<br><span class="note">signal-detection accuracy; z = inverse-normal. Higher = better discrimination of seen vs. unseen items.</span></div>
-    <p>Recomputed from raw trials as a transparency check — matched the study's export closely (social r ≈ 0.96, monetary r ≈ 0.99), confirming a clean, standard recognition d′.</p>
+  <h3>Accuracy: d′</h3>
+  <div class="formula"><span class="lbl">d′</span> = z(hit rate) − z(false-alarm rate)<br><span class="note">signal-detection accuracy; z is the inverse-normal. Higher means better discrimination of seen from unseen items.</span></div>
+  <p>Recomputed from raw trials as a transparency check. It matched the study's export closely (social r = 0.96, monetary r = 0.99), so this is a clean, standard recognition d′.</p>
 
-    <h3>Positivity bias — two scores</h3>
-    <div class="two">
-      <div class="formula"><span class="lbl">HitRateBias</span><br>= TrueMem<sub>pos</sub>/Total<sub>pos</sub> − TrueMem<sub>neg</sub>/Total<sub>neg</sub><br><span class="note">positivity skew in <b>correct</b> memories</span></div>
-      <div class="formula"><span class="lbl">FABias</span><br>= FalseMem<sub>pos</sub>/Total<sub>pos</sub> − FalseMem<sub>neg</sub>/Total<sub>neg</sub><br><span class="note">positivity skew in <b>false</b> memories</span></div>
-    </div>
-    <p class="small">Zero-valence rule: a term whose denominator is 0 (a mother who produced no memories of one valence) is set to 0, giving her a defined, maximally-positive score rather than dropping her. Affects only those subjects; compliance is screened first, so it never rescues a yes-to-everything responder.</p>
-
-    <h3>The scores, across mothers</h3>
-    <table class="dtable"><thead><tr><th>Score</th><th>Social — M ± SD</th><th>Monetary — M ± SD</th><th>n</th></tr></thead><tbody>
-      <tr><td>d′ (accuracy)</td><td>0.10 ± 0.29</td><td>0.22 ± 0.33</td><td>52 / 53</td></tr>
-      <tr><td>HitRateBias</td><td>+0.12 ± 0.19</td><td>+0.12 ± 0.16</td><td>52 / 53</td></tr>
-      <tr><td>FABias</td><td>+0.07 ± 0.19</td><td>+0.07 ± 0.16</td><td>52 / 53</td></tr>
-    </tbody></table>
-    <p class="small">Both bias scores are positive in both domains — a consistent positivity skew in what these mothers remember.</p>
-
-    <h3>Why monetary d′ &gt; social d′ — it's a false-alarm story</h3>
-    <p>The conditions differ in accuracy (0.22 vs 0.10), but not where you'd think. <b>Hit rates are equal</b>; mothers simply <b>false-alarm more to social faces</b> — saying "remember" to faces they never saw — which drags social d′ down. The monetary "advantage" is really social recognition being pulled down by positively-skewed false memories.</p>
-    <table class="dtable"><thead><tr><th>Component</th><th>Social</th><th>Monetary</th><th>diff</th><th>p</th></tr></thead><tbody>
-      <tr><td>Hit rate</td><td>0.560</td><td>0.539</td><td>+0.021</td><td>0.40</td></tr>
-      <tr><td>False-alarm rate</td><td>0.527</td><td>0.460</td><td>+0.067</td><td class="sig">0.008</td></tr>
-      <tr><td>d′</td><td>0.098</td><td>0.218</td><td>−0.119</td><td>0.073</td></tr>
-    </tbody></table>
-    <p class="small">Paired t-tests, n = 52.</p>
-
-    <h3>How the scores relate</h3>
-    <table class="dtable"><thead><tr><th>Pair</th><th>r</th><th>p</th><th>reading</th></tr></thead><tbody>
-      <tr><td>Social d′ × Monetary d′</td><td>−0.15</td><td>0.29</td><td>independent — not one "good memory" factor</td></tr>
-      <tr><td>HitRateBias: social × monetary</td><td class="sig">+0.40</td><td class="sig">0.004</td><td>positivity in correct memories is trait-like across domains</td></tr>
-      <tr><td>Social d′ × Social HitRateBias</td><td>+0.28</td><td>0.043</td><td>better social accuracy ↔ more positive correct memories</td></tr>
-      <tr><td>d′ × FABias (within domain)</td><td>≈ −0.13</td><td>ns</td><td>accuracy unrelated to false-memory skew</td></tr>
-    </tbody></table>
-    <p class="small">Pearson, n = 52. The social/monetary independence is what makes monetary a clean within-subject specificity control.</p>
+  <h3>Positivity bias: two scores</h3>
+  <div class="two">
+    <div class="formula"><span class="lbl">HitRateBias</span><br>= TrueMem<sub>pos</sub>/Total<sub>pos</sub> − TrueMem<sub>neg</sub>/Total<sub>neg</sub><br><span class="note">positivity skew in <b>correct</b> memories</span></div>
+    <div class="formula"><span class="lbl">FABias</span><br>= FalseMem<sub>pos</sub>/Total<sub>pos</sub> − FalseMem<sub>neg</sub>/Total<sub>neg</sub><br><span class="note">positivity skew in <b>false</b> memories</span></div>
   </div>
+  <p class="small">Zero-valence rule: a term whose denominator is 0 (a mother who produced no memories of one valence) is set to 0, giving her a defined, maximally-positive score rather than dropping her. It changes only those subjects. Compliance is screened first, so it never rescues a yes-to-everything responder.</p>
+
+  <h3>The scores across mothers</h3>
+  <table class="dtable"><thead><tr><th>Score</th><th>Social, M ± SD</th><th>Monetary, M ± SD</th><th>n</th></tr></thead><tbody>
+    <tr><td>d′ (accuracy)</td><td>0.10 ± 0.29</td><td>0.22 ± 0.33</td><td>52 / 53</td></tr>
+    <tr><td>HitRateBias</td><td>+0.12 ± 0.19</td><td>+0.12 ± 0.16</td><td>52 / 53</td></tr>
+    <tr><td>FABias</td><td>+0.07 ± 0.19</td><td>+0.07 ± 0.16</td><td>52 / 53</td></tr>
+  </tbody></table>
+  <p class="small">Both bias scores are positive in both domains: a consistent positivity skew in what these mothers remember.</p>
+
+  <h3>Is memory above chance?</h3>
+  <p>Each d′ tested against 0 (a one-sample t-test).</p>
+  <table class="dtable"><thead><tr><th>Condition</th><th>mean d′</th><th>t vs 0</th><th>p</th><th>verdict</th></tr></thead><tbody>
+    <tr><td>Social</td><td>+0.098</td><td>2.47</td><td class="sig">0.017</td><td>above chance</td></tr>
+    <tr><td>Monetary</td><td>+0.215</td><td>4.77</td><td class="sig">&lt;0.001</td><td>above chance</td></tr>
+  </tbody></table>
+  <p>Both are above chance. Social and monetary d′ are also uncorrelated at the subject level (r = -0.15, p = 0.29): they are distinct abilities, not two views of one signal. That independence is what makes the monetary condition a clean within-subject control.</p>
+
+  <h3>Why is social d′ lower than monetary?</h3>
+  <p>d′ has two ingredients: the hit rate (memory strength) and the false-alarm rate (false positives). Splitting them shows the difference is entirely in false alarms.</p>
+  <table class="dtable"><thead><tr><th>Component</th><th>Social</th><th>Monetary</th><th>diff (S−M)</th><th>paired test</th><th>differ?</th></tr></thead><tbody>
+    <tr><td>Hit rate</td><td>0.560</td><td>0.539</td><td>+0.021</td><td>t=0.86, p=0.395</td><td>no</td></tr>
+    <tr><td>False-alarm rate</td><td>0.527</td><td>0.460</td><td>+0.067</td><td>t=2.77, p=0.008</td><td class="sig">yes</td></tr>
+    <tr><td>d′</td><td>0.098</td><td>0.218</td><td>−0.119</td><td>t=−1.83, p=0.073</td><td>no</td></tr>
+  </tbody></table>
+  <p class="small">Paired t-tests, n = 52.</p>
+  <p>Social and monetary items are remembered equally well; hit rates are essentially identical (0.56 vs 0.54, p = 0.40). The only difference is that the social task produces significantly more false alarms (0.527 vs 0.460, p = 0.008): mothers more often falsely remember social faces they never chose. So the lower social d′ is not weaker memory, it is more false positives.</p>
+  <div class="callout">This is the same phenomenon the tract results are about. The robust VTA→HPC effect is on <b>social positivity bias in false memories</b>, and here, at the behavioural level, false memories are exactly what distinguishes the social task. Memory strength is matched across domains; the social signal lives on the false-alarm side.</div>
+
+  <h3>How the scores relate</h3>
+  <table class="dtable"><thead><tr><th>Pair</th><th>r</th><th>p</th><th>reading</th></tr></thead><tbody>
+    <tr><td>Social d′ × Monetary d′</td><td>-0.15</td><td>0.29</td><td>independent abilities</td></tr>
+    <tr><td>HitRateBias: social × monetary</td><td class="sig">+0.40</td><td class="sig">0.004</td><td>positivity in correct memories is trait-like across domains</td></tr>
+    <tr><td>Social d′ × Social HitRateBias</td><td>+0.28</td><td>0.043</td><td>better social accuracy goes with more positive correct memories</td></tr>
+    <tr><td>d′ × FABias (within domain)</td><td>≈ -0.13</td><td>ns</td><td>accuracy unrelated to false-memory skew</td></tr>
+  </tbody></table>
+  <p class="small">Pearson, n = 52.</p>
 
   <!-- ============ 2 · ANALYSES ============ -->
-  <div class="section">
-    <h2>2 · Analyses</h2>
-    <p>Six outcomes (social/monetary × d′, HitRateBias, FABias) tested against each tract's along-node microstructure, for all four metrics.</p>
+  <h2>2 · Analyses</h2>
+  <p>Six outcomes (social and monetary × d′, HitRateBias, FABias) tested against each tract's along-node microstructure, for all four metrics, plus a hippocampus-region control.</p>
 
-    <h3>Model, per node</h3>
-    <p>At <b>each of the 100 nodes</b>, a linear model of the outcome on that node's microstructure value plus five nuisance covariates — <b>ICV</b>, <b>tract streamline count</b> and <b>mean length</b> (so a result isn't just "bigger/denser tract"), <b>head motion</b>, and <b>maternal age</b>:</p>
-    <div class="formula"><span class="lbl">full</span>&nbsp;&nbsp;&nbsp; y ~ node + ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age<br><span class="lbl">reduced</span>&nbsp; y ~ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age</div>
+  <h3>Model, per node</h3>
+  <p>At each of the 100 nodes, a linear model of the outcome on that node's microstructure value plus five nuisance covariates: ICV, tract streamline count and mean length (so a result is not just a bigger or denser tract), head motion, and maternal age.</p>
+  <div class="formula"><span class="lbl">full</span>&nbsp;&nbsp;&nbsp; y ~ node + ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age<br><span class="lbl">reduced</span>&nbsp; y ~ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age</div>
 
-    <h3>Correction — cluster-extent FWE by permutation</h3>
-    <p>Neighboring significant nodes form a <b>cluster</b>. To keep testing 100 nodes from inflating false positives, the null is built by <b>Freedman–Lane</b> permutation: take the reduced model's residuals, shuffle them, re-run all 100 nodes — <b>5,000 times</b> — recording the largest chance cluster each time. An observed cluster counts only if it beats 95% of those. Run across <b>6 outcomes × 4 tracts × 4 metrics = 96 analyses</b>, one core each on the cluster.</p>
-
-    <details class="step"><summary><span class="cmd">permutation_one.R</span><span class="pkg">R</span></summary>
-      <div class="stepbody">
-        <div class="block info"><div class="blabel">Info</div><p>Ported from Ranesh's permutation script. Node-wise t on the tract term, cluster-forming at p&lt;0.05, Freedman–Lane null over 5,000 shuffles, cluster-extent FWE.</p></div>
-        <div class="block"><div class="blabel">Script (core)</div><pre><span class="c"># for each node: fit full vs reduced, record t on the node term</span>
+  <h3>Correction: cluster-extent FWE by permutation</h3>
+  <p>Neighboring significant nodes form a cluster. To keep 100 tests from inflating false positives, the null is built by Freedman-Lane permutation: take the reduced model's residuals, shuffle them, re-run all 100 nodes, 5,000 times, recording the largest chance cluster each time. An observed cluster counts only if it beats 95% of those. Run across 6 outcomes × 4 tracts × 4 metrics = 96 analyses, one core each.</p>
+  <details class="drawer" style="margin:8px 0"><summary>permutation_one.R (core)</summary><div class="drawerbody"><pre><span class="c"># for each node: fit full vs reduced, record t on the node term</span>
 full    &lt;- lm(y ~ node + ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age)
 reduced &lt;- lm(y ~        ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age)
 
 <span class="c"># observed clusters = runs of adjacent nodes with p &lt; 0.05</span>
-<span class="c"># Freedman–Lane null:</span>
+<span class="c"># Freedman-Lane null:</span>
 res  &lt;- residuals(reduced)
 for (i in 1:5000) {
   y_perm &lt;- fitted(reduced) + sample(res)      <span class="c"># shuffle reduced-model residuals</span>
   <span class="c"># re-fit all 100 nodes, record size of largest chance cluster</span>
 }
-<span class="c"># p_FWE = fraction of permuted max-clusters ≥ observed cluster size</span></pre></div>
-      </div>
-    </details>
+<span class="c"># p_FWE = fraction of permuted max-clusters >= observed cluster size</span></pre></div></details>
 
-    <h3>Hippocampus control — region vs. connection</h3>
-    <p>The same regression framework, but predicting memory from the <b>mean NODDI inside the hippocampus ROI itself</b> (hemisphere-matched, same covariates) instead of along the tract. This asks whether a memory signal is specific to the <em>pathway</em> or just reflects hippocampal <em>tissue</em>.</p>
+  <h3>Hippocampus control: region vs. connection</h3>
+  <p>The same framework, but predicting memory from the mean NODDI inside the hippocampus ROI itself (hemisphere-matched, same covariates) instead of along the tract. This asks whether a memory signal is specific to the pathway or just reflects hippocampal tissue.</p>
 
-    <div class="callout">The findings live in the interactive site → <a href="results_explorer.html">Results browser</a> · <a href="data_quality.html">data quality</a> · <a href="hpc_region_vs_connection.html">hippocampus</a></div>
-  </div>
+  <h3>What the tests show</h3>
+  <p>Full detail, all 96 tests, is in the <a href="results_explorer.html">Results browser</a>. The headline:</p>
+  <ul>
+    <li><b>Social positivity bias in false memories (FABias) is the robust effect.</b> It is significant across FA, NDI, ODI, and FWF, in both hemispheres and both the anterior and posterior tract, strongest on the right. Higher FABias goes with lower FA, NDI, and ODI and higher FWF.</li>
+    <li><b>Social d′ tracks neurite density (NDI), on the left.</b> The same left-NDI signal appears in the tract (p = 0.003) and in the hippocampus region itself (β = +0.089, p = 0.039). The region control says this is a neurite-density effect the circuit shares, not generic hippocampal tissue.</li>
+    <li><b>Monetary is essentially null</b> (one isolated cluster), consistent with the within-subject control doing its job.</li>
+  </ul>
+
+  <p class="small" style="margin-top:24px">See it interactively: <a href="results_explorer.html">Results browser</a> · <a href="data_quality.html">data quality</a> · <a href="hpc_region_vs_connection.html">hippocampus</a></p>
 </div>
 </body></html>

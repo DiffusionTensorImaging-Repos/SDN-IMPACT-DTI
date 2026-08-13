@@ -1,6 +1,6 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>IMPACT — Pipeline</title>
+<title>IMPACT · Pipeline</title>
 <link rel="stylesheet" href="_pres.css">
 </head><body>
 <nav class="topnav">
@@ -12,269 +12,2160 @@
   <a href="results_explorer.html" class="results">Results ↗</a>
 </nav>
 <div class="wrap">
-  <p class="eyebrow">02 · Pipeline</p>
-  <h1>From raw scans to tract microstructure</h1>
-  <p class="lead">Three stages: <b>preprocessing</b> (standard diffusion cleanup + fiber modeling), <b>tractography</b> (drawing the VTA→HPC tract, then cleaning it), and <b>microstructure</b> (FA + NODDI profiled along each tract). Every step is a command — expand for the rationale, key output, and script.</p>
-  <p class="mut" style="font-size:12.5px">57 subjects, run in parallel on the Temple cluster inside <span class="mono">tmux</span>. Full scripts + audits in the <a href="https://github.com/diffusiontensorimaging-repos/SDN-IMPACT-DTI">repo ReadMe</a> (Steps 1–30).</p>
+  <h1>Pipeline</h1>
+  <p class="lead">Preprocessing, tractography, and microstructure. Each command has two buttons: the script that ran, and its outputs (decisions, results, figures).</p>
+  <p class="small">57 subjects, run in parallel on the Temple cluster inside tmux. Scripts are verbatim from the project <a href="https://github.com/DiffusionTensorImaging-Repos/SDN-IMPACT-DTI">ReadMe</a> (Steps 1–30); audit blocks omitted.</p>
 
-  <!-- ============ PREPROCESSING ============ -->
-  <details class="catgroup" open>
-    <summary><span class="cnum">A</span><span class="cname">Preprocessing</span><span class="cdesc">standard cleanup + fiber model · MRtrix / FSL / ANTs</span></summary>
-    <div class="catbody">
-    <p class="mut" style="font-size:12.5px;margin:6px 6px 2px">Customary diffusion preprocessing — the cleanup every DTI study runs before anything interesting. Concise here; none of it is the contribution.</p>
+  <details class="catgroup" open><summary><span class="cname">Preprocessing</span><span class="cdesc">standard cleanup + fiber model · MRtrix / FSL / ANTs</span></summary><div class="catbody"><div class="subhead">Clean the raw data</div><div class="step"><div class="stephead"><span class="cmd">dcm2niix</span><span class="pkg">dcm2niix</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+<span class="c"># ============================================================</span>
+<span class="c"># DICOM → NIfTI conversion for IMPACT (DTI pipeline)</span>
+<span class="c"># With subject-prefixed filenames + logging</span>
+<span class="c"># ============================================================</span>
 
-    <div class="subhead">Clean the raw data</div>
+base_dir=&quot;/data/projects/STUDIES/IMPACT/fMRI/dicoms&quot;
+out_base=&quot;/data/projects/STUDIES/IMPACT/DTI/NIFTI&quot;
+dcm2niix_bin=&quot;/usr/bin/dcm2niix&quot;   # confirmed path on cluster
 
-    <details class="step"><summary><span class="cmd">dcm2niix</span><span class="pkg">dcm2niix</span></summary>
-      <div class="stepbody">
-        <div class="block info"><div class="blabel">Info</div><p>Convert the scanner's raw DICOM to NIfTI. Only subjects with all four required scans (T1, diffusion, AP/PA fieldmaps) were kept.</p></div>
-        <div class="block output"><div class="blabel">Output</div><p>57 usable subjects; 5 dropped here for missing scans (s1253, s1476, s578, s820, s999-pilot).</p></div>
-        <div class="block"><div class="blabel">Script</div><pre>dcm2niix -o "$out/$target" -f "${subj}_${label}" "$scan_dir"</pre></div>
-      </div>
-    </details>
+<span class="c"># Required scan patterns (pattern:output_dir:label)</span>
+scan_types=(
+    &quot;anat_T1w_acq_mpgSag:struct:struct&quot;
+    &quot;cmrr_mb3hydi_ipat2_64ch:dti:dwi&quot;
+    &quot;cmrr_fieldmapse_ap:dti:fmapAP&quot;
+    &quot;cmrr_fieldmapse_pa:dti:fmapPA&quot;
+)
 
-    <details class="step"><summary><span class="cmd">antsBrainExtraction.sh</span><span class="pkg">ANTs</span></summary>
-      <div class="stepbody">
-        <div class="block info"><div class="blabel">Info</div><p>Skull-strip the T1 by warping a brain-only template onto each subject. Used the <b>NKI adult template</b> (appropriate for grown women). Every stripped brain eyeballed in FSLeyes.</p></div>
-        <div class="block"><div class="blabel">Script</div><pre>antsBrainExtraction.sh -d 3 -a "$T1" -e "$TEMPLATE" -m "$TEMPLATE_MASK" -o "$out/"</pre></div>
-      </div>
-    </details>
+<span class="c"># Log file (always overwrite dcm2niix.log)</span>
+logfile=&quot;dcm2niix.log&quot;
+: &gt; &quot;$logfile&quot;
 
-    <details class="step"><summary><span class="cmd">topup</span><span class="pkg">FSL</span></summary>
-      <div class="stepbody">
-        <div class="block info"><div class="blabel">Info</div><p>Correct susceptibility distortion. Stack the first b=0 of the opposed AP/PA fieldmaps, then estimate the distortion field. Output feeds <span class="mono">eddy</span> so volumes get un-distorted in the same pass.</p></div>
-        <div class="block"><div class="blabel">Script</div><pre><span class="c"># build the AP/PA pair, then estimate the field</span>
-fslroi ${subj}_fmapAP a2p_b0 0 1 ; fslroi ${subj}_fmapPA p2a_b0 0 1
-fslmerge -t merged_b0s a2p_b0 p2a_b0
-topup --imain=merged_b0s --datain=acqp.txt --config=b02b0_1.cnf \
-      --out=${subj}_topup --iout=${subj}_topup_corrected_b0 --fout=${subj}_topup_fieldmap</pre></div>
-      </div>
-    </details>
+<span class="c"># Simple logger: prints to screen AND appends to logfile</span>
+log() { echo &quot;$*&quot; | tee -a &quot;$logfile&quot; ; }
 
-    <details class="step"><summary><span class="cmd">fslmaths -Tmean · bet</span><span class="pkg">FSL</span></summary>
-      <div class="stepbody">
-        <div class="block info"><div class="blabel">Info</div><p>Average the corrected b=0 volumes into a clean reference, then make a brain mask from it. Downstream steps compute only inside the mask.</p></div>
-        <div class="block"><div class="blabel">Script</div><pre>fslmaths ${subj}_topup_corrected_b0 -Tmean ${subj}_topup_Tmean
-bet ${subj}_topup_Tmean brain -m -f 0.2 -g 0.1 -R</pre></div>
-      </div>
-    </details>
+log &quot;=== Starting DICOM → NIfTI conversion ===&quot;
 
-    <details class="step"><summary><span class="cmd">dwidenoise · mrdegibbs · dwiextract</span><span class="pkg">MRtrix3</span></summary>
-      <div class="stepbody">
-        <div class="block info"><div class="blabel">Info</div><p>Remove thermal noise (MP-PCA) and Gibbs ringing, then drop the unstable <b>b=250</b> shell (Olson-lab convention). Kept shells: 0, 1000, 2000, 3250, 5000.</p></div>
-        <div class="block"><div class="blabel">Script</div><pre>dwidenoise -mask brain_mask dwi denoised
-mrdegibbs denoised denoised_degibbs
-dwiextract denoised_degibbs -fslgrad bvec bval -shells 0,1000,2000,3250,5000 dwi_no_b250 \
-           -export_grad_fsl dwi_no_b250.bvec dwi_no_b250.bval</pre></div>
-      </div>
-    </details>
+for subj in &quot;$base_dir&quot;/*; do
+    [ -d &quot;$subj&quot; ] || continue
+    subj_id=$(basename &quot;$subj&quot;)
+    log &quot;--- Checking subject: $subj_id ---&quot;
 
-    <details class="step"><summary><span class="cmd">eddy --repol</span><span class="pkg">FSL (+ QUAD/SQUAD)</span></summary>
-      <div class="stepbody">
-        <div class="block info"><div class="blabel">Info</div><p>The big correction: head motion, eddy-current distortion, and the TOPUP susceptibility field, all at once, with outlier-slice replacement (<span class="mono">--repol</span>). Three QC layers followed: <span class="mono">eddy_quad</span> (per-subject), <span class="mono">eddy_squad</span> (group), and a manual FSLeyes scroll-through.</p></div>
-        <div class="block output"><div class="blabel">Output</div><p>Motion low across the board — group mean absolute motion <b>0.27 mm</b>; exclusion rule was &gt;2 mm, nobody hit it. Per-subject <span class="mono">qc_mot_abs</span> becomes a covariate.</p></div>
-        <div class="block"><div class="blabel">Script</div><pre>eddy --imain=dwi_no_b250 --mask=brain_mask --acqp=acqp.txt --index=index.txt \
-     --bvecs=dwi_no_b250.bvec --bvals=dwi_no_b250.bval --topup=${subj}_topup \
-     --out=${subj}_eddy --repol --cnr_maps</pre></div>
-      </div>
-    </details>
+<span class="c">    # Check completeness</span>
+    complete=true
+    for scan in &quot;${scan_types[@]}&quot;; do
+        pattern=&quot;${scan%%:*}&quot;
+        if ! find &quot;$subj&quot; -maxdepth 1 -type d -regex &quot;.*/[0-9]+-$pattern.*&quot; | grep -q .; then
+            log &quot;  ❌ Missing required scan: $pattern&quot;
+            complete=false
+        fi
+    done
+    if [ &quot;$complete&quot; = false ]; then
+        log &quot;  ⚠️ Skipping $subj_id (not DTI-clear)&quot;
+        continue
+    fi
 
-    <div class="subhead">Build the fiber model</div>
+<span class="c">    # Output directories</span>
+    subj_out=&quot;$out_base/$subj_id&quot;
+    mkdir -p &quot;$subj_out/struct&quot; &quot;$subj_out/dti&quot;
 
-    <details class="step"><summary><span class="cmd">dwiextract · dtifit</span><span class="pkg">MRtrix3 · FSL</span></summary>
-      <div class="stepbody">
-        <div class="block info"><div class="blabel">Info</div><p>Fit the diffusion tensor on the low shells (b=0,1000) → <b>FA</b> (and MD, RD). FA is one of the four microstructure metrics carried to the analyses.</p></div>
-        <div class="block"><div class="blabel">Script</div><pre>dwiextract data -fslgrad bvecs bvals -shells 0,1000 data_1000 -export_grad_fsl ...
-dtifit -k data_1000 -o DTI -m brain_mask -r bvecs_1000 -b bvals_1000
-fslmaths DTI_L2 -add DTI_L3 -div 2 DTI_RD</pre></div>
-      </div>
-    </details>
+<span class="c">    # Convert each scan type</span>
+    for scan in &quot;${scan_types[@]}&quot;; do
+        IFS=&quot;:&quot; read -r pattern target label &lt;&lt;&lt; &quot;$scan&quot;
+        scan_dir=$(find &quot;$subj&quot; -maxdepth 1 -type d -regex &quot;.*/[0-9]+-$pattern.*&quot; | head -n 1)
+        log &quot;  ✅ Converting $pattern → $target/&quot;
 
-    <details class="step"><summary><span class="cmd">flirt · convert_xfm</span><span class="pkg">FSL</span></summary>
-      <div class="stepbody">
-        <div class="block info"><div class="blabel">Info</div><p>Build the linear transforms between diffusion, T1, and MNI space, and invert the set. The one reused later is <b>str2diff</b> (T1→diffusion), to bring the ROIs into the DWI grid.</p></div>
-        <div class="block"><div class="blabel">Script</div><pre>flirt -in b0_brain -ref t1_brain -omat diff2str.mat -dof 6          <span class="c"># rigid</span>
-flirt -in t1_brain -ref MNI152_T1_2mm_brain -omat str2standard.mat -dof 12  <span class="c"># affine</span>
-convert_xfm -omat str2diff.mat -inverse diff2str.mat</pre></div>
-      </div>
-    </details>
+        {
+            echo &quot;----- [$subj_id $label] dcm2niix start&quot;
+            $dcm2niix_bin -o &quot;$subj_out/$target&quot; -f &quot;${subj_id}_${label}&quot; &quot;$scan_dir&quot;
+            echo &quot;----- [$subj_id $label] dcm2niix end&quot;
+            echo
+        } &gt;&gt;&quot;$logfile&quot; 2&gt;&amp;1
+    done
+done
 
-    <details class="step"><summary><span class="cmd">Atropos · fslstats -V</span><span class="pkg">ANTs · FSL</span></summary>
-      <div class="stepbody">
-        <div class="block info"><div class="blabel">Info</div><p>Estimate intracranial volume: segment the T1 into CSF/GM/WM and sum. <b>ICV</b> is a covariate so a finding isn't just "bigger heads."</p></div>
-        <div class="block"><div class="blabel">Script</div><pre>Atropos -d 3 -a brain -x mask -i KMeans[3] -o [seg.nii.gz,prob%02d.nii.gz]
-fslstats prob01 -V   <span class="c"># sum CSF+GM+WM = ICV</span></pre></div>
-      </div>
-    </details>
+log &quot;=== Conversion finished. Output saved to: $out_base ===&quot;
 
-    <details class="step"><summary><span class="cmd">mrconvert · dwi2response (dhollander)</span><span class="pkg">MRtrix3</span></summary>
-      <div class="stepbody">
-        <div class="block info"><div class="blabel">Info</div><p>Repackage into MRtrix <span class="mono">.mif</span> (gradients in the header), then estimate the single-fiber / GM / CSF <b>response functions</b> from each subject's own data (Dhollander, no atlas).</p></div>
-        <div class="block"><div class="blabel">Script</div><pre>mrconvert data.nii.gz -fslgrad bvecs bvals dwi.mif
-dwi2response dhollander dwi.mif wm_response.txt gm_response.txt csf_response.txt -mask mask.mif</pre></div>
-      </div>
-    </details>
+</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Convert the scanner's raw DICOM into NIfTI. Only subjects with all four required scans (T1, diffusion, and the two opposed fieldmaps) were converted.</p><div class="lead-lbl">Result</div><p class="res">57 usable subjects. 5 dropped here for missing scans (s1253, s1476, s578, s820, s999-pilot).</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">antsBrainExtraction.sh</span><span class="pkg">ANTs</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Parallelized ANTs Skull Stripping for IMPACT (DTI)</span>
+<span class="c"># ============================================================</span>
 
-    <details class="step"><summary><span class="cmd">responsemean</span><span class="pkg">MRtrix3</span></summary>
-      <div class="stepbody">
-        <div class="block info"><div class="blabel">Info</div><p>Average every subject's three response functions into one shared group set — so later differences reflect biology, not per-subject response noise.</p></div>
-        <div class="block"><div class="blabel">Script</div><pre>responsemean */wm_response.txt group_wm_response.txt   <span class="c"># and gm, csf</span></pre></div>
-      </div>
-    </details>
+<span class="c"># Paths</span>
+ANTs_bin=&quot;/data/tools/ants/bin/antsBrainExtraction.sh&quot;
+TEMPLATE=&quot;/data/projects/STUDIES/IMPACT/DTI/ANTsTemplate/NKI/T_template.nii.gz&quot;
+TEMPLATE_MASK=&quot;/data/projects/STUDIES/IMPACT/DTI/ANTsTemplate/NKI/T_template_BrainCerebellumMask.nii.gz&quot;
+in_base=&quot;/data/projects/STUDIES/IMPACT/DTI/NIFTI&quot;
+out_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/ANTs&quot;
 
-    <details class="step"><summary><span class="cmd">dwi2fod msmt_csd · mtnormalise</span><span class="pkg">MRtrix3</span></summary>
-      <div class="stepbody">
-        <div class="block info"><div class="blabel">Info</div><p>The core fiber model. <b>MSMT-CSD</b> (multi-shell multi-tissue constrained spherical deconvolution) turns each voxel's signal into an FOD; <span class="mono">mtnormalise</span> rescales them to be comparable across tissue and across people. The normalized WM FOD is the input to tractography.</p></div>
-        <div class="block"><div class="blabel">Script</div><pre>dwi2fod -mask mask.mif msmt_csd dwi.mif \
-        group_wm_response.txt wm_fod.mif group_gm_response.txt gm_fod.mif \
-        group_csf_response.txt csf_fod.mif
-mtnormalise wm_fod.mif wm_fod_norm.mif gm_fod.mif gm_fod_norm.mif \
-        csf_fod.mif csf_fod_norm.mif -mask mask.mif</pre></div>
-      </div>
-    </details>
-    </div>
-  </details>
+<span class="c"># Collect all subject IDs from NIFTI directory</span>
+subjects=($(ls -1 &quot;$in_base&quot;))
 
-  <!-- ============ TRACTOGRAPHY ============ -->
-  <details class="catgroup">
-    <summary><span class="cnum">B</span><span class="cname">Tractography</span><span class="cdesc">draw the VTA→HPC tract, then clean it · MRtrix3 / ANTs / pyAFQ</span></summary>
-    <div class="catbody">
-    <p class="mut" style="font-size:12.5px;margin:6px 6px 2px">The hands-on core. Grow streamlines from the <b>VTA</b> to the <b>hippocampus</b> in each hemisphere, constrained to an anatomically plausible corridor, then prune outliers.</p>
+<span class="c"># Function to process one subject</span>
+process_subject () {
+    subj_id=&quot;$1&quot;
+    echo &quot;=== Processing $subj_id ===&quot;
 
-    <div class="callout" style="margin:10px 6px"><b>The three ROI inputs</b> (from Ranesh Mopuru, Olson lab; all MNI space).
-      <b>Seed</b> = VTA, Pauli atlas @ 25%. <b>Target</b> = hippocampus, Harvard–Oxford @ 50%.
-      <b>Tract atlas</b> = his VTA→HPC group mean (GroupMean_thr50), built from ~170 HCP 7T subjects — used to build the exclusion corridor below.</div>
+    nii_file=&quot;$in_base/$subj_id/struct/${subj_id}_struct.nii&quot;
+    out_dir=&quot;$out_base/$subj_id&quot;
+    mkdir -p &quot;$out_dir&quot;
 
-    <div class="subhead">Fiber drawing</div>
+    &quot;$ANTs_bin&quot; -d 3 -a &quot;$nii_file&quot; -e &quot;$TEMPLATE&quot; -m &quot;$TEMPLATE_MASK&quot; -o &quot;$out_dir/&quot;
 
-    <details class="step"><summary><span class="cmd">antsRegistrationSyNQuick.sh</span><span class="pkg">ANTs (SyN)</span></summary>
-      <div class="stepbody">
-        <div class="block info"><div class="blabel">Info</div><p>ROIs live in MNI; tracking happens in each subject's diffusion space. First a <b>nonlinear</b> (SyN) warp MNI→T1 — needed because our T1s aren't already diffusion-aligned, unlike the HCP data the atlas came from.</p></div>
-        <div class="block"><div class="blabel">Script</div><pre>antsRegistrationSyNQuick.sh -d 3 -f ${subj}_T1_brain -m MNI152_T1_1mm_brain -o reg/mni2t1_</pre></div>
-      </div>
-    </details>
+<span class="c">    # Rename outputs with subject prefix</span>
+    mv &quot;$out_dir/BrainExtractionBrain.nii.gz&quot; &quot;$out_dir/${subj_id}_BrainExtractionBrain.nii.gz&quot;
+    mv &quot;$out_dir/BrainExtractionMask.nii.gz&quot; &quot;$out_dir/${subj_id}_BrainExtractionMask.nii.gz&quot;
+    mv &quot;$out_dir/BrainExtractionPrior0GenericAffine.mat&quot; &quot;$out_dir/${subj_id}_BrainExtractionPrior0GenericAffine.mat&quot;
 
-    <details class="step"><summary><span class="cmd">antsApplyTransforms · flirt</span><span class="pkg">ANTs · FSL</span></summary>
-      <div class="stepbody">
-        <div class="block info"><div class="blabel">Info</div><p>Push all six ROIs (VTA, HPC, tract atlas × L/R) MNI→T1→diffusion, chaining the SyN warp then the <b>str2diff</b> matrix. Nearest-neighbor interpolation (binary masks), re-binarized after. Visually QC'd on the diffusion image.</p></div>
-        <div class="block"><div class="blabel">Script</div><pre>antsApplyTransforms -d 3 -i roi_mni -r t1_brain -o roi_t1 \
-    -t mni2t1_1Warp.nii.gz -t mni2t1_0GenericAffine.mat -n NearestNeighbor
-flirt -in roi_t1 -ref diff_ref -applyxfm -init str2diff.mat -out roi_diff -interp nearestneighbour
-fslmaths roi_diff -thr 0.5 -bin roi_diff</pre></div>
-      </div>
-    </details>
+    echo &quot;=== Finished $subj_id ===&quot;
+}
 
-    <details class="step"><summary><span class="cmd">fslmaths — exclusion mask</span><span class="pkg">FSL</span></summary>
-      <div class="stepbody">
-        <div class="block info"><div class="blabel">Info</div><p>Ranesh's original pipeline used 13 separate anatomical exclusion ROIs. His approved shortcut: take the group tract atlas, <b>dilate</b> 2 voxels into a corridor, add VTA + HPC, <b>invert</b> → one exclusion mask per hemisphere (allowed = corridor, excluded = everything else). This single mask is what lets us drop the FOD cutoff so low (next step).</p></div>
-        <div class="block output"><div class="blabel">Output</div><p>57/57 pass all 7 audit checks. Inclusion corridor ≈ 1,526–1,934 voxels (mean ~1,720) — a narrow, consistent VTA→HPC corridor. VTA and HPC fully contained.</p></div>
-        <div class="block"><div class="blabel">Script</div><pre><span class="c"># per hemisphere (left shown; right identical with r_ inputs)</span>
-fslmaths left_tract_atlas_diff -dilM -dilM l_atlas_dilated        <span class="c"># widen corridor 2 voxels</span>
-fslmaths l_atlas_dilated -add left_VTA_diff -add left_HPC_diff -bin l_inclusion_zone
-fslmaths l_inclusion_zone -binv exclusion_mask_l                  <span class="c"># invert: outside = excluded</span></pre></div>
-      </div>
-    </details>
+<span class="c"># ==============================</span>
+<span class="c"># Run jobs in parallel (max 30)</span>
+<span class="c"># ==============================</span>
+max_jobs=30
+job_count=0
 
-    <details class="step"><summary><span class="cmd">tckgen — FOD-cutoff test (5 subjects)</span><span class="pkg">MRtrix3</span></summary>
-      <div class="stepbody">
-        <div class="block info"><div class="blabel">Info</div><p>The one tuned parameter: the FOD amplitude <b>cutoff</b> (when tracking stops). Ranesh used 0.06 at 7T; 3T is noisier, so we tested 0.1 / 0.08 / 0.06 / 0.01 on 5 pilot subjects × both hemispheres. Because the exclusion corridor already constrains tracking, the usual downside of a low cutoff (spurious fibers) doesn't apply — so we could go lower than expected.</p></div>
-        <div class="block output"><div class="blabel">Output — streamlines hit (target 1000)</div>
-          <table class="dtable"><thead><tr><th>cutoff</th><th>runs hitting 1000</th><th>note</th></tr></thead><tbody>
-          <tr><td>0.1</td><td>2 / 10</td><td>too strict for 3T</td></tr>
-          <tr><td>0.08</td><td>~5 / 10</td><td>inconsistent (s606 L = 309)</td></tr>
-          <tr><td>0.06</td><td>10 / 10</td><td>reliable</td></tr>
-          <tr><td><b>0.01</b></td><td><b>10 / 10</b></td><td>reliable + ~5× more seed-efficient</td></tr>
-          </tbody></table>
-          <p style="margin-top:8px">Paths virtually identical to 0.06 (same VTA→HPC arc; length ~44 vs ~47 mm). 0.01 gives a slightly thicker TDI — which <b>cleaning tightens below the 0.06 bundle anyway</b>. <b>Chose 0.01</b>; Ranesh confirmed it's robust with the atlas mask.</p>
-        </div>
-        <div class="block"><div class="blabel">Script</div><pre><span class="c"># looped over cutoff ∈ {0.1, 0.08, 0.06, 0.01}, both hemispheres, 5 subjects</span>
-tckgen wm_fod_norm.mif l_vta_l_hipp_${cutoff}.tck \
-    -seed_image left_VTA_diff.nii.gz -seed_unidirectional \
-    -include  left_HPC_diff.nii.gz \
-    -exclude  exclusion_mask_l.nii.gz \
-    -select 1000 -seeds 5000000 -cutoff $cutoff \
-    -minlength 35 -maxlength 65 -stop -nthreads 8</pre></div>
-      </div>
-    </details>
+for subj in &quot;${subjects[@]}&quot;; do
+    process_subject &quot;$subj&quot; &amp;   # run in background
+    ((job_count++))
 
-    <details class="step"><summary><span class="cmd">tckgen — full run (all 57)</span><span class="pkg">MRtrix3</span></summary>
-      <div class="stepbody">
-        <div class="block info"><div class="blabel">Info</div><p>Same command at production budget: <b>2,500 streamlines</b> from up to <b>25M</b> seed attempts, cutoff 0.01. Later added an <b>anterior</b> VTA→HPC tract with a second atlas Ranesh provided — identical pipeline — giving <b>4 tracts</b>: posterior L/R and anterior L/R.</p></div>
-        <div class="block output"><div class="blabel">Output</div><p>All 114 posterior tracts (57 × 2) reached the full 2,500 streamlines; all 114 anterior masks/tracts passed QC. Four tracts per subject.</p></div>
-        <div class="block"><div class="blabel">Script</div><pre>tckgen wm_fod_norm.mif l_vta_l_hipp_0.01.tck \
-    -seed_image left_VTA_diff -seed_unidirectional -include left_HPC_diff \
-    -exclude exclusion_mask_l -select 2500 -seeds 25000000 \
-    -cutoff 0.01 -minlength 35 -maxlength 65 -stop</pre></div>
-      </div>
-    </details>
+    if (( job_count &gt;= max_jobs )); then
+        wait -n                 # wait for one job to finish
+        ((job_count--))
+    fi
+done
 
-    <div class="subhead">Cleaning</div>
+wait  # wait for all jobs to finish
 
-    <details class="step"><summary><span class="cmd">clean_bundle (Mahalanobis)</span><span class="pkg">pyAFQ</span></summary>
-      <div class="stepbody">
-        <div class="block info"><div class="blabel">Info</div><p>Prune anatomically weird streamlines by <b>Mahalanobis distance</b> — anything &gt;3 SD from the bundle's core shape, or &gt;2 SD off in length, dropped over 5 rounds. Ported from Ranesh's cleaning script.</p></div>
-        <div class="block output"><div class="blabel">Output</div><p>Retention ~30–45% of streamlines; the rest trimmed as outliers. Cleaned bundles are tighter than the conservative-0.06 version — confirming the low cutoff cost nothing.</p></div>
-        <div class="block"><div class="blabel">Script</div><pre>sft = load_tractogram(in_tck, ref_img, bbox_valid_check=False)
-cleaned_sft, idx = clean_bundle(
-    sft, n_points=100, clean_rounds=5,
-    distance_threshold=3,   <span class="c"># 3 SD Mahalanobis</span>
-    length_threshold=2,     <span class="c"># 2 SD from mean length</span>
-    stat='mean', return_idx=True)</pre></div>
-      </div>
-    </details>
+echo -e &quot;\n=== Skull stripping finished. Results saved to: $out_base ===&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Skull-strip the T1 by warping a brain-only template onto each subject and copying its outline over. We used the NKI adult template (a good average adult brain). Every stripped brain was eyeballed in FSLeyes.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">fslroi · fslmerge</span><span class="pkg">FSL</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
 
-    <details class="step"><summary><span class="cmd">tckmap — visual QC</span><span class="pkg">MRtrix3</span></summary>
-      <div class="stepbody">
-        <div class="block info"><div class="blabel">Info</div><p>For every cleaned tract, a <b>TDI</b> (track-density heatmap) overlaid on the b=0 to eyeball the shape; auto-flags catch anything too sparse or too diffuse.</p></div>
-        <div class="block output"><div class="blabel">Output</div><p>All tracts passed and show the expected VTA→hippocampus arc. See the <a href="results_explorer.html">Results browser</a> for per-subject renders.</p></div>
-        <div class="block"><div class="blabel">Script</div><pre>tckmap cleaned.tck tdi.nii.gz -template left_VTA_diff.nii.gz</pre></div>
-      </div>
-    </details>
-    </div>
-  </details>
+<span class="c"># Step 3: B0 Concatenation (parallel + verbose)</span>
 
-  <!-- ============ MICROSTRUCTURE ============ -->
-  <details class="catgroup">
-    <summary><span class="cnum">C</span><span class="cname">Microstructure</span><span class="cdesc">FA + NODDI along each tract · dipy / AMICO</span></summary>
-    <div class="catbody">
-    <p class="mut" style="font-size:12.5px;margin:6px 6px 2px">Measure the tissue along each tract — not one number per tract, but a 100-point <b>profile</b> from the VTA end to the hippocampus end. Four metrics: FA (tensor) + NDI, ODI, FWF (NODDI).</p>
+nifti_base=&quot;/data/projects/STUDIES/IMPACT/DTI/NIFTI&quot;
+deriv_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/b0_concat&quot;
 
-    <details class="step"><summary><span class="cmd">afq_profile — FA</span><span class="pkg">dipy</span></summary>
-      <div class="stepbody">
-        <div class="block info"><div class="blabel">Info</div><p>Sample FA at <b>100 nodes</b> evenly spaced along the tract. Every streamline is oriented the same way (so node 1 is always the same end), resampled to 100 points, and Gaussian-weighted (core streamlines count more). Analyses use the middle nodes (~25–75); the ends are dropped for partial-volume contamination. Ported from Ranesh's <span class="mono">nodewise_noddi.py</span>.</p></div>
-        <div class="block"><div class="blabel">Script</div><pre>oriented = orient_by_streamline(streamlines, quickbundles_centroid)
-fa = afq_profile(FA_map, oriented, affine, nb_points=100,
-                 weights=gaussian_weights(oriented))</pre></div>
-      </div>
-    </details>
+mkdir -p &quot;$deriv_base&quot;
 
-    <details class="step"><summary><span class="cmd">NODDI fit (modulated maps)</span><span class="pkg">AMICO</span></summary>
-      <div class="stepbody">
-        <div class="block info"><div class="blabel">Info</div><p>Fit NODDI on all shells, giving three interpretable maps per voxel: <b>NDI</b> (neurite density), <b>ODI</b> (orientation dispersion), <b>FWF</b> (free-water fraction). Saved the <b>modulated</b> NDI/ODI (partial-volume-corrected, per Parker 2021) — the version Ranesh used.</p></div>
-        <div class="block"><div class="blabel">Script</div><pre>amico.util.fsl2scheme(bvals, bvecs, bStep=200)
-<span class="c"># NODDI fit: b0_thr=100, doSaveModulatedMaps=True</span>
-<span class="c"># → fit_NDI_modulated, fit_ODI_modulated, fit_FWF</span></pre></div>
-      </div>
-    </details>
+<span class="c"># Function to process a single subject</span>
+process_subj() {
+    subj=$1
+    subj_dir=&quot;$nifti_base/$subj/dti&quot;
+    out_dir=&quot;$deriv_base/$subj&quot;
+    mkdir -p &quot;$out_dir&quot;
 
-    <details class="step"><summary><span class="cmd">afq_profile — NDI · ODI · FWF</span><span class="pkg">dipy</span></summary>
-      <div class="stepbody">
-        <div class="block info"><div class="blabel">Info</div><p>The FA-profiling step again, on the three NODDI maps. This produces the main microstructure measurements the statistics use: per subject, per tract, per metric — a 100-node profile.</p></div>
-        <div class="block output"><div class="blabel">Output</div><p>16 tidy tables (4 tracts × 4 metrics); each row a subject, 100 node columns. These feed the <a href="analyses.html">analyses</a>.</p></div>
-        <div class="block"><div class="blabel">Script</div><pre><span class="c"># same orient + gaussian-weighted afq_profile, applied to</span>
-<span class="c"># fit_NDI_modulated / fit_ODI_modulated / fit_FWF</span></pre></div>
-      </div>
-    </details>
+    echo &quot;&gt;&gt;&gt; [$subj] Starting B0 extraction and concatenation&quot;
 
-    <details class="step"><summary><span class="cmd">fslstats -k HPC -M</span><span class="pkg">FSL</span></summary>
-      <div class="stepbody">
-        <div class="block info"><div class="blabel">Info</div><p>One extra measurement for a control analysis: the <b>mean NODDI inside the hippocampus ROI itself</b> (the region, not the pathway). Same Harvard–Oxford hippocampus, warped to diffusion space. Lets us ask whether memory tracks the <em>tract</em> specifically or just hippocampal <em>tissue</em> in general.</p></div>
-        <div class="block"><div class="blabel">Script</div><pre>fslstats fit_NDI_modulated.nii.gz -k left_HPC_diff.nii.gz -M   <span class="c"># mean NDI in L hippocampus; same ODI, FWF, L/R</span></pre></div>
-      </div>
-    </details>
-    </div>
-  </details>
+<span class="c">    # Check inputs exist</span>
+    if [ ! -f &quot;$subj_dir/${subj}_fmapAP.nii&quot; ] || [ ! -f &quot;$subj_dir/${subj}_fmapPA.nii&quot; ]; then
+        echo &quot;!!! [$subj] Missing AP or PA fieldmap. Skipping.&quot;
+        return
+    fi
 
-  <div class="callout" style="margin-top:22px">Next: <a href="analyses.html">how memory is scored, and how it's tested against the tract →</a></div>
+<span class="c">    # Extract b0 from AP</span>
+    echo &quot;&gt;&gt;&gt; [$subj] Extracting AP b0&quot;
+    fslroi &quot;$subj_dir/${subj}_fmapAP.nii&quot; \
+           &quot;$out_dir/${subj}_a2p_b0.nii.gz&quot; 0 1
+
+<span class="c">    # Extract b0 from PA</span>
+    echo &quot;&gt;&gt;&gt; [$subj] Extracting PA b0&quot;
+    fslroi &quot;$subj_dir/${subj}_fmapPA.nii&quot; \
+           &quot;$out_dir/${subj}_p2a_b0.nii.gz&quot; 0 1
+
+<span class="c">    # Merge AP + PA</span>
+    echo &quot;&gt;&gt;&gt; [$subj] Merging AP+PA b0s&quot;
+    fslmerge -t &quot;$out_dir/${subj}_merged_b0s.nii.gz&quot; \
+             &quot;$out_dir/${subj}_a2p_b0.nii.gz&quot; \
+             &quot;$out_dir/${subj}_p2a_b0.nii.gz&quot;
+
+    echo &quot;&gt;&gt;&gt; [$subj] Done!&quot;
+}
+
+export -f process_subj
+export nifti_base deriv_base
+
+<span class="c"># === Run in parallel ===</span>
+<span class="c"># Safe to use 30 jobs: B0 extraction/merge is light compared to ANT for which 30 parellel was no problem</span>
+<span class="c">#30 subjects in parallel.</span>
+
+subjects=$(basename -a &quot;$nifti_base&quot;/*)
+
+echo &quot;Found $(echo $subjects | wc -w) subjects in $nifti_base&quot;
+echo &quot;Running with up to 30 in parallel...&quot;
+
+if command -v parallel &gt; /dev/null; then
+    echo &quot;$subjects&quot; | tr &#x27; &#x27; &#x27;\n&#x27; | parallel -j 30 process_subj {}
+else
+    max_jobs=30
+    for subj in $subjects; do
+        process_subj &quot;$subj&quot; &amp;
+        while [ &quot;$(jobs -r | wc -l)&quot; -ge &quot;$max_jobs&quot; ]; do
+            sleep 1
+        done
+    done
+    wait
+fi
+
+echo &quot;=== All B0 concatenation jobs finished ===&quot;
+</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Build the fieldmap pair. Diffusion scans warp near air/tissue boundaries (susceptibility distortion); to measure it the scanner takes two b0 images with opposite phase-encoding (AP and PA). Here we grab the first b0 of each and stack them.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">topup</span><span class="pkg">FSL</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+
+<span class="c"># Step 4: TOPUP (susceptibility distortion correction)</span>
+
+nifti_base=&quot;/data/projects/STUDIES/IMPACT/DTI/NIFTI&quot;
+b0_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/b0_concat&quot;
+deriv_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/TOPUP&quot;
+datain_file=&quot;/data/projects/STUDIES/IMPACT/DTI/config/acqp.txt&quot;
+config_file=&quot;/usr/local/fsl/etc/flirtsch/b02b0_1.cnf&quot;
+
+process_subj() {
+    subj=$1
+    b0_file=&quot;$b0_base/$subj/${subj}_merged_b0s.nii.gz&quot;
+    output_dir=&quot;$deriv_base/$subj/topup_output&quot;
+    mkdir -p &quot;$output_dir&quot;
+
+    output_prefix=&quot;$output_dir/${subj}_topup&quot;
+
+<span class="c">    # Skip if outputs already exist</span>
+    if [[ -f &quot;${output_prefix}_corrected_b0.nii.gz&quot; &amp;&amp; -f &quot;${output_prefix}_fieldmap.nii.gz&quot; ]]; then
+        echo &quot;=== [$subj] Already has TOPUP outputs, skipping&quot;
+        return
+    fi
+
+    if [ ! -f &quot;$b0_file&quot; ]; then
+        echo &quot;!!! [$subj] Missing merged b0 input, skipping&quot;
+        return
+    fi
+
+    echo &quot;&gt;&gt;&gt; [$subj] Running TOPUP&quot;
+    topup --imain=&quot;$b0_file&quot; --datain=&quot;$datain_file&quot; \
+          --config=&quot;$config_file&quot; \
+          --out=&quot;$output_prefix&quot; \
+          --iout=&quot;${output_prefix}_corrected_b0&quot; \
+          --fout=&quot;${output_prefix}_fieldmap&quot; \
+          --verbose
+    echo &quot;&gt;&gt;&gt; [$subj] Done&quot;
+}
+
+export -f process_subj
+export nifti_base b0_base deriv_base datain_file config_file
+
+subjects=$(basename -a &quot;$nifti_base&quot;/*)
+
+echo &quot;Found $(echo $subjects | wc -w) subjects in $nifti_base&quot;
+
+<span class="c"># Run in parallel: up to 18 jobs at once</span>
+if command -v parallel &gt; /dev/null; then
+    echo &quot;$subjects&quot; | tr &#x27; &#x27; &#x27;\n&#x27; | parallel -j 18 process_subj {}
+else
+    max_jobs=18
+    for subj in $subjects; do
+        process_subj &quot;$subj&quot; &amp;
+        while [ &quot;$(jobs -r | wc -l)&quot; -ge &quot;$max_jobs&quot; ]; do
+            sleep 1
+        done
+    done
+    wait
+fi
+
+echo &quot;=== All TOPUP jobs finished ===&quot;
+
+</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Estimate the distortion field from the AP/PA pair, plus a corrected b0. The field is fed into eddy so the diffusion volumes get un-distorted in the same motion-correction pass.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">fslmaths -Tmean</span><span class="pkg">FSL</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+<span class="c"># Step 5: Mean B0 Image (collapse across time, with logging)</span>
+
+deriv_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/TOPUP&quot;
+logfile=&quot;mean_b0.log&quot;
+
+<span class="c"># Initialize/clear log</span>
+: &gt; &quot;$logfile&quot;
+
+<span class="c"># Logger function</span>
+log() { printf &#x27;%s %s\n&#x27; &quot;$(date &#x27;+%F %T&#x27;)&quot; &quot;$*&quot; | tee -a &quot;$logfile&quot; ; }
+
+<span class="c"># Source FSL environment once</span>
+source /usr/local/fsl/etc/fslconf/fsl.sh
+export FSLOUTPUTTYPE=NIFTI_GZ
+
+process_subj() {
+    subj=$1
+    input_file=&quot;${deriv_base}/${subj}/topup_output/${subj}_topup_corrected_b0.nii.gz&quot;
+    output_file=&quot;${deriv_base}/${subj}/topup_output/${subj}_topup_Tmean.nii.gz&quot;
+
+    if [[ -f &quot;$input_file&quot; ]]; then
+        log &quot;&gt;&gt;&gt; [$subj] Averaging B0 across time&quot;
+        {
+            echo &quot;----- [$subj] fslmaths start&quot;
+            echo &quot;cmd: fslmaths \&quot;$input_file\&quot; -Tmean \&quot;$output_file\&quot;&quot;
+            fslmaths &quot;$input_file&quot; -Tmean &quot;$output_file&quot;
+            echo &quot;----- [$subj] fslmaths end&quot;
+            echo
+        } &gt;&gt;&quot;$logfile&quot; 2&gt;&amp;1
+        log &quot;&gt;&gt;&gt; [$subj] Done&quot;
+    else
+        log &quot;!!! [$subj] Missing input: $input_file&quot;
+    fi
+}
+
+<span class="c"># Max parallel jobs</span>
+max_jobs=60
+job_count=0
+
+for subj in $(ls -1 &quot;$deriv_base&quot;); do
+    process_subj &quot;$subj&quot; &amp;
+    ((job_count++))
+
+    if (( job_count &gt;= max_jobs )); then
+        wait -n
+        ((job_count--))
+    fi
+done
+
+wait
+log &quot;=== Mean B0 collapse finished for all subjects ===&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Average the corrected b0 volumes into one clean, low-noise reference, used as the target for brain-masking and motion correction.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">bet</span><span class="pkg">FSL</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c"># Step 6: Brain extraction on mean b0 (parallelized, Bash-only, safe logging)</span>
+
+deriv_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/TOPUP&quot;
+
+<span class="c"># One shared log file (always overwrite bet.log)</span>
+logfile=&quot;bet.log&quot;
+: &gt; &quot;$logfile&quot;   # create/clear
+
+<span class="c"># Simple logger: prints to screen AND appends to logfile</span>
+log() { echo &quot;$*&quot; | tee -a &quot;$logfile&quot; ; }
+
+<span class="c"># Source FSL environment once</span>
+source /usr/local/fsl/etc/fslconf/fsl.sh
+export FSLOUTPUTTYPE=NIFTI_GZ
+
+process_subj() {
+    local subj=&quot;$1&quot;
+    local input=&quot;${deriv_base}/${subj}/topup_output/${subj}_topup_Tmean.nii.gz&quot;
+    local output=&quot;${deriv_base}/${subj}/topup_output/${subj}_topup_Tmean_brain.nii.gz&quot;
+
+    if [[ -f &quot;$input&quot; ]]; then
+        log &quot;&gt;&gt;&gt; [$subj] Running BET on mean b0&quot;
+        {
+            echo &quot;----- [$subj] BET start&quot;
+            echo &quot;cmd: bet \&quot;$input\&quot; \&quot;$output\&quot; -m -f 0.2 -g 0.1 -R -v&quot;
+            bet &quot;$input&quot; &quot;$output&quot; -m -f 0.2 -g 0.1 -R -v
+            echo &quot;----- [$subj] BET end&quot;
+            echo
+        } &gt;&gt;&quot;$logfile&quot; 2&gt;&amp;1
+        log &quot;&gt;&gt;&gt; [$subj] Brain mask created&quot;
+    else
+        log &quot;!!! [$subj] Missing input: $input&quot;
+    fi
+}
+
+subjects=$(ls -1 &quot;$deriv_base&quot;)
+max_jobs=60
+job_count=0
+
+for subj in $subjects; do
+    process_subj &quot;$subj&quot; &amp;
+    ((job_count++))
+    if (( job_count &gt;= max_jobs )); then
+        wait -n   # wait for one to finish, then continue launching
+        ((job_count--))
+    fi
+done
+
+wait  # ensure all background jobs are finished
+log &quot;=== Brain extraction finished for all subjects ===&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Make a brain mask from the mean b0. Later steps only compute inside the mask, which saves time and avoids garbage from outside the brain.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">dwidenoise · mrdegibbs · dwiextract</span><span class="pkg">MRtrix3</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+
+<span class="c"># Step 7: Gibbs ringing removal + b=250 cleanup (sequential version)</span>
+
+denoise_dir=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/denoise&quot;
+nifti_base=&quot;/data/projects/STUDIES/IMPACT/DTI/NIFTI&quot;
+topup_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/TOPUP&quot;
+
+<span class="c"># Add MRtrix to PATH (adjust if installed elsewhere)</span>
+
+for subj in $(ls -1 &quot;$nifti_base&quot;); do
+    echo &quot;&gt;&gt;&gt; [$subj] Starting denoise + mrdegibbs + b=250 cleanup&quot;
+
+    subj_dir=&quot;$nifti_base/$subj/dti&quot;
+<span class="c">    # Auto-detect .nii or .nii.gz for DWI</span>
+    dwi_file=$(ls &quot;$subj_dir/${subj}_dwi.nii&quot;* 2&gt;/dev/null | head -n1)
+    bval_file=&quot;$subj_dir/${subj}_dwi.bval&quot;
+    bvec_file=&quot;$subj_dir/${subj}_dwi.bvec&quot;
+    mask_file=&quot;$topup_base/$subj/topup_output/${subj}_topup_Tmean_brain_mask.nii.gz&quot;
+
+<span class="c">    # Skip subject if files are missing</span>
+    if [[ ! -f &quot;$dwi_file&quot; || ! -f &quot;$bval_file&quot; || ! -f &quot;$bvec_file&quot; || ! -f &quot;$mask_file&quot; ]]; then
+        echo &quot;!!! [$subj] Missing input files, skipping&quot;
+        continue
+    fi
+
+    out_subj=&quot;$denoise_dir/$subj&quot;
+    mkdir -p &quot;$out_subj/dwidenoise&quot; &quot;$out_subj/mrdegibbs&quot; &quot;$out_subj/mrdegibbs_no_b250&quot;
+
+<span class="c">    # Step 1: Denoise</span>
+    dwidenoise \
+        -mask &quot;$mask_file&quot; \
+        -noise &quot;$out_subj/dwidenoise/${subj}_noise_map.nii.gz&quot; \
+        &quot;$dwi_file&quot; \
+        &quot;$out_subj/dwidenoise/${subj}_denoised.nii.gz&quot; -force
+
+<span class="c">    # Step 2: Gibbs ringing removal</span>
+    mrdegibbs \
+        &quot;$out_subj/dwidenoise/${subj}_denoised.nii.gz&quot; \
+        &quot;$out_subj/mrdegibbs/${subj}_denoised_degibbs.nii.gz&quot; -force
+
+<span class="c">    # Step 3: Remove b=250 shell from data (keep 0,1000,2000,3250,5000)</span>
+    dwiextract \
+        &quot;$out_subj/mrdegibbs/${subj}_denoised_degibbs.nii.gz&quot; \
+        -fslgrad &quot;$bvec_file&quot; &quot;$bval_file&quot; \
+        -shells 0,1000,2000,3250,5000 \
+        &quot;$out_subj/mrdegibbs_no_b250/${subj}_dwi_no_b250.nii.gz&quot; \
+        -export_grad_fsl \
+        &quot;$out_subj/mrdegibbs_no_b250/${subj}_dwi_no_b250.bvec&quot; \
+        &quot;$out_subj/mrdegibbs_no_b250/${subj}_dwi_no_b250.bval&quot; \
+        -force
+
+    echo &quot;&gt;&gt;&gt; [$subj] Done&quot;
+done
+
+echo &quot;=== All subjects finished (sequential run) ===&quot;
+
+</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Three cleanups on the raw diffusion data: remove thermal noise (MP-PCA), remove Gibbs ringing, and drop the unstable b=250 shell (Olson-lab convention).</p><div class="lead-lbl">Result</div><p class="res">Shells kept: b = 0, 1000, 2000, 3250, 5000.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">eddy --repol</span><span class="pkg">FSL</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+
+<span class="c"># Base directories</span>
+nifti_base=&quot;/data/projects/STUDIES/IMPACT/DTI/NIFTI&quot;
+denoise_dir=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/denoise&quot;
+topup_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/TOPUP&quot;
+eddy_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/EDDY&quot;
+
+acq_params_file=&quot;/data/projects/STUDIES/IMPACT/DTI/config/acqp.txt&quot;
+index_file=&quot;/data/projects/STUDIES/IMPACT/DTI/config/index_no_b250.txt&quot;
+
+<span class="c"># Function to run EDDY for one subject</span>
+process_subj() {
+    subj=$1
+    echo &quot;&gt;&gt;&gt; [$subj] Running EDDY&quot;
+
+    mrdegibbs_dir=&quot;$denoise_dir/$subj/mrdegibbs_no_b250&quot;
+    topup_dir=&quot;$topup_base/$subj/topup_output&quot;
+    out_dir=&quot;$eddy_base/$subj&quot;
+    mkdir -p &quot;$out_dir&quot;
+
+    eddy \
+        --imain=&quot;$mrdegibbs_dir/${subj}_dwi_no_b250.nii.gz&quot; \
+        --mask=&quot;$topup_dir/${subj}_topup_Tmean_brain_mask.nii.gz&quot; \
+        --acqp=&quot;$acq_params_file&quot; \
+        --index=&quot;$index_file&quot; \
+        --bvecs=&quot;$mrdegibbs_dir/${subj}_dwi_no_b250.bvec&quot; \
+        --bvals=&quot;$mrdegibbs_dir/${subj}_dwi_no_b250.bval&quot; \
+        --topup=&quot;$topup_dir/${subj}_topup&quot; \
+        --out=&quot;$out_dir/${subj}_eddy&quot; \
+        --cnr_maps \
+        --repol \
+        -v
+
+    echo &quot;&gt;&gt;&gt; [$subj] Done&quot;
+}
+
+export -f process_subj
+export denoise_dir topup_base eddy_base acq_params_file index_file
+
+subjects=$(ls -1 &quot;$nifti_base&quot;)
+
+<span class="c"># Run up to 8 jobs in parallel</span>
+if command -v parallel &gt; /dev/null; then
+    echo &quot;$subjects&quot; | parallel -j 8 process_subj {}
+else
+    max_jobs=8
+    job_count=0
+    for subj in $subjects; do
+        process_subj &quot;$subj&quot; &amp;
+        ((job_count++))
+        if (( job_count &gt;= max_jobs )); then
+            wait -n
+            ((job_count--))
+        fi
+    done
+    wait
+fi
+
+echo &quot;=== All EDDY jobs finished ===&quot;
+</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>The big correction: head motion, eddy-current distortion, and the susceptibility field (from topup), all at once, with outlier-slice replacement. A corrupted slice (4+ SD below expected) is rebuilt from a model prediction.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">eddy_quad · eddy_squad</span><span class="pkg">FSL</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+<span class="c"># ============================================================</span>
+<span class="c"># IMPACT DTI QC Pipeline (QUAD -&gt; quad_list.txt -&gt; SQUAD -&gt; summary)</span>
+<span class="c"># Notes:</span>
+<span class="c"># - SQUAD expects a text file listing QUAD subject dirs containing qc.json - this script creates that file. </span>
+<span class="c"># - Do NOT pre-create $squad_base (eddy_squad will create it)</span>
+<span class="c"># - &quot;Outlier slice&quot; = slice whose mean intensity is ≥ 4 SD below expected</span>
+<span class="c"># ============================================================</span>
+
+set -u -o pipefail
+export OMP_NUM_THREADS=1
+export MKL_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 NUMEXPR_NUM_THREADS=1
+
+<span class="c"># --- Paths ---</span>
+nifti_base=&quot;/data/projects/STUDIES/IMPACT/DTI/NIFTI&quot;
+denoise_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/denoise&quot;
+eddy_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/EDDY&quot;
+topup_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/TOPUP&quot;
+quad_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/QUAD&quot;
+squad_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/SQUAD&quot;
+
+acq_params=&quot;/data/projects/STUDIES/IMPACT/DTI/config/acqp.txt&quot;
+index_file=&quot;/data/projects/STUDIES/IMPACT/DTI/config/index_no_b250.txt&quot;
+
+out_txt=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/qc_summary.txt&quot;
+
+quad_list=&quot;$quad_base/quad_list.txt&quot;
+: &gt; &quot;$quad_list&quot;
+
+<span class="c"># -------------------- Step 1: QUAD -------------------------</span>
+echo &quot;&gt;&gt;&gt; Step 1: running QUAD in parallel (max 60)...&quot;
+
+ls -1 &quot;$nifti_base&quot; | xargs -n 1 -P 60 -I{} bash -c &#x27;
+  subj=&quot;{}&quot;
+  mask_file=&quot;&#x27;&quot;$topup_base&quot;&#x27;/$subj/topup_output/${subj}_topup_Tmean_brain_mask.nii.gz&quot;
+  bval_file=&quot;&#x27;&quot;$denoise_base&quot;&#x27;/$subj/mrdegibbs_no_b250/${subj}_dwi_no_b250.bval&quot;
+  bvec_file=&quot;&#x27;&quot;$denoise_base&quot;&#x27;/$subj/mrdegibbs_no_b250/${subj}_dwi_no_b250.bvec&quot;
+  eddy_prefix=&quot;&#x27;&quot;$eddy_base&quot;&#x27;/$subj/${subj}_eddy&quot;
+  out_dir=&quot;&#x27;&quot;$quad_base&quot;&#x27;/$subj&quot;
+
+  if [[ -f &quot;$mask_file&quot; &amp;&amp; -f &quot;$bval_file&quot; &amp;&amp; -f &quot;$bvec_file&quot; &amp;&amp; -f &quot;${eddy_prefix}.nii.gz&quot; ]]; then
+    echo &quot;&gt;&gt;&gt; QUAD: $subj&quot;
+    rm -rf &quot;$out_dir&quot;
+    eddy_quad &quot;$eddy_prefix&quot; \
+      -idx &quot;&#x27;&quot;$index_file&quot;&#x27;&quot; \
+      -par &quot;&#x27;&quot;$acq_params&quot;&#x27;&quot; \
+      -m &quot;$mask_file&quot; \
+      -b &quot;$bval_file&quot; \
+      -g &quot;$bvec_file&quot; \
+      -o &quot;$out_dir&quot;
+  else
+    echo &quot;!! Skipping $subj (missing inputs)&quot;
+  fi
+&#x27;
+
+<span class="c"># -------------------- Step 2: SQUAD ------------------------</span>
+echo &quot;&gt;&gt;&gt; Step 2: rebuilding quad_list (only QUADs with qc.json) and running SQUAD...&quot;
+
+find &quot;$quad_base&quot; -mindepth 1 -maxdepth 1 -type d \
+  -exec test -f &quot;{}/qc.json&quot; \; -print | sort &gt; &quot;$quad_list&quot;
+
+nsubj=$(wc -l &lt; &quot;$quad_list&quot; | tr -d &quot; &quot;)
+echo &quot;Found $nsubj subjects for SQUAD.&quot;
+if [[ &quot;$nsubj&quot; -eq 0 ]]; then
+  echo &quot;!! quad_list.txt is empty; skipping SQUAD&quot;
+else
+<span class="c">  # Optional: ensure a clean SQUAD run</span>
+<span class="c">  # rm -rf &quot;$squad_base&quot;</span>
+
+  echo &quot;Running eddy_squad...&quot;
+  eddy_squad &quot;$quad_list&quot; -o &quot;$squad_base&quot; || echo &quot;!! eddy_squad failed; continuing to summary with available data&quot;
+fi
+
+<span class="c"># -------------------- Step 3: Summary ----------------------</span>
+echo &quot;&gt;&gt;&gt; Step 3: collating per-subject (QUAD) + group metrics (SQUAD)...&quot;
+{
+  echo &quot;QC Summary — IMPACT DTI&quot;
+  echo &quot;Exclusion threshold: &gt;2 mm average absolute motion&quot;
+  echo
+  echo &quot;Per-subject results:&quot;
+} &gt; &quot;$out_txt&quot;
+
+per_subj_tmp=$(mktemp)
+excl_tmp=$(mktemp)
+
+while IFS= read -r subj_dir; do
+  subj=$(basename &quot;$subj_dir&quot;)
+  qc_file=&quot;$subj_dir/qc.json&quot;
+  [[ -f &quot;$qc_file&quot; ]] || continue
+
+  abs_motion=$(python3 - &lt;&lt;PY &quot;$qc_file&quot;
+import json,sys
+d=json.load(open(sys.argv[1]))
+print(d.get(&#x27;qc_mot_abs&#x27;) or d.get(&#x27;avg_abs_motion&#x27;) or &quot;NA&quot;)
+PY
+)
+  rel_motion=$(python3 - &lt;&lt;PY &quot;$qc_file&quot;
+import json,sys
+d=json.load(open(sys.argv[1]))
+print(d.get(&#x27;qc_mot_rel&#x27;) or &quot;NA&quot;)
+PY
+)
+  out_prop=$(python3 - &lt;&lt;PY &quot;$qc_file&quot;
+import json,sys
+d=json.load(open(sys.argv[1]))
+v=d.get(&#x27;qc_outliers_tot&#x27;) or d.get(&#x27;outlier_prop&#x27;)
+print(&quot;&quot; if v is None else v)
+PY
+)
+
+  if [[ -n &quot;$out_prop&quot; ]]; then
+<span class="c">    # qc_outliers_tot is already expressed as percent of slices</span>
+    out_pct=$(awk -v v=&quot;$out_prop&quot; &#x27;BEGIN{printf(&quot;%.2f&quot;,v)}&#x27;)
+  else
+    out_pct=&quot;NA&quot;
+  fi
+
+  printf &quot;%s\tavg_abs_motion=%smm\trel_motion=%smm\toutlier_slices=%s%%\n&quot; \
+    &quot;$subj&quot; &quot;$abs_motion&quot; &quot;$rel_motion&quot; &quot;$out_pct&quot; &gt;&gt; &quot;$per_subj_tmp&quot;
+
+  awk -v m=&quot;${abs_motion:-0}&quot; -v s=&quot;$subj&quot; &#x27;BEGIN{ if (m+0&gt;2.0) print s }&#x27; &gt;&gt; &quot;$excl_tmp&quot;
+done &lt; &quot;$quad_list&quot;
+
+sort &quot;$per_subj_tmp&quot; &gt;&gt; &quot;$out_txt&quot;
+echo &gt;&gt; &quot;$out_txt&quot;
+echo &quot;Exclusions (&gt;2 mm):&quot; &gt;&gt; &quot;$out_txt&quot;
+if [[ -s &quot;$excl_tmp&quot; ]]; then
+  sort &quot;$excl_tmp&quot; &gt;&gt; &quot;$out_txt&quot;
+else
+  echo &quot;None&quot; &gt;&gt; &quot;$out_txt&quot;
+fi
+
+<span class="c"># --- group stats from SQUAD group_db.json ---</span>
+group_db=&quot;$squad_base/group_db.json&quot;
+if [[ -f &quot;$group_db&quot; ]]; then
+  echo &gt;&gt; &quot;$out_txt&quot;
+  echo &quot;Group-level metrics (from SQUAD group_db.json):&quot; &gt;&gt; &quot;$out_txt&quot;
+
+  python3 - &quot;$group_db&quot; &gt;&gt; &quot;$out_txt&quot; &lt;&lt;&#x27;PY&#x27;
+import json, sys, numpy as np
+path = sys.argv[1]
+with open(path) as f:
+    d = json.load(f)
+
+motions = np.array(d.get(&quot;qc_motion&quot;, []), dtype=float)
+outliers = np.array(d.get(&quot;qc_outliers&quot;, []), dtype=float)
+
+if motions.size &gt; 0:
+    print(f&quot;Mean (SD) average absolute motion across participants = {motions.mean():.2f} ({motions.std(ddof=1):.2f}) mm&quot;)
+else:
+    print(&quot;Mean (SD) average absolute motion across participants = NA (NA) mm&quot;)
+
+if outliers.size &gt; 0:
+    print(f&quot;Mean (SD) frequency of outlier slices = {outliers.mean():.2f}% ({outliers.std(ddof=1):.2f}%)&quot;)
+else:
+    print(&quot;Mean (SD) frequency of outlier slices = NA (NA)%&quot;)
+PY
+else
+  echo &gt;&gt; &quot;$out_txt&quot;
+  echo &quot;!! No group_db.json found — group metrics unavailable&quot; &gt;&gt; &quot;$out_txt&quot;
+fi
+
+rm -f &quot;$per_subj_tmp&quot; &quot;$excl_tmp&quot;
+
+echo &quot;=== Done. Summary written to: $out_txt ===&quot;
+tail -n 20 &quot;$out_txt&quot;
+
+
+</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Per-subject (QUAD) and group (SQUAD) automated QC, plus a manual FSLeyes scroll-through. The per-subject absolute-motion number becomes a covariate.</p><div class="lead-lbl">Result</div><p class="res">Motion was low across the board. Group mean absolute motion 0.27 mm. The rule was to exclude anyone over 2 mm; nobody hit it.</p><figure class="fig"><img src="../images/qc_summary.png" alt="Group SQUAD QC summary across all subjects." loading="lazy"><figcaption>Group SQUAD QC summary across all subjects.</figcaption></figure></div></details></div></div><div class="subhead">Build the fiber model</div><div class="step"><div class="stephead"><span class="cmd">bedpostx</span><span class="pkg">FSL</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Step 9: BEDPOSTX (IMPACT DTI)</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Prepares inputs and runs bedpostx for each subject</span>
+<span class="c"># Dynamically parallelizes across available cores</span>
+<span class="c"># Outputs go to: derivatives/BEDPOSTX/&lt;subj&gt;.bedpostX/</span>
+<span class="c"># ============================================================</span>
+
+set -u -o pipefail
+
+<span class="c"># --- Paths ---</span>
+nifti_base=&quot;/data/projects/STUDIES/IMPACT/DTI/NIFTI&quot;
+eddy_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/EDDY&quot;
+denoise_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/denoise&quot;
+topup_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/TOPUP&quot;
+bedpostx_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX&quot;
+
+mkdir -p &quot;$bedpostx_base&quot;
+
+<span class="c"># --- Dynamic resource detection ---</span>
+ncores=$(nproc)              # total CPU cores
+threads_per_job=4            # cores used *inside* each bedpostx
+max_jobs=$(( ncores / threads_per_job ))
+
+echo &quot;Detected $ncores cores → running up to $max_jobs jobs in parallel&quot;
+export OMP_NUM_THREADS=$threads_per_job
+export MKL_NUM_THREADS=$threads_per_job
+export OPENBLAS_NUM_THREADS=$threads_per_job
+export NUMEXPR_NUM_THREADS=$threads_per_job
+
+<span class="c"># --- Subject processing function ---</span>
+process_subj() {
+    subj=$1
+    echo &quot;&gt;&gt;&gt; [$subj] Preparing and running bedpostx&quot;
+
+    out_dir=&quot;$bedpostx_base/$subj&quot;
+    mkdir -p &quot;$out_dir/bedpostx_input&quot;
+
+<span class="c">    # Copy and rename into FSL’s expected filenames</span>
+    cp &quot;$eddy_base/$subj/${subj}_eddy.nii.gz&quot;                  &quot;$out_dir/bedpostx_input/data.nii.gz&quot;
+    cp &quot;$eddy_base/$subj/${subj}_eddy.eddy_rotated_bvecs&quot;      &quot;$out_dir/bedpostx_input/bvecs&quot;
+    cp &quot;$denoise_base/$subj/mrdegibbs_no_b250/${subj}_modified_bval.bval&quot; \
+       &quot;$out_dir/bedpostx_input/bvals&quot;
+    cp &quot;$topup_base/$subj/topup_output/${subj}_topup_Tmean_brain_mask.nii.gz&quot; \
+       &quot;$out_dir/bedpostx_input/nodif_brain_mask.nii.gz&quot;
+
+<span class="c">    # Run bedpostx</span>
+    bedpostx &quot;$out_dir/bedpostx_input&quot;
+}
+
+export -f process_subj
+export eddy_base denoise_base topup_base bedpostx_base
+
+<span class="c"># --- Loop through subjects with job control ---</span>
+subjects=$(ls -1 &quot;$nifti_base&quot;)
+
+job_count=0
+for subj in $subjects; do
+    process_subj &quot;$subj&quot; &amp;
+    ((job_count++))
+    if (( job_count &gt;= max_jobs )); then
+        wait -n
+        ((job_count--))
+    fi
+done
+
+wait
+echo &quot;=== All BEDPOSTX jobs finished ===&quot;
+</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Fits a multi-fiber (ball-and-stick) model at every voxel. Run partly for its own outputs and partly because it produces a tidy, correctly-formatted input folder (data, motion-rotated bvecs, bvals, mask) that later MRtrix and NODDI steps reuse.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">dwiextract</span><span class="pkg">MRtrix3</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+<span class="c">###############################################################################</span>
+<span class="c"># 🧠 IMPACT DTI — Parallel DWIEXTRACT (live + logged output, stable + safe)</span>
+<span class="c">###############################################################################</span>
+
+<span class="c"># --- consistent logging (no SSH close) ---</span>
+log_file=&quot;$HOME/dwiextract.log&quot;
+: &gt; &quot;$log_file&quot;   # clear previous run
+echo &quot;=== Starting DWIEXTRACT ===&quot; | tee -a &quot;$log_file&quot;
+
+<span class="c"># --- base directories ---</span>
+base_dir=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX&quot;
+mrtrix3_1000_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/mrtrix3_1000&quot;
+mrtrix3_2000_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/mrtrix3_2000&quot;
+
+mkdir -p &quot;$mrtrix3_1000_base&quot; &quot;$mrtrix3_2000_base&quot;
+
+<span class="c"># --- function: process one subject ---</span>
+process_subj() {
+    subj=&quot;$1&quot;
+    subj_dir=&quot;$base_dir/$subj/bedpostx_input&quot;
+
+    echo &quot;&gt;&gt;&gt; [$subj] START&quot; | tee -a &quot;$log_file&quot;
+
+    mkdir -p &quot;$mrtrix3_1000_base/$subj&quot; &quot;$mrtrix3_2000_base/$subj&quot;
+
+    echo &quot;&gt;&gt;&gt; [$subj] Running dwiextract (b=0,1000)&quot; | tee -a &quot;$log_file&quot;
+    dwiextract \
+        -fslgrad &quot;$subj_dir/bvecs&quot; &quot;$subj_dir/bvals&quot; \
+        -shells 0,1000 \
+        &quot;$subj_dir/data.nii.gz&quot; \
+        &quot;$mrtrix3_1000_base/$subj/data_1000.nii.gz&quot; \
+        -export_grad_fsl \
+        &quot;$mrtrix3_1000_base/$subj/bvecs_1000&quot; \
+        &quot;$mrtrix3_1000_base/$subj/bvals_1000&quot; \
+        -force 2&gt;&amp;1 | tee -a &quot;$log_file&quot;
+
+    echo &quot;&gt;&gt;&gt; [$subj] Running dwiextract (b=0,1000,2000)&quot; | tee -a &quot;$log_file&quot;
+    dwiextract \
+        -fslgrad &quot;$subj_dir/bvecs&quot; &quot;$subj_dir/bvals&quot; \
+        -shells 0,1000,2000 \
+        &quot;$subj_dir/data.nii.gz&quot; \
+        &quot;$mrtrix3_2000_base/$subj/data_1000_2000.nii.gz&quot; \
+        -export_grad_fsl \
+        &quot;$mrtrix3_2000_base/$subj/bvecs_1000_2000&quot; \
+        &quot;$mrtrix3_2000_base/$subj/bvals_1000_2000&quot; \
+        -force 2&gt;&amp;1 | tee -a &quot;$log_file&quot;
+
+    echo &quot;&gt;&gt;&gt; [$subj] DONE&quot; | tee -a &quot;$log_file&quot;
+}
+
+export -f process_subj
+export base_dir mrtrix3_1000_base mrtrix3_2000_base log_file
+
+<span class="c"># --- find and run subjects in parallel (no hang, no wait) ---</span>
+subjects=$(find &quot;$base_dir&quot; -mindepth 1 -maxdepth 1 -type d -exec basename {} \;)
+count=$(echo &quot;$subjects&quot; | wc -l)
+echo &quot;Found $count subjects. Running up to 60 in parallel...&quot; | tee -a &quot;$log_file&quot;
+
+echo &quot;$subjects&quot; | xargs -n 1 -P 60 -I {} bash -c &#x27;process_subj &quot;$@&quot;&#x27; _ {} | tee -a &quot;$log_file&quot;
+
+echo &quot;=== All DWIEXTRACT jobs finished successfully ===&quot; | tee -a &quot;$log_file&quot;
+</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Make reduced datasets by shell (b=0,1000 and b=0,1000,2000). The tensor model, next, only wants the low shells.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">dtifit</span><span class="pkg">FSL</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+<span class="c"># ============================================================</span>
+<span class="c"># 🧠 IMPACT DTI — Step 11: Tensor Fitting (DTIFIT)</span>
+<span class="c"># ============================================================</span>
+
+source /usr/local/fsl/etc/fslconf/fsl.sh
+export FSLOUTPUTTYPE=NIFTI_GZ
+
+<span class="c"># --- Safe logging (no exec redirection, no SSH close) ---</span>
+log_file=&quot;$HOME/dtifit.log&quot;
+: &gt; &quot;$log_file&quot;
+echo &quot;=== Starting DTIFIT ===&quot; | tee -a &quot;$log_file&quot;
+
+<span class="c"># --- Base directories ---</span>
+mrtrix3_1000_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/mrtrix3_1000&quot;
+topup_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/TOPUP&quot;
+dtifit_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/DTIFIT_OUTPUT&quot;
+mkdir -p &quot;$dtifit_base&quot;
+
+<span class="c"># --- Function ---</span>
+process_subj() {
+    subj=&quot;$1&quot;
+    subj_mrtrix=&quot;$mrtrix3_1000_base/$subj&quot;
+    subj_topup=&quot;$topup_base/$subj/topup_output&quot;
+    subj_out=&quot;$dtifit_base/$subj&quot;
+    mkdir -p &quot;$subj_out&quot;
+
+    data=&quot;$subj_mrtrix/data_1000.nii.gz&quot;
+    bvec=&quot;$subj_mrtrix/bvecs_1000&quot;
+    bval=&quot;$subj_mrtrix/bvals_1000&quot;
+    mask=&quot;$subj_topup/${subj}_topup_Tmean_brain_mask.nii.gz&quot;
+
+    if [[ ! -f &quot;$data&quot; || ! -f &quot;$bvec&quot; || ! -f &quot;$bval&quot; || ! -f &quot;$mask&quot; ]]; then
+        echo &quot;!!! [$subj] Missing input(s). Skipping.&quot; | tee -a &quot;$log_file&quot;
+        return
+    fi
+
+    echo &quot;&gt;&gt;&gt; [$subj] Running DTIFIT&quot; | tee -a &quot;$log_file&quot;
+    {
+        dtifit -k &quot;$data&quot; -o &quot;$subj_out/DTI&quot; -m &quot;$mask&quot; -r &quot;$bvec&quot; -b &quot;$bval&quot;
+
+        if [[ -f &quot;$subj_out/DTI_L2.nii.gz&quot; &amp;&amp; -f &quot;$subj_out/DTI_L3.nii.gz&quot; ]]; then
+            echo &quot;&gt;&gt;&gt; [$subj] Calculating RD = (L2+L3)/2&quot;
+            fslmaths &quot;$subj_out/DTI_L2.nii.gz&quot; -add &quot;$subj_out/DTI_L3.nii.gz&quot; \
+                     -div 2 &quot;$subj_out/DTI_RD.nii.gz&quot;
+        else
+            echo &quot;!!! [$subj] Missing L2/L3 for RD computation&quot;
+        fi
+
+        echo &quot;&gt;&gt;&gt; [$subj] Done&quot;
+    } 2&gt;&amp;1 | tee -a &quot;$log_file&quot;
+}
+
+export -f process_subj
+export mrtrix3_1000_base topup_base dtifit_base log_file
+
+<span class="c"># --- Parallel run ---</span>
+subjects=$(ls -1 &quot;$mrtrix3_1000_base&quot;)
+count=$(echo &quot;$subjects&quot; | wc -l)
+echo &quot;Found $count subjects. Running up to 60 in parallel...&quot; | tee -a &quot;$log_file&quot;
+
+echo &quot;$subjects&quot; | xargs -n 1 -P 60 -I {} bash -c &#x27;process_subj &quot;$@&quot;&#x27; _ {} | tee -a &quot;$log_file&quot;
+
+echo &quot;=== All $count DTIFIT jobs finished successfully ===&quot; | tee -a &quot;$log_file&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Fit the diffusion tensor on the low shells and derive FA, MD, and RD. FA is one of the four microstructure metrics carried to the analyses.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">flirt · convert_xfm</span><span class="pkg">FSL</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+<span class="c"># ============================================================</span>
+<span class="c"># 🧠 IMPACT DTI — Step 12: FLIRT + CONVERT (Spatial Alignment)</span>
+<span class="c"># ============================================================</span>
+
+source /usr/local/fsl/etc/fslconf/fsl.sh
+export FSLOUTPUTTYPE=NIFTI_GZ
+
+<span class="c"># --- Logging ---</span>
+log_file=&quot;$HOME/flirtconvert.log&quot;
+: &gt; &quot;$log_file&quot;
+echo &quot;=== Starting FLIRT + CONVERT ===&quot; | tee -a &quot;$log_file&quot;
+
+<span class="c"># --- Directories ---</span>
+ants_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/ANTs&quot;
+topup_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/TOPUP&quot;
+transform_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/TRANSFORMS&quot;
+template_ref=&quot;/usr/local/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz&quot;
+
+mkdir -p &quot;$transform_base&quot;
+
+<span class="c"># --- Function: Run FLIRT + CONVERT for one subject ---</span>
+process_subj() {
+    subj=&quot;$1&quot;
+    subj_ants=&quot;$ants_base/$subj&quot;
+    subj_topup=&quot;$topup_base/$subj/topup_output&quot;
+    subj_out=&quot;$transform_base/$subj&quot;
+    mkdir -p &quot;$subj_out&quot;
+
+    t1_brain=&quot;$subj_ants/${subj}_BrainExtractionBrain.nii.gz&quot;
+    b0_brain=&quot;$subj_topup/${subj}_topup_Tmean_brain.nii.gz&quot;
+
+<span class="c">    # Skip if missing input</span>
+    if [[ ! -f &quot;$t1_brain&quot; || ! -f &quot;$b0_brain&quot; ]]; then
+        echo &quot;!!! [$subj] Missing input(s), skipping&quot; | tee -a &quot;$log_file&quot;
+        return
+    fi
+
+    echo &quot;&gt;&gt;&gt; [$subj] Running FLIRT + CONVERT&quot; | tee -a &quot;$log_file&quot;
+
+    flirt -in &quot;$b0_brain&quot; -ref &quot;$t1_brain&quot; \
+        -omat &quot;$subj_out/diff2str_${subj}.mat&quot; \
+        -searchrx -90 90 -searchry -90 90 -searchrz -90 90 \
+        -dof 6 -cost corratio
+
+    convert_xfm -omat &quot;$subj_out/str2diff_${subj}.mat&quot; \
+        -inverse &quot;$subj_out/diff2str_${subj}.mat&quot;
+
+    flirt -in &quot;$t1_brain&quot; -ref &quot;$template_ref&quot; \
+        -omat &quot;$subj_out/str2standard_${subj}.mat&quot; \
+        -searchrx -90 90 -searchry -90 90 -searchrz -90 90 \
+        -dof 12 -cost corratio
+
+    convert_xfm -omat &quot;$subj_out/standard2str_${subj}.mat&quot; \
+        -inverse &quot;$subj_out/str2standard_${subj}.mat&quot;
+
+    convert_xfm -omat &quot;$subj_out/diff2standard_${subj}.mat&quot; \
+        -concat &quot;$subj_out/str2standard_${subj}.mat&quot; &quot;$subj_out/diff2str_${subj}.mat&quot;
+
+    convert_xfm -omat &quot;$subj_out/standard2diff_${subj}.mat&quot; \
+        -inverse &quot;$subj_out/diff2standard_${subj}.mat&quot;
+
+    echo &quot;&gt;&gt;&gt; [$subj] Done&quot; | tee -a &quot;$log_file&quot;
+}
+
+export -f process_subj
+export ants_base topup_base transform_base template_ref log_file
+
+<span class="c"># --- Parallel Run ---</span>
+subjects=$(ls -1 &quot;$ants_base&quot;)
+echo &quot;Found $(echo &quot;$subjects&quot; | wc -l) subjects. Running up to 60 in parallel...&quot; | tee -a &quot;$log_file&quot;
+
+echo &quot;$subjects&quot; | xargs -n 1 -P 60 -I {} bash -c &#x27;process_subj &quot;$@&quot;&#x27; _ {}
+
+echo &quot;=== All FLIRT + CONVERT jobs finished ===&quot; | tee -a &quot;$log_file&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Compute the linear alignments between diffusion, T1, and MNI space, and invert the set. The one reused later is str2diff (T1 to diffusion), to bring the ROIs into the DWI grid.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">Atropos · fslstats -V</span><span class="pkg">ANTs · FSL</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+<span class="c"># ============================================================</span>
+<span class="c"># 🧠 IMPACT DTI — Step 13: Intracranial Volume (ICV) Estimation</span>
+<span class="c"># ============================================================</span>
+
+source /usr/local/fsl/etc/fslconf/fsl.sh
+export FSLOUTPUTTYPE=NIFTI_GZ
+
+ANTs_bin=&quot;/data/tools/ANTs/bin&quot;
+ants_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/ANTs&quot;
+icv_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/ICV&quot;
+csv_file=&quot;$icv_base/icv_results.csv&quot;
+log_file=&quot;$HOME/icv.log&quot;
+
+mkdir -p &quot;$icv_base&quot;
+: &gt; &quot;$log_file&quot;
+echo &quot;participant_id,brain_file_name,ICV_mm3&quot; &gt; &quot;$csv_file&quot;
+
+<span class="c"># --- Function to process one subject ---</span>
+process_subj() {
+    subj=&quot;$1&quot;
+    subj_dir=&quot;$ants_base/$subj&quot;
+    brain_file=&quot;$subj_dir/${subj}_BrainExtractionBrain.nii.gz&quot;
+    mask_file=&quot;$subj_dir/${subj}_BrainExtractionMask.nii.gz&quot;
+    out_dir=&quot;$icv_base/$subj&quot;
+    mkdir -p &quot;$out_dir&quot;
+
+    echo &quot;&gt;&gt;&gt; [$subj] Running Atropos segmentation...&quot; | tee -a &quot;$log_file&quot;
+
+<span class="c">    # Segmentation (probabilistic)</span>
+    &quot;$ANTs_bin/Atropos&quot; -d 3 \
+        -a &quot;$brain_file&quot; \
+        -x &quot;$mask_file&quot; \
+        -i KMeans[3] \
+        -c [5,0.001] \
+        -m [0.3,1x1x1] \
+        -o [&quot;$out_dir/${subj}_seg_labelled.nii.gz&quot;,&quot;$out_dir/${subj}_seg_prob%02d.nii.gz&quot;]
+
+<span class="c">    # Ensure segmentation maps exist</span>
+    if [[ ! -f &quot;$out_dir/${subj}_seg_prob01.nii.gz&quot; ]]; then
+        echo &quot;!!! [$subj] Segmentation failed — missing prob maps.&quot; | tee -a &quot;$log_file&quot;
+        return
+    fi
+
+<span class="c">    # Compute ICV</span>
+    csf=$(fslstats &quot;$out_dir/${subj}_seg_prob01.nii.gz&quot; -V | awk &#x27;{print $2}&#x27;)
+    gm=$(fslstats &quot;$out_dir/${subj}_seg_prob02.nii.gz&quot; -V | awk &#x27;{print $2}&#x27;)
+    wm=$(fslstats &quot;$out_dir/${subj}_seg_prob03.nii.gz&quot; -V | awk &#x27;{print $2}&#x27;)
+
+    icv=$(echo &quot;$csf + $gm + $wm&quot; | bc)
+    echo &quot;$subj,$(basename &quot;$brain_file&quot;),$icv&quot; &gt;&gt; &quot;$csv_file&quot;
+
+    echo &quot;&gt;&gt;&gt; [$subj] Done (ICV = ${icv} mm³)&quot; | tee -a &quot;$log_file&quot;
+}
+
+export -f process_subj
+export ANTs_bin ants_base icv_base csv_file log_file
+
+<span class="c"># --- Parallel run ---</span>
+subjects=$(ls -1 &quot;$ants_base&quot;)
+max_jobs=20  # adjust based on system load
+
+echo &quot;Found $(echo &quot;$subjects&quot; | wc -l) subjects. Running up to $max_jobs in parallel...&quot; | tee -a &quot;$log_file&quot;
+
+echo &quot;$subjects&quot; | xargs -n 1 -P &quot;$max_jobs&quot; -I {} bash -c &#x27;process_subj &quot;$@&quot;&#x27; _ {}
+
+echo &quot;=== All ICV jobs finished. Results in $csv_file ===&quot; | tee -a &quot;$log_file&quot;
+
+</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Estimate intracranial volume: segment the T1 into CSF/GM/WM and sum. ICV is a covariate so a finding isn't just about head size.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">pyAFQ BIDS prep</span><span class="pkg">pyAFQ</span></div><div class="drawers"><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>We briefly organized the data into BIDS layout to try pyAFQ's automated tractography. No imaging math happened here (copying and renaming only). We ultimately went with MRtrix for tractography and kept pyAFQ only for its tract cleaning (Step 25).</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">mrconvert</span><span class="pkg">MRtrix3</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Step 15: Convert DWI to MRtrix format (mrconvert)</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Converts eddy-corrected DWI + gradients + brain mask from</span>
+<span class="c"># NIfTI to MRtrix .mif format for CSD pipeline</span>
+<span class="c"># Input: BEDPOSTX/bedpostx_input/ (data.nii.gz, bvecs, bvals, mask)</span>
+<span class="c"># Output: CSD/&lt;subj&gt;/dwi.mif, mask.mif</span>
+<span class="c"># ============================================================</span>
+
+export PATH=/data/tools/mrtrix3/bin:$PATH
+
+bedpostx_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX&quot;
+csd_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD&quot;
+nifti_base=&quot;/data/projects/STUDIES/IMPACT/DTI/NIFTI&quot;
+
+process_subj() {
+    subj=$1
+    echo &quot;&gt;&gt;&gt; [$subj] Converting to MRtrix format&quot;
+    in_dir=&quot;$bedpostx_base/$subj/bedpostx_input&quot;
+    out_dir=&quot;$csd_base/$subj&quot;
+    mkdir -p &quot;$out_dir&quot;
+
+<span class="c">    # Skip if inputs missing</span>
+    if [[ ! -f &quot;$in_dir/data.nii.gz&quot; || ! -f &quot;$in_dir/bvecs&quot; || ! -f &quot;$in_dir/bvals&quot; || ! -f &quot;$in_dir/nodif_brain_mask.nii.gz&quot; ]]; then
+        echo &quot;!!! [$subj] Missing input files, skipping&quot;
+        return
+    fi
+
+<span class="c">    # Convert DWI with embedded gradient table</span>
+    mrconvert &quot;$in_dir/data.nii.gz&quot; \
+        -fslgrad &quot;$in_dir/bvecs&quot; &quot;$in_dir/bvals&quot; \
+        &quot;$out_dir/dwi.mif&quot; -force
+
+<span class="c">    # Convert brain mask</span>
+    mrconvert &quot;$in_dir/nodif_brain_mask.nii.gz&quot; \
+        &quot;$out_dir/mask.mif&quot; -force
+
+    echo &quot;&gt;&gt;&gt; [$subj] Done&quot;
+}
+
+export -f process_subj
+export bedpostx_base csd_base
+
+subjects=$(ls -1 &quot;$nifti_base&quot;)
+for subj in $subjects; do
+    process_subj &quot;$subj&quot; &amp;
+    while [ &quot;$(jobs -r | wc -l)&quot; -ge 30 ]; do sleep 1; done
+done
+wait
+echo &quot;=== All MRtrix conversions finished ===&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Repackage the eddy-corrected DWI and mask into MRtrix's .mif format, which carries the gradient table inside the file header.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">dwi2response (dhollander)</span><span class="pkg">MRtrix3</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Step 16: Estimate per-subject response functions (dwi2response)</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Uses the Dhollander algorithm to estimate tissue-specific</span>
+<span class="c"># response functions (WM, GM, CSF) from each subject&#x27;s DWI data.</span>
+<span class="c"># These are needed for multi-shell multi-tissue CSD (Step 18).</span>
+<span class="c"># Input:  CSD/&lt;subj&gt;/dwi.mif, mask.mif</span>
+<span class="c"># Output: CSD/&lt;subj&gt;/wm_response.txt, gm_response.txt, csf_response.txt</span>
+<span class="c"># ============================================================</span>
+
+export PATH=/data/tools/mrtrix3/bin:$PATH
+
+csd_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD&quot;
+nifti_base=&quot;/data/projects/STUDIES/IMPACT/DTI/NIFTI&quot;
+
+process_subj() {
+    subj=$1
+    echo &quot;&gt;&gt;&gt; [$subj] Estimating response functions&quot;
+    d=&quot;$csd_base/$subj&quot;
+
+    if [[ ! -f &quot;$d/dwi.mif&quot; || ! -f &quot;$d/mask.mif&quot; ]]; then
+        echo &quot;!!! [$subj] Missing dwi.mif or mask.mif, skipping&quot;
+        return
+    fi
+
+    dwi2response dhollander \
+        &quot;$d/dwi.mif&quot; \
+        &quot;$d/wm_response.txt&quot; \
+        &quot;$d/gm_response.txt&quot; \
+        &quot;$d/csf_response.txt&quot; \
+        -mask &quot;$d/mask.mif&quot; \
+        -force
+
+    echo &quot;&gt;&gt;&gt; [$subj] Done&quot;
+}
+
+export -f process_subj
+export csd_base
+
+subjects=$(ls -1 &quot;$nifti_base&quot;)
+for subj in $subjects; do
+    process_subj &quot;$subj&quot; &amp;
+    while [ &quot;$(jobs -r | wc -l)&quot; -ge 15 ]; do sleep 1; done
+done
+wait
+echo &quot;=== All response function estimations finished ===&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Estimate the response functions: the diffusion signal of a single perfectly-aligned fiber, plus GM and CSF. These are the reference shapes the deconvolution uses. Dhollander estimates all three from each subject's own data, no atlas.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">responsemean</span><span class="pkg">MRtrix3</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Step 17: Group-average response functions (responsemean)</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Averages per-subject response functions across all subjects</span>
+<span class="c"># to create group-level WM, GM, CSF response functions.</span>
+<span class="c"># MRtrix recommends group-averaged responses for FOD estimation.</span>
+<span class="c"># Input:  CSD/&lt;subj&gt;/wm_response.txt, gm_response.txt, csf_response.txt</span>
+<span class="c"># Output: CSD/group_wm_response.txt, group_gm_response.txt, group_csf_response.txt</span>
+<span class="c"># ============================================================</span>
+
+export PATH=/data/tools/mrtrix3/bin:$PATH
+
+csd_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD&quot;
+
+cd &quot;$csd_base&quot;
+
+echo &quot;&gt;&gt;&gt; Computing group-average WM response&quot;
+responsemean */wm_response.txt group_wm_response.txt -info -force
+
+echo &quot;&gt;&gt;&gt; Computing group-average GM response&quot;
+responsemean */gm_response.txt group_gm_response.txt -info -force
+
+echo &quot;&gt;&gt;&gt; Computing group-average CSF response&quot;
+responsemean */csf_response.txt group_csf_response.txt -info -force
+
+echo &quot;=== Group-average response functions finished ===&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Average every subject's three response functions into one shared group set, so later differences reflect biology rather than per-subject response noise.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">dwi2fod (msmt_csd)</span><span class="pkg">MRtrix3</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Step 18: Generate FODs — Multi-Shell Multi-Tissue CSD (dwi2fod)</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Uses group-averaged response functions to estimate fiber</span>
+<span class="c"># orientation distributions (FODs) for each tissue type.</span>
+<span class="c"># This is the MRtrix equivalent of BedpostX fiber modeling.</span>
+<span class="c"># Input:  CSD/&lt;subj&gt;/dwi.mif, mask.mif + CSD/group_*_response.txt</span>
+<span class="c"># Output: CSD/&lt;subj&gt;/wm_fod.mif, gm_fod.mif, csf_fod.mif</span>
+<span class="c"># ============================================================</span>
+
+export PATH=/data/tools/mrtrix3/bin:$PATH
+
+csd_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD&quot;
+nifti_base=&quot;/data/projects/STUDIES/IMPACT/DTI/NIFTI&quot;
+
+process_subj() {
+    subj=$1
+    echo &quot;&gt;&gt;&gt; [$subj] Generating FODs (MSMT-CSD)&quot;
+    d=&quot;$csd_base/$subj&quot;
+
+    if [[ ! -f &quot;$d/dwi.mif&quot; || ! -f &quot;$d/mask.mif&quot; ]]; then
+        echo &quot;!!! [$subj] Missing dwi.mif or mask.mif, skipping&quot;
+        return
+    fi
+
+    if [[ ! -f &quot;$csd_base/group_wm_response.txt&quot; || ! -f &quot;$csd_base/group_gm_response.txt&quot; || ! -f &quot;$csd_base/group_csf_response.txt&quot; ]]; then
+        echo &quot;!!! [$subj] Missing group response functions, skipping&quot;
+        return
+    fi
+
+    dwi2fod -mask &quot;$d/mask.mif&quot; \
+        msmt_csd \
+        &quot;$d/dwi.mif&quot; \
+        &quot;$csd_base/group_wm_response.txt&quot; &quot;$d/wm_fod.mif&quot; \
+        &quot;$csd_base/group_gm_response.txt&quot; &quot;$d/gm_fod.mif&quot; \
+        &quot;$csd_base/group_csf_response.txt&quot; &quot;$d/csf_fod.mif&quot; \
+        -force
+
+    echo &quot;&gt;&gt;&gt; [$subj] Done&quot;
+}
+
+export -f process_subj
+export csd_base
+
+subjects=$(ls -1 &quot;$nifti_base&quot;)
+for subj in $subjects; do
+    process_subj &quot;$subj&quot; &amp;
+    while [ &quot;$(jobs -r | wc -l)&quot; -ge 10 ]; do sleep 1; done
+done
+wait
+echo &quot;=== All FOD estimations finished ===&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>The core fiber model. MSMT-CSD decomposes each voxel's signal into a fiber orientation distribution using all shells and the group responses. The white-matter FOD is what streamlines grow from.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">mtnormalise</span><span class="pkg">MRtrix3</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Step 19: Normalize FODs (mtnormalise)</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Normalizes FOD intensities across tissue types and subjects</span>
+<span class="c"># so they are comparable. The normalized WM FOD (wm_fod_norm.mif)</span>
+<span class="c"># is what feeds into tractography.</span>
+<span class="c"># Also creates tissue-concatenated images for visualization/QC.</span>
+<span class="c"># Input:  CSD/&lt;subj&gt;/wm_fod.mif, gm_fod.mif, csf_fod.mif, mask.mif</span>
+<span class="c"># Output: CSD/&lt;subj&gt;/wm_fod_norm.mif, gm_fod_norm.mif, csf_fod_norm.mif</span>
+<span class="c">#         CSD/&lt;subj&gt;/vf_fod.mif, vf_fod_norm.mif (visualization)</span>
+<span class="c"># ============================================================</span>
+
+export PATH=/data/tools/mrtrix3/bin:$PATH
+
+csd_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD&quot;
+nifti_base=&quot;/data/projects/STUDIES/IMPACT/DTI/NIFTI&quot;
+
+process_subj() {
+    subj=$1
+    echo &quot;&gt;&gt;&gt; [$subj] Normalizing FODs&quot;
+    d=&quot;$csd_base/$subj&quot;
+
+    if [[ ! -f &quot;$d/wm_fod.mif&quot; || ! -f &quot;$d/gm_fod.mif&quot; || ! -f &quot;$d/csf_fod.mif&quot; || ! -f &quot;$d/mask.mif&quot; ]]; then
+        echo &quot;!!! [$subj] Missing FOD or mask files, skipping&quot;
+        return
+    fi
+
+<span class="c">    # Normalize FODs</span>
+    mtnormalise \
+        &quot;$d/wm_fod.mif&quot;  &quot;$d/wm_fod_norm.mif&quot; \
+        &quot;$d/gm_fod.mif&quot;  &quot;$d/gm_fod_norm.mif&quot; \
+        &quot;$d/csf_fod.mif&quot; &quot;$d/csf_fod_norm.mif&quot; \
+        -mask &quot;$d/mask.mif&quot; \
+        -force
+
+<span class="c">    # Tissue concatenation for visualization (matches Ranesh&#x27;s pipeline)</span>
+    mrconvert -coord 3 0 &quot;$d/wm_fod.mif&quot; - | \
+        mrcat &quot;$d/csf_fod.mif&quot; &quot;$d/gm_fod.mif&quot; - &quot;$d/vf_fod.mif&quot; -force
+
+    mrconvert -coord 3 0 &quot;$d/wm_fod_norm.mif&quot; - | \
+        mrcat &quot;$d/csf_fod_norm.mif&quot; &quot;$d/gm_fod_norm.mif&quot; - &quot;$d/vf_fod_norm.mif&quot; -force
+
+    echo &quot;&gt;&gt;&gt; [$subj] Done&quot;
+}
+
+export -f process_subj
+export csd_base
+
+subjects=$(ls -1 &quot;$nifti_base&quot;)
+for subj in $subjects; do
+    process_subj &quot;$subj&quot; &amp;
+    while [ &quot;$(jobs -r | wc -l)&quot; -ge 15 ]; do sleep 1; done
+done
+wait
+echo &quot;=== All FOD normalizations finished ===&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Rescale the FODs so intensities are comparable across tissues and people (correcting scanner drift, coil sensitivity). The normalized WM FOD is the final input to tractography.</p></div></details></div></div></div></details>
+  <details class="catgroup"><summary><span class="cname">Tractography</span><span class="cdesc">draw the VTA→HPC tract, then clean it · MRtrix3 / ANTs / pyAFQ</span></summary><div class="catbody"><div class="subhead">Fiber drawing</div><div class="callout"><b>The three ROI inputs</b> (from Ranesh Mopuru, Olson lab; all MNI space). Seed = VTA, Pauli atlas at 25%. Target = hippocampus, Harvard-Oxford at 50%. Tract atlas = his VTA-HPC group mean, built from ~170 HCP 7T subjects, used to build the exclusion corridor.</div><div class="step"><div class="stephead"><span class="cmd">antsRegistrationSyNQuick.sh</span><span class="pkg">ANTs (SyN)</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Step 20: ANTs Registration — MNI → Subject T1 Space</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Registers the MNI152 template to each subject&#x27;s skull-stripped</span>
+<span class="c"># T1, producing warp fields that can move any MNI-space image</span>
+<span class="c"># (ROIs, atlases) into subject-native T1 space.</span>
+<span class="c"># Input:  ANTs/&lt;subj&gt;/&lt;subj&gt;_BrainExtractionBrain.nii.gz (skull-stripped T1)</span>
+<span class="c">#         FSL MNI152_T1_1mm_brain.nii.gz (standard template)</span>
+<span class="c"># Output: CSD/&lt;subj&gt;/reg/mni2t1_0GenericAffine.mat</span>
+<span class="c">#         CSD/&lt;subj&gt;/reg/mni2t1_1Warp.nii.gz</span>
+<span class="c">#         CSD/&lt;subj&gt;/reg/mni2t1_1InverseWarp.nii.gz</span>
+<span class="c">#         CSD/&lt;subj&gt;/reg/mni2t1_Warped.nii.gz</span>
+<span class="c"># ============================================================</span>
+
+export ANTSPATH=/data/tools/ANTs/bin/
+export PATH=${ANTSPATH}:$PATH
+
+ants_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/ANTs&quot;
+csd_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD&quot;
+nifti_base=&quot;/data/projects/STUDIES/IMPACT/DTI/NIFTI&quot;
+mni_template=&quot;/usr/local/fsl/data/standard/MNI152_T1_1mm_brain.nii.gz&quot;
+
+process_subj() {
+    subj=$1
+    echo &quot;&gt;&gt;&gt; [$subj] Running ANTs registration: MNI → T1&quot;
+
+    t1_brain=&quot;$ants_base/$subj/${subj}_BrainExtractionBrain.nii.gz&quot;
+    reg_dir=&quot;$csd_base/$subj/reg&quot;
+    mkdir -p &quot;$reg_dir&quot;
+
+    if [[ ! -f &quot;$t1_brain&quot; ]]; then
+        echo &quot;!!! [$subj] Missing skull-stripped T1, skipping&quot;
+        return
+    fi
+
+<span class="c">    # Register MNI (moving) to subject T1 (fixed)</span>
+    antsRegistrationSyNQuick.sh \
+        -d 3 \
+        -f &quot;$t1_brain&quot; \
+        -m &quot;$mni_template&quot; \
+        -o &quot;$reg_dir/mni2t1_&quot; \
+        -n 4
+
+    echo &quot;&gt;&gt;&gt; [$subj] Done&quot;
+}
+
+export -f process_subj
+export ants_base csd_base mni_template ANTSPATH
+
+subjects=$(ls -1 &quot;$nifti_base&quot;)
+for subj in $subjects; do
+    process_subj &quot;$subj&quot; &amp;
+    while [ &quot;$(jobs -r | wc -l)&quot; -ge 5 ]; do sleep 1; done
+done
+wait
+echo &quot;=== All ANTs registrations finished ===&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>The ROIs live in MNI space; tracking has to happen in each subject's diffusion space. First a nonlinear (SyN) warp of MNI to the subject's T1, needed because our T1s aren't already diffusion-aligned, unlike the HCP data the atlas came from.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">antsApplyTransforms · flirt</span><span class="pkg">ANTs · FSL</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Step 21: Warp ROIs from MNI → T1 → Diffusion Space</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Uses ANTs warp (Step 20) to bring ROIs from MNI to T1 space,</span>
+<span class="c"># then FLIRT str2diff matrix (Step 12) to bring them to diffusion.</span>
+<span class="c"># Both steps use NearestNeighbor interpolation for binary masks.</span>
+<span class="c"># Outputs are binarized as a safety step.</span>
+<span class="c">#</span>
+<span class="c"># ROIs warped (per hemisphere):</span>
+<span class="c">#   - VTA (Pauli atlas, 25% threshold)</span>
+<span class="c">#   - HPC (Harvard-Oxford, 50% threshold)</span>
+<span class="c">#   - Tract atlas (GroupMean_thr50)</span>
+<span class="c">#</span>
+<span class="c"># Input:  ROIs/VTA-HPC/*.nii.gz (MNI space)</span>
+<span class="c">#         CSD/&lt;subj&gt;/reg/mni2t1_* (ANTs warp from Step 20)</span>
+<span class="c">#         TRANSFORMS/&lt;subj&gt;/str2diff_&lt;subj&gt;.mat (FLIRT from Step 12)</span>
+<span class="c"># Output: CSD/&lt;subj&gt;/rois/*_diff.nii.gz (diffusion space)</span>
+<span class="c"># ============================================================</span>
+
+export PATH=/data/tools/ANTs/bin:/usr/local/fsl/bin:$PATH
+
+roi_base=&quot;/data/projects/STUDIES/IMPACT/DTI/ROIs/VTA-HPC&quot;
+csd_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD&quot;
+ants_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/ANTs&quot;
+transforms_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/TRANSFORMS&quot;
+bedpostx_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX&quot;
+nifti_base=&quot;/data/projects/STUDIES/IMPACT/DTI/NIFTI&quot;
+
+<span class="c"># ROI files (MNI space) and their output names</span>
+declare -a ROI_FILES=(
+    &quot;left_VTA_0.25_bin.nii.gz:left_VTA&quot;
+    &quot;right_VTA_0.25_bin.nii.gz:right_VTA&quot;
+    &quot;HPC_L_0.5_bin.nii.gz:left_HPC&quot;
+    &quot;HPC_R_0.5_bin.nii.gz:right_HPC&quot;
+    &quot;l_vta_l_hipp_1mm_MNI_GroupMean_thr50.nii.gz:left_tract_atlas&quot;
+    &quot;r_vta_r_hipp_1mm_MNI_GroupMean_thr50.nii.gz:right_tract_atlas&quot;
+)
+
+process_subj() {
+    subj=$1
+    echo &quot;&gt;&gt;&gt; [$subj] Warping ROIs to diffusion space&quot;
+
+    reg_dir=&quot;$csd_base/$subj/reg&quot;
+    roi_dir=&quot;$csd_base/$subj/rois&quot;
+    mkdir -p &quot;$roi_dir&quot;
+
+    t1_brain=&quot;$ants_base/$subj/${subj}_BrainExtractionBrain.nii.gz&quot;
+    warp=&quot;$reg_dir/mni2t1_1Warp.nii.gz&quot;
+    affine=&quot;$reg_dir/mni2t1_0GenericAffine.mat&quot;
+    flirt_mat=&quot;$transforms_base/$subj/str2diff_${subj}.mat&quot;
+    diff_ref=&quot;$bedpostx_base/$subj/bedpostx_input/nodif_brain_mask.nii.gz&quot;
+
+<span class="c">    # Check all required files exist</span>
+    if [[ ! -f &quot;$warp&quot; || ! -f &quot;$affine&quot; ]]; then
+        echo &quot;!!! [$subj] Missing ANTs warp files, skipping&quot;
+        return
+    fi
+    if [[ ! -f &quot;$flirt_mat&quot; ]]; then
+        echo &quot;!!! [$subj] Missing FLIRT str2diff matrix, skipping&quot;
+        return
+    fi
+    if [[ ! -f &quot;$diff_ref&quot; ]]; then
+        echo &quot;!!! [$subj] Missing diffusion reference image, skipping&quot;
+        return
+    fi
+
+    for entry in &quot;${ROI_FILES[@]}&quot;; do
+        roi_file=&quot;${entry%%:*}&quot;
+        roi_name=&quot;${entry##*:}&quot;
+
+        roi_mni=&quot;$roi_base/$roi_file&quot;
+        roi_t1=&quot;$roi_dir/${roi_name}_t1.nii.gz&quot;
+        roi_diff=&quot;$roi_dir/${roi_name}_diff.nii.gz&quot;
+
+        if [[ ! -f &quot;$roi_mni&quot; ]]; then
+            echo &quot;!!! [$subj] Missing ROI: $roi_file, skipping&quot;
+            continue
+        fi
+
+<span class="c">        # Step A: ANTs warp MNI → T1 (NearestNeighbor)</span>
+        antsApplyTransforms -d 3 \
+            -i &quot;$roi_mni&quot; \
+            -r &quot;$t1_brain&quot; \
+            -o &quot;$roi_t1&quot; \
+            -t &quot;$warp&quot; \
+            -t &quot;$affine&quot; \
+            -n NearestNeighbor
+
+<span class="c">        # Step B: FLIRT T1 → Diffusion (nearestneighbour)</span>
+        flirt -in &quot;$roi_t1&quot; \
+            -ref &quot;$diff_ref&quot; \
+            -applyxfm -init &quot;$flirt_mat&quot; \
+            -out &quot;$roi_diff&quot; \
+            -interp nearestneighbour
+
+<span class="c">        # Safety: binarize output</span>
+        fslmaths &quot;$roi_diff&quot; -thr 0.5 -bin &quot;$roi_diff&quot;
+    done
+
+    echo &quot;&gt;&gt;&gt; [$subj] Done&quot;
+}
+
+export -f process_subj
+export roi_base csd_base ants_base transforms_base bedpostx_base ROI_FILES
+
+subjects=$(ls -1 &quot;$nifti_base&quot;)
+for subj in $subjects; do
+    process_subj &quot;$subj&quot; &amp;
+    while [ &quot;$(jobs -r | wc -l)&quot; -ge 15 ]; do sleep 1; done
+done
+wait
+echo &quot;=== All ROI warps finished ===&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Push all six ROIs (VTA, hippocampus, tract atlas, both hemispheres) from MNI to T1 to diffusion, chaining the SyN warp then the str2diff matrix. Nearest-neighbor interpolation (binary masks), re-binarized after. Output per subject in CSD/&lt;subj&gt;/rois/, visually QC'd on the diffusion image.</p><div class="lead-lbl">Result</div><p class="res">All ROIs land in plausible anatomical positions on the diffusion image.</p><figure class="fig"><img src="../images/roi_qc_wholebrain_left_VTA.png" alt="Left VTA seed (Pauli 25%) warped to diffusion space, s1000." loading="lazy"><figcaption>Left VTA seed (Pauli 25%) warped to diffusion space, s1000.</figcaption></figure><figure class="fig"><img src="../images/roi_qc_zoomed_left_HPC.png" alt="Left hippocampus target (Harvard-Oxford 50%), zoomed." loading="lazy"><figcaption>Left hippocampus target (Harvard-Oxford 50%), zoomed.</figcaption></figure><figure class="fig"><img src="../images/roi_qc_zoomed_left_tract_atlas.png" alt="Left VTA-HPC tract atlas (Ranesh&#x27;s HCP group mean) in diffusion space." loading="lazy"><figcaption>Left VTA-HPC tract atlas (Ranesh's HCP group mean) in diffusion space.</figcaption></figure></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">fslmaths: exclusion mask</span><span class="pkg">FSL</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Step 22: Build Atlas-Based Exclusion Masks</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Uses Ranesh&#x27;s GroupMean_thr50 tract atlas to create a single</span>
+<span class="c"># exclusion mask per hemisphere, replacing 13 individual exclusion ROIs.</span>
+<span class="c">#</span>
+<span class="c"># Logic (per Ranesh):</span>
+<span class="c">#   1. Dilate tract atlas by 2 voxels (fslmaths -dilM -dilM)</span>
+<span class="c">#   2. Add VTA seed + HPC target to dilated atlas</span>
+<span class="c">#   3. Binarize = inclusion zone (where streamlines are allowed)</span>
+<span class="c">#   4. Invert = exclusion mask (everything outside is excluded)</span>
+<span class="c">#</span>
+<span class="c"># Input:  CSD/&lt;subj&gt;/rois/ (atlas, VTA, HPC in diffusion space)</span>
+<span class="c"># Output: CSD/&lt;subj&gt;/rois/ (exclusion_mask_l/r.nii.gz)</span>
+<span class="c"># ============================================================</span>
+
+export FSLDIR=/usr/local/fsl
+export PATH=$FSLDIR/bin:$PATH
+source $FSLDIR/etc/fslconf/fsl.sh
+
+csd_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD&quot;
+nifti_base=&quot;/data/projects/STUDIES/IMPACT/DTI/NIFTI&quot;
+log_file=&quot;/data/projects/STUDIES/IMPACT/DTI/scripts/step22.log&quot;
+
+echo &quot;=== Step 22: Building exclusion masks ===&quot;  &gt; &quot;$log_file&quot;
+echo &quot;Started: $(date)&quot; &gt;&gt; &quot;$log_file&quot;
+
+process_subj() {
+    subj=$1
+    d=&quot;$csd_base/$subj/rois&quot;
+
+<span class="c">    # Check inputs exist</span>
+    missing=0
+    for f in left_tract_atlas_diff.nii.gz right_tract_atlas_diff.nii.gz \
+             left_VTA_diff.nii.gz right_VTA_diff.nii.gz \
+             left_HPC_diff.nii.gz right_HPC_diff.nii.gz; do
+        if [ ! -f &quot;$d/$f&quot; ]; then
+            echo &quot;!!! [$subj] Missing $f — SKIPPING&quot; | tee -a &quot;$log_file&quot;
+            missing=1
+        fi
+    done
+    if [ &quot;$missing&quot; -eq 1 ]; then return 1; fi
+
+    echo &quot;&gt;&gt;&gt; [$subj] Building exclusion masks&quot; | tee -a &quot;$log_file&quot;
+
+<span class="c">    # === LEFT HEMISPHERE ===</span>
+<span class="c">    # 1. Dilate tract atlas by 2 voxels</span>
+    fslmaths &quot;$d/left_tract_atlas_diff.nii.gz&quot; -dilM -dilM &quot;$d/l_atlas_dilated.nii.gz&quot;
+
+<span class="c">    # 2. Add VTA + HPC to dilated atlas, binarize = inclusion zone</span>
+    fslmaths &quot;$d/l_atlas_dilated.nii.gz&quot; \
+        -add &quot;$d/left_VTA_diff.nii.gz&quot; \
+        -add &quot;$d/left_HPC_diff.nii.gz&quot; \
+        -bin &quot;$d/l_inclusion_zone.nii.gz&quot;
+
+<span class="c">    # 3. Invert = exclusion mask</span>
+    fslmaths &quot;$d/l_inclusion_zone.nii.gz&quot; -binv &quot;$d/exclusion_mask_l.nii.gz&quot;
+
+<span class="c">    # === RIGHT HEMISPHERE ===</span>
+    fslmaths &quot;$d/right_tract_atlas_diff.nii.gz&quot; -dilM -dilM &quot;$d/r_atlas_dilated.nii.gz&quot;
+
+    fslmaths &quot;$d/r_atlas_dilated.nii.gz&quot; \
+        -add &quot;$d/right_VTA_diff.nii.gz&quot; \
+        -add &quot;$d/right_HPC_diff.nii.gz&quot; \
+        -bin &quot;$d/r_inclusion_zone.nii.gz&quot;
+
+    fslmaths &quot;$d/r_inclusion_zone.nii.gz&quot; -binv &quot;$d/exclusion_mask_r.nii.gz&quot;
+
+    echo &quot;&gt;&gt;&gt; [$subj] Done&quot; | tee -a &quot;$log_file&quot;
+}
+
+export -f process_subj
+export csd_base log_file FSLDIR PATH
+
+<span class="c"># Run all subjects in parallel (lightweight fslmaths — 30 jobs fine)</span>
+for subj in $(ls -1 &quot;$nifti_base&quot;); do
+    process_subj &quot;$subj&quot; &amp;
+    while [ &quot;$(jobs -r | wc -l)&quot; -ge 30 ]; do sleep 0.5; done
+done
+wait
+
+echo &quot;=== Step 22 Complete: $(date) ===&quot; | tee -a &quot;$log_file&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Ranesh's original pipeline used 13 separate anatomical exclusion ROIs. His approved shortcut: take his group tract atlas, dilate it 2 voxels into a corridor, add the VTA and hippocampus, then invert, so allowed = the corridor and excluded = everything else. One mask instead of thirteen. This is also what lets us drop the FOD cutoff so low in the next step.</p><div class="lead-lbl">Result</div><p class="res">57/57 pass all 7 audit checks. Inclusion corridor 1,526 to 1,934 voxels (mean ~1,720), consistent across subjects. VTA and HPC fully contained.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">tckgen: FOD-cutoff test</span><span class="pkg">MRtrix3</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Step 23: Test Tractography on 5 Subjects (Parameter Tuning)</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Tests tckgen with 3 FOD cutoff values (0.1, 0.08, 0.06) on</span>
+<span class="c"># 5 subjects to find optimal parameters for 3T IMPACT data.</span>
+<span class="c"># Ranesh used cutoff=0.06 at 7T; predicted 0.08 for 3T.</span>
+<span class="c">#</span>
+<span class="c"># Input:  CSD/&lt;subj&gt;/wm_fod_norm.mif (normalized WM FODs)</span>
+<span class="c">#         CSD/&lt;subj&gt;/rois/left_VTA_diff.nii.gz (seed)</span>
+<span class="c">#         CSD/&lt;subj&gt;/rois/left_HPC_diff.nii.gz (target/include)</span>
+<span class="c">#         CSD/&lt;subj&gt;/rois/exclusion_mask_l.nii.gz (exclusion)</span>
+<span class="c">#         (same for right hemisphere)</span>
+<span class="c">#</span>
+<span class="c"># Output: CSD/&lt;subj&gt;/tckgen/l_vta_l_hipp/l_vta_l_hipp_&lt;cutoff&gt;.tck</span>
+<span class="c">#         CSD/&lt;subj&gt;/tckgen/r_vta_r_hipp/r_vta_r_hipp_&lt;cutoff&gt;.tck</span>
+<span class="c">#</span>
+<span class="c"># Parameters matching Ranesh&#x27;s pipeline (adjusted for 3T):</span>
+<span class="c">#   -seed_unidirectional (same as Ranesh)</span>
+<span class="c">#   -select 1000 (Ranesh: 2500, reduced for test)</span>
+<span class="c">#   -seeds 5000000 (Ranesh: 25M, reduced for test)</span>
+<span class="c">#   -minlength 35 (Ranesh: 35mm at 7T)</span>
+<span class="c">#   -maxlength 65 (Ranesh: 65mm at 7T)</span>
+<span class="c">#   -stop (same as Ranesh)</span>
+<span class="c">#   -cutoff varies: 0.1, 0.08, 0.06 (Ranesh: fixed 0.06 at 7T)</span>
+<span class="c">#   -nthreads 8 (Ranesh: 24, reduced for shared cluster)</span>
+<span class="c">#</span>
+<span class="c"># NOT using -fslgrad (gradients already embedded in dwi.mif from Step 15)</span>
+<span class="c"># NOT using ACT, backtrack, angle, step_size (Ranesh didn&#x27;t use these)</span>
+<span class="c"># ============================================================</span>
+
+export PATH=/data/tools/mrtrix3/bin:$PATH
+
+csd_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD&quot;
+log_file=&quot;/data/projects/STUDIES/IMPACT/DTI/scripts/step23_test.log&quot;
+
+<span class="c"># 5 test subjects (from Ranesh&#x27;s suggestion)</span>
+test_subjects=&quot;s169 s4222 s4418 s606 s1000&quot;
+
+echo &quot;=== Step 23: Test Tractography ===&quot; &gt; &quot;$log_file&quot;
+echo &quot;Started: $(date)&quot; &gt;&gt; &quot;$log_file&quot;
+echo &quot;Test subjects: $test_subjects&quot; &gt;&gt; &quot;$log_file&quot;
+echo &quot;Cutoffs: 0.1, 0.08, 0.06&quot; &gt;&gt; &quot;$log_file&quot;
+echo &quot;Parameters: -select 1000 -seeds 5000000 -minlength 35 -maxlength 65&quot; &gt;&gt; &quot;$log_file&quot;
+echo &quot;&quot; &gt;&gt; &quot;$log_file&quot;
+
+for subj in $test_subjects; do
+    echo &quot;========================================&quot; | tee -a &quot;$log_file&quot;
+    echo &quot;&gt;&gt;&gt; [$subj] Starting test tractography&quot; | tee -a &quot;$log_file&quot;
+    echo &quot;========================================&quot; | tee -a &quot;$log_file&quot;
+
+<span class="c">    # Verify inputs exist</span>
+    if [[ ! -f &quot;$csd_base/$subj/wm_fod_norm.mif&quot; ]]; then
+        echo &quot;!!! [$subj] MISSING wm_fod_norm.mif — skipping&quot; | tee -a &quot;$log_file&quot;
+        continue
+    fi
+    if [[ ! -f &quot;$csd_base/$subj/rois/exclusion_mask_l.nii.gz&quot; ]]; then
+        echo &quot;!!! [$subj] MISSING exclusion_mask_l.nii.gz — skipping&quot; | tee -a &quot;$log_file&quot;
+        continue
+    fi
+
+    for cutoff in 0.1 0.08 0.06; do
+<span class="c">        # === LEFT HEMISPHERE ===</span>
+        echo &quot;&gt;&gt;&gt; [$subj] LEFT VTA→HPC at cutoff $cutoff — $(date)&quot; | tee -a &quot;$log_file&quot;
+        mkdir -p &quot;$csd_base/$subj/tckgen/l_vta_l_hipp&quot;
+
+        tckgen &quot;$csd_base/$subj/wm_fod_norm.mif&quot; \
+            &quot;$csd_base/$subj/tckgen/l_vta_l_hipp/l_vta_l_hipp_${cutoff}.tck&quot; \
+            -seed_image &quot;$csd_base/$subj/rois/left_VTA_diff.nii.gz&quot; \
+            -seed_unidirectional \
+            -include &quot;$csd_base/$subj/rois/left_HPC_diff.nii.gz&quot; \
+            -exclude &quot;$csd_base/$subj/rois/exclusion_mask_l.nii.gz&quot; \
+            -select 1000 \
+            -seeds 5000000 \
+            -cutoff $cutoff \
+            -minlength 35 \
+            -maxlength 65 \
+            -stop \
+            -nthreads 8 \
+            -force 2&gt;&amp;1 | tee -a &quot;$log_file&quot;
+
+<span class="c">        # Log streamline count</span>
+        if [[ -f &quot;$csd_base/$subj/tckgen/l_vta_l_hipp/l_vta_l_hipp_${cutoff}.tck&quot; ]]; then
+            count=$(tckinfo &quot;$csd_base/$subj/tckgen/l_vta_l_hipp/l_vta_l_hipp_${cutoff}.tck&quot; 2&gt;/dev/null | grep &quot;actual count&quot; | awk &#x27;{print $NF}&#x27;)
+            echo &quot;    → Left streamlines at cutoff $cutoff: $count&quot; | tee -a &quot;$log_file&quot;
+        else
+            echo &quot;    → Left tck file NOT created at cutoff $cutoff&quot; | tee -a &quot;$log_file&quot;
+        fi
+
+<span class="c">        # === RIGHT HEMISPHERE ===</span>
+        echo &quot;&gt;&gt;&gt; [$subj] RIGHT VTA→HPC at cutoff $cutoff — $(date)&quot; | tee -a &quot;$log_file&quot;
+        mkdir -p &quot;$csd_base/$subj/tckgen/r_vta_r_hipp&quot;
+
+        tckgen &quot;$csd_base/$subj/wm_fod_norm.mif&quot; \
+            &quot;$csd_base/$subj/tckgen/r_vta_r_hipp/r_vta_r_hipp_${cutoff}.tck&quot; \
+            -seed_image &quot;$csd_base/$subj/rois/right_VTA_diff.nii.gz&quot; \
+            -seed_unidirectional \
+            -include &quot;$csd_base/$subj/rois/right_HPC_diff.nii.gz&quot; \
+            -exclude &quot;$csd_base/$subj/rois/exclusion_mask_r.nii.gz&quot; \
+            -select 1000 \
+            -seeds 5000000 \
+            -cutoff $cutoff \
+            -minlength 35 \
+            -maxlength 65 \
+            -stop \
+            -nthreads 8 \
+            -force 2&gt;&amp;1 | tee -a &quot;$log_file&quot;
+
+<span class="c">        # Log streamline count</span>
+        if [[ -f &quot;$csd_base/$subj/tckgen/r_vta_r_hipp/r_vta_r_hipp_${cutoff}.tck&quot; ]]; then
+            count=$(tckinfo &quot;$csd_base/$subj/tckgen/r_vta_r_hipp/r_vta_r_hipp_${cutoff}.tck&quot; 2&gt;/dev/null | grep &quot;actual count&quot; | awk &#x27;{print $NF}&#x27;)
+            echo &quot;    → Right streamlines at cutoff $cutoff: $count&quot; | tee -a &quot;$log_file&quot;
+        else
+            echo &quot;    → Right tck file NOT created at cutoff $cutoff&quot; | tee -a &quot;$log_file&quot;
+        fi
+    done
+
+    echo &quot;&gt;&gt;&gt; [$subj] All cutoffs complete — $(date)&quot; | tee -a &quot;$log_file&quot;
+    echo &quot;&quot; | tee -a &quot;$log_file&quot;
+done
+
+echo &quot;========================================&quot; | tee -a &quot;$log_file&quot;
+echo &quot;=== Step 23 Test Tractography Complete ===&quot; | tee -a &quot;$log_file&quot;
+echo &quot;Finished: $(date)&quot; | tee -a &quot;$log_file&quot;
+
+<span class="c"># === SUMMARY TABLE ===</span>
+echo &quot;&quot; | tee -a &quot;$log_file&quot;
+echo &quot;=== SUMMARY TABLE ===&quot; | tee -a &quot;$log_file&quot;
+printf &quot;%-8s %-15s %-8s %-12s\n&quot; &quot;Subject&quot; &quot;Hemisphere&quot; &quot;Cutoff&quot; &quot;Streamlines&quot; | tee -a &quot;$log_file&quot;
+printf &quot;%-8s %-15s %-8s %-12s\n&quot; &quot;-------&quot; &quot;---------&quot; &quot;------&quot; &quot;-----------&quot; | tee -a &quot;$log_file&quot;
+
+for subj in $test_subjects; do
+    for hemi_dir in l_vta_l_hipp r_vta_r_hipp; do
+        if [[ &quot;$hemi_dir&quot; == &quot;l_vta_l_hipp&quot; ]]; then
+            hemi_label=&quot;left&quot;
+        else
+            hemi_label=&quot;right&quot;
+        fi
+        for cutoff in 0.1 0.08 0.06; do
+            tck=&quot;$csd_base/$subj/tckgen/$hemi_dir/${hemi_dir}_${cutoff}.tck&quot;
+            if [[ -f &quot;$tck&quot; ]]; then
+                count=$(tckinfo &quot;$tck&quot; 2&gt;/dev/null | grep &quot;actual count&quot; | awk &#x27;{print $NF}&#x27;)
+            else
+                count=&quot;MISSING&quot;
+            fi
+            printf &quot;%-8s %-15s %-8s %-12s\n&quot; &quot;$subj&quot; &quot;$hemi_label&quot; &quot;$cutoff&quot; &quot;$count&quot; | tee -a &quot;$log_file&quot;
+        done
+    done
+done
+
+echo &quot;&quot; | tee -a &quot;$log_file&quot;
+echo &quot;=== LENGTH STATISTICS ===&quot; | tee -a &quot;$log_file&quot;
+printf &quot;%-8s %-15s %-8s %-12s %-12s %-12s\n&quot; &quot;Subject&quot; &quot;Hemisphere&quot; &quot;Cutoff&quot; &quot;Mean(mm)&quot; &quot;Median(mm)&quot; &quot;Std(mm)&quot; | tee -a &quot;$log_file&quot;
+
+for subj in $test_subjects; do
+    for hemi_dir in l_vta_l_hipp r_vta_r_hipp; do
+        if [[ &quot;$hemi_dir&quot; == &quot;l_vta_l_hipp&quot; ]]; then
+            hemi_label=&quot;left&quot;
+        else
+            hemi_label=&quot;right&quot;
+        fi
+        for cutoff in 0.1 0.08 0.06; do
+            tck=&quot;$csd_base/$subj/tckgen/$hemi_dir/${hemi_dir}_${cutoff}.tck&quot;
+            if [[ -f &quot;$tck&quot; ]]; then
+                stats=$(tckstats &quot;$tck&quot; 2&gt;/dev/null)
+                mean_len=$(echo &quot;$stats&quot; | grep -i mean | head -1 | awk &#x27;{print $2}&#x27;)
+                median_len=$(echo &quot;$stats&quot; | grep -i median | head -1 | awk &#x27;{print $2}&#x27;)
+                std_len=$(echo &quot;$stats&quot; | grep -i std | head -1 | awk &#x27;{print $2}&#x27;)
+                printf &quot;%-8s %-15s %-8s %-12s %-12s %-12s\n&quot; &quot;$subj&quot; &quot;$hemi_label&quot; &quot;$cutoff&quot; &quot;$mean_len&quot; &quot;$median_len&quot; &quot;$std_len&quot; | tee -a &quot;$log_file&quot;
+            fi
+        done
+    done
+done</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>The one tuned parameter: the FOD amplitude cutoff (when tracking stops). Ranesh used 0.06 at 7T; 3T is noisier, so we tested 0.1 / 0.08 / 0.06 / 0.01 on 5 pilot subjects, both hemispheres. Because the exclusion corridor already constrains tracking, the usual downside of a low cutoff (spurious fibers) doesn't apply, so we could go lower than expected.</p><p>Runs hitting the 1000 target: <b>0.1</b> 2/10 (too strict for 3T); <b>0.08</b> ~5/10 (inconsistent, s606 L = 309); <b>0.06</b> 10/10; <b>0.01</b> 10/10 and about 5x more seed-efficient. Paths were virtually identical to 0.06 (same arc, length ~44 vs ~47 mm). The 0.01 TDI is slightly thicker, which the cleaning step then tightens below the 0.06 bundle anyway.</p><div class="lead-lbl">Result</div><p class="res">Cutoff 0.01 chosen for the full run. Ranesh confirmed it is robust with the atlas-based exclusion mask.</p><figure class="fig"><img src="../images/cutoff_compare_s169_l.png" alt="TDI at 0.06 (left) vs 0.01 (right), s169 left tract. Same VTA-HPC arc." loading="lazy"><figcaption>TDI at 0.06 (left) vs 0.01 (right), s169 left tract. Same VTA-HPC arc.</figcaption></figure><figure class="fig"><img src="../images/cutoff_stats_comparison.png" alt="Streamline counts and lengths across the 5 test subjects, four cutoffs." loading="lazy"><figcaption>Streamline counts and lengths across the 5 test subjects, four cutoffs.</figcaption></figure></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">tckgen: full run (all 57)</span><span class="pkg">MRtrix3</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Step 24: Full Tractography — All 57 Subjects (cutoff 0.01)</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Runs tckgen on all subjects with parameters determined in Step 23:</span>
+<span class="c">#   - cutoff 0.01 (confirmed by Ranesh + pilot testing)</span>
+<span class="c">#   - select 2500 streamlines (Ranesh&#x27;s target)</span>
+<span class="c">#   - seeds 25,000,000 (Ranesh&#x27;s seed limit)</span>
+<span class="c">#   - minlength 35mm, maxlength 65mm (Ranesh&#x27;s values)</span>
+<span class="c">#   - Atlas-based exclusion masks from Step 22</span>
+<span class="c">#</span>
+<span class="c"># Input:  CSD/&lt;subj&gt;/wm_fod_norm.mif</span>
+<span class="c">#         CSD/&lt;subj&gt;/rois/{left,right}_{VTA,HPC}_diff.nii.gz</span>
+<span class="c">#         CSD/&lt;subj&gt;/rois/exclusion_mask_{l,r}.nii.gz</span>
+<span class="c">#</span>
+<span class="c"># Output: CSD/&lt;subj&gt;/tckgen/{l,r}_vta_{l,r}_hipp/{l,r}_vta_{l,r}_hipp_0.01.tck</span>
+<span class="c"># ============================================================</span>
+
+export PATH=/data/tools/mrtrix3/bin:$PATH
+
+csd_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD&quot;
+nifti_base=&quot;/data/projects/STUDIES/IMPACT/DTI/NIFTI&quot;
+log_file=&quot;/data/projects/STUDIES/IMPACT/DTI/scripts/step24_full.log&quot;
+
+echo &quot;=== Step 24: Full Tractography ===&quot; &gt; &quot;$log_file&quot;
+echo &quot;Started: $(date)&quot; &gt;&gt; &quot;$log_file&quot;
+echo &quot;Parameters: cutoff=0.01, select=2500, seeds=25000000, minlength=35, maxlength=65&quot; &gt;&gt; &quot;$log_file&quot;
+echo &quot;&quot; &gt;&gt; &quot;$log_file&quot;
+
+subjects=$(ls -1 &quot;$nifti_base&quot;)
+total=$(echo &quot;$subjects&quot; | wc -w)
+count=0
+
+for subj in $subjects; do
+    count=$((count + 1))
+    echo &quot;========================================&quot; | tee -a &quot;$log_file&quot;
+    echo &quot;&gt;&gt;&gt; [$count/$total] $subj — $(date)&quot; | tee -a &quot;$log_file&quot;
+    echo &quot;========================================&quot; | tee -a &quot;$log_file&quot;
+
+<span class="c">    # Verify inputs</span>
+    if [[ ! -f &quot;$csd_base/$subj/wm_fod_norm.mif&quot; ]]; then
+        echo &quot;!!! [$subj] MISSING wm_fod_norm.mif — skipping&quot; | tee -a &quot;$log_file&quot;
+        continue
+    fi
+
+    for side in l r; do
+        if [ &quot;$side&quot; = &quot;l&quot; ]; then
+            seed=left_VTA_diff.nii.gz
+            inc=left_HPC_diff.nii.gz
+            exc=exclusion_mask_l.nii.gz
+            dir=l_vta_l_hipp
+            label=&quot;LEFT&quot;
+        else
+            seed=right_VTA_diff.nii.gz
+            inc=right_HPC_diff.nii.gz
+            exc=exclusion_mask_r.nii.gz
+            dir=r_vta_r_hipp
+            label=&quot;RIGHT&quot;
+        fi
+
+        echo &quot;&gt;&gt;&gt; [$subj] $label VTA→HPC — $(date)&quot; | tee -a &quot;$log_file&quot;
+        mkdir -p &quot;$csd_base/$subj/tckgen/$dir&quot;
+
+        tckgen &quot;$csd_base/$subj/wm_fod_norm.mif&quot; \
+            &quot;$csd_base/$subj/tckgen/$dir/${dir}_0.01.tck&quot; \
+            -seed_image &quot;$csd_base/$subj/rois/$seed&quot; \
+            -seed_unidirectional \
+            -include &quot;$csd_base/$subj/rois/$inc&quot; \
+            -exclude &quot;$csd_base/$subj/rois/$exc&quot; \
+            -select 2500 \
+            -seeds 25000000 \
+            -cutoff 0.01 \
+            -minlength 35 \
+            -maxlength 65 \
+            -stop \
+            -nthreads 8 \
+            -force 2&gt;&amp;1 | tee -a &quot;$log_file&quot;
+
+<span class="c">        # Log streamline count</span>
+        if [[ -f &quot;$csd_base/$subj/tckgen/$dir/${dir}_0.01.tck&quot; ]]; then
+            count_str=$(tckinfo &quot;$csd_base/$subj/tckgen/$dir/${dir}_0.01.tck&quot; 2&gt;/dev/null | grep &quot;count:&quot; | head -1 | awk &#x27;{print $NF}&#x27;)
+            seeds_used=$(tckinfo &quot;$csd_base/$subj/tckgen/$dir/${dir}_0.01.tck&quot; 2&gt;/dev/null | grep &quot;total_count:&quot; | awk &#x27;{print $NF}&#x27;)
+            echo &quot;    → $subj $label: $count_str streamlines from $seeds_used seeds&quot; | tee -a &quot;$log_file&quot;
+        else
+            echo &quot;    → $subj $label: tck file NOT created&quot; | tee -a &quot;$log_file&quot;
+        fi
+    done
+done
+
+echo &quot;&quot; | tee -a &quot;$log_file&quot;
+echo &quot;========================================&quot; | tee -a &quot;$log_file&quot;
+echo &quot;=== Step 24 Complete ===&quot; | tee -a &quot;$log_file&quot;
+echo &quot;Finished: $(date)&quot; | tee -a &quot;$log_file&quot;
+
+<span class="c"># === SUMMARY ===</span>
+echo &quot;&quot; &gt;&gt; &quot;$log_file&quot;
+echo &quot;=== SUMMARY ===&quot; &gt;&gt; &quot;$log_file&quot;
+printf &quot;%-8s %-15s %-12s %-12s\n&quot; &quot;Subject&quot; &quot;Hemisphere&quot; &quot;Streamlines&quot; &quot;Seeds_used&quot; &gt;&gt; &quot;$log_file&quot;
+
+for subj in $(ls -1 &quot;$nifti_base&quot;); do
+    for dir in l_vta_l_hipp r_vta_r_hipp; do
+        f=&quot;$csd_base/$subj/tckgen/$dir/${dir}_0.01.tck&quot;
+        if [[ -f &quot;$f&quot; ]]; then
+            cnt=$(tckinfo &quot;$f&quot; 2&gt;/dev/null | grep &quot;count:&quot; | head -1 | awk &#x27;{print $NF}&#x27;)
+            seeds=$(tckinfo &quot;$f&quot; 2&gt;/dev/null | grep &quot;total_count:&quot; | awk &#x27;{print $NF}&#x27;)
+            printf &quot;%-8s %-15s %-12s %-12s\n&quot; &quot;$subj&quot; &quot;$dir&quot; &quot;$cnt&quot; &quot;$seeds&quot; &gt;&gt; &quot;$log_file&quot;
+        else
+            printf &quot;%-8s %-15s %-12s %-12s\n&quot; &quot;$subj&quot; &quot;$dir&quot; &quot;MISSING&quot; &quot;N/A&quot; &gt;&gt; &quot;$log_file&quot;
+        fi
+    done
+done
+echo &quot;STEP24_ALL_DONE&quot; &gt;&gt; &quot;$log_file&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Same command at production budget: 2,500 streamlines from up to 25M seed attempts, cutoff 0.01. Later repeated with a second (anterior) VTA-HPC atlas Ranesh provided, giving four tracts: posterior L/R and anterior L/R.</p><div class="lead-lbl">Result</div><p class="res">114/114 posterior runs hit 2,500 streamlines. Seed usage 511K to 2.03M (avg ~1.1M, about 4.4% of the cap), no subject near the budget. Anterior set: all 114 also hit 2,500.</p></div></details></div></div><div class="subhead">Cleaning</div><div class="step"><div class="stephead"><span class="cmd">clean_bundle (Mahalanobis)</span><span class="pkg">pyAFQ</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/usr/bin/env python3</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Step 25: Clean tracts using pyAFQ</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Adapted from Ranesh&#x27;s cleaning script</span>
+<span class="c"># (hcp_afq_tract_cleaning_hipp_accumbens.txt)</span>
+<span class="c">#</span>
+<span class="c"># Parameters (from Ranesh):</span>
+<span class="c">#   n_points = 100</span>
+<span class="c">#   clean_rounds = 5</span>
+<span class="c">#   distance_threshold = 3 (Mahalanobis SD)</span>
+<span class="c">#   length_threshold = 2 (SD from mean length)</span>
+<span class="c">#   stat = &#x27;mean&#x27;</span>
+<span class="c">#   return_idx = True</span>
+<span class="c">#</span>
+<span class="c"># Input:  CSD/&lt;subj&gt;/tckgen/{l,r}_vta_{l,r}_hipp/{l,r}_vta_{l,r}_hipp_0.01.tck</span>
+<span class="c"># Output: CSD/&lt;subj&gt;/tckgen/{l,r}_vta_{l,r}_hipp/{l,r}_vta_{l,r}_hipp_0.01_cleaned.tck</span>
+<span class="c"># ============================================================</span>
+
+import os
+import sys
+from pathlib import Path
+
+from AFQ.recognition.cleaning import clean_bundle
+from dipy.io.streamline import load_tractogram, save_tractogram
+
+<span class="c"># Paths</span>
+csd_base = Path(&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD&quot;)
+nifti_base = Path(&quot;/data/projects/STUDIES/IMPACT/DTI/NIFTI&quot;)
+log_file = Path(&quot;/data/projects/STUDIES/IMPACT/DTI/scripts/step25_cleaning.log&quot;)
+
+<span class="c"># pyAFQ cleaning parameters (from Ranesh)</span>
+n_points = 100
+clean_rounds = 5
+distance_threshold = 3      # 3 SD Mahalanobis distance
+length_threshold = 2         # 2 SD from mean length
+cutoff = &quot;0.01&quot;
+
+<span class="c"># Get subject list</span>
+subjects = sorted([d.name for d in nifti_base.iterdir() if d.is_dir()])
+hemis = [&quot;l_vta_l_hipp&quot;, &quot;r_vta_r_hipp&quot;]
+
+with open(log_file, &#x27;w&#x27;) as log:
+    log.write(&quot;=== Step 25: pyAFQ Tract Cleaning ===\n&quot;)
+    log.write(f&quot;Parameters: n_points={n_points}, clean_rounds={clean_rounds}, &quot;
+              f&quot;distance_threshold={distance_threshold}, length_threshold={length_threshold}\n&quot;)
+    log.write(f&quot;Cutoff: {cutoff}\n&quot;)
+    log.write(f&quot;Subjects: {len(subjects)}\n\n&quot;)
+
+    total = len(subjects) * len(hemis)
+    count = 0
+    results = []
+
+    for subj in subjects:
+        for hemi in hemis:
+            count += 1
+            in_tck = csd_base / subj / &quot;tckgen&quot; / hemi / f&quot;{hemi}_{cutoff}.tck&quot;
+            out_tck = csd_base / subj / &quot;tckgen&quot; / hemi / f&quot;{hemi}_{cutoff}_cleaned.tck&quot;
+
+<span class="c">            # Reference image for tractogram loading</span>
+            ref_img = csd_base / subj / &quot;qc&quot; / &quot;mean_b0.nii.gz&quot;
+            if not ref_img.exists():
+                ref_img = Path(f&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/&quot;
+                               f&quot;BEDPOSTX/{subj}/bedpostx_input/data.nii.gz&quot;)
+
+            msg = f&quot;[{count}/{total}] {subj} {hemi}&quot;
+
+            if not in_tck.exists():
+                msg += &quot; — SKIP: missing input tck&quot;
+                print(msg)
+                log.write(msg + &quot;\n&quot;)
+                results.append((subj, hemi, &quot;MISSING&quot;, &quot;N/A&quot;, &quot;N/A&quot;))
+                continue
+
+            if not ref_img.exists():
+                msg += &quot; — SKIP: missing reference image&quot;
+                print(msg)
+                log.write(msg + &quot;\n&quot;)
+                results.append((subj, hemi, &quot;NO_REF&quot;, &quot;N/A&quot;, &quot;N/A&quot;))
+                continue
+
+            try:
+                sft = load_tractogram(str(in_tck), str(ref_img),
+                                      bbox_valid_check=False)
+                n_before = len(sft.streamlines)
+
+                if n_before == 0:
+                    msg += &quot; — SKIP: 0 streamlines&quot;
+                    print(msg)
+                    log.write(msg + &quot;\n&quot;)
+                    results.append((subj, hemi, 0, 0, &quot;0%&quot;))
+                    continue
+
+                cleaned_sft, idx = clean_bundle(
+                    sft,
+                    n_points=n_points,
+                    clean_rounds=clean_rounds,
+                    distance_threshold=distance_threshold,
+                    length_threshold=length_threshold,
+                    stat=&#x27;mean&#x27;,
+                    return_idx=True
+                )
+
+                n_after = len(cleaned_sft.streamlines)
+                pct = f&quot;{n_after/n_before*100:.1f}%&quot;
+                msg += f&quot; — {n_before} → {n_after} ({pct} retained)&quot;
+                print(msg)
+                log.write(msg + &quot;\n&quot;)
+                results.append((subj, hemi, n_before, n_after, pct))
+
+                save_tractogram(cleaned_sft, str(out_tck),
+                                bbox_valid_check=False)
+
+            except Exception as e:
+                msg += f&quot; — ERROR: {str(e)}&quot;
+                print(msg)
+                log.write(msg + &quot;\n&quot;)
+                results.append((subj, hemi, &quot;ERROR&quot;, str(e), &quot;N/A&quot;))
+
+<span class="c">    # Summary</span>
+    log.write(&quot;\n=== SUMMARY ===\n&quot;)
+    log.write(f&quot;{&#x27;Subject&#x27;:&lt;12} {&#x27;Hemisphere&#x27;:&lt;16} {&#x27;Before&#x27;:&lt;10} &quot;
+              f&quot;{&#x27;After&#x27;:&lt;10} {&#x27;Retained&#x27;:&lt;10}\n&quot;)
+    log.write(&quot;-&quot; * 58 + &quot;\n&quot;)
+    for subj, hemi, before, after, pct in results:
+        log.write(f&quot;{subj:&lt;12} {hemi:&lt;16} {str(before):&lt;10} &quot;
+                  f&quot;{str(after):&lt;10} {str(pct):&lt;10}\n&quot;)
+
+    log.write(&quot;\nSTEP25_ALL_DONE\n&quot;)
+
+print(&quot;\n=== Step 25 Complete ===&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Prune anatomically implausible streamlines by Mahalanobis distance: anything more than 3 SD from the bundle's core shape, or 2 SD off in length, dropped over 5 rounds. Ported from Ranesh's cleaning script.</p><div class="lead-lbl">Result</div><p class="res">114/114 cleaned, retention 26.4% to 57.5% (avg ~39%), no bundle emptied. The cleaned 0.01 tract is tighter (length SD ~3.5-4.5 mm) than both the uncleaned 0.01 and the conservative 0.06 (~5-7 mm), which validates the permissive-cutoff plus cleaning approach.</p><figure class="fig"><img src="../images/cleaned_compare_s169_l.png" alt="s169 left: 0.06 conservative, 0.01 uncleaned, 0.01 cleaned. The cleaned 0.01 is the most focused." loading="lazy"><figcaption>s169 left: 0.06 conservative, 0.01 uncleaned, 0.01 cleaned. The cleaned 0.01 is the most focused.</figcaption></figure><figure class="fig"><img src="../images/cleaned_stats_comparison.png" alt="Length variability across test subjects; the cleaned 0.01 bars (green) are consistently lowest." loading="lazy"><figcaption>Length variability across test subjects; the cleaned 0.01 bars (green) are consistently lowest.</figcaption></figure></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">tckmap: visual QC</span><span class="pkg">MRtrix3 · Python</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/usr/bin/env python3</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Step 26: Visual QC — Cleaned Tract TDIs for All 57 Subjects</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Generates tract density images (TDIs) for cleaned tracts</span>
+<span class="c"># and overlays them on mean b0 for visual inspection.</span>
+<span class="c"># Automated flags: LOW_VOXELS (&lt;50), HIGH_VOXELS (&gt;5000),</span>
+<span class="c">#                  LOW_DENSITY (max&lt;5)</span>
+<span class="c"># ============================================================</span>
+
+import os
+import nibabel as nib
+import numpy as np
+import matplotlib
+matplotlib.use(&#x27;Agg&#x27;)
+import matplotlib.pyplot as plt
+from pathlib import Path
+
+csd = Path(&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD&quot;)
+nifti = Path(&quot;/data/projects/STUDIES/IMPACT/DTI/NIFTI&quot;)
+out = Path(&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/qc_step26&quot;)
+out.mkdir(exist_ok=True)
+
+subjects = sorted([d.name for d in nifti.iterdir() if d.is_dir()])
+hemis = [(&quot;l_vta_l_hipp&quot;, &quot;Left VTA→HPC&quot;),
+         (&quot;r_vta_r_hipp&quot;, &quot;Right VTA→HPC&quot;)]
+cutoff = &quot;0.01&quot;
+
+os.environ[&quot;PATH&quot;] = &quot;/data/tools/mrtrix3/bin:&quot; + os.environ.get(&quot;PATH&quot;, &quot;&quot;)
+
+log = open(out / &quot;step26_qc.log&quot;, &quot;w&quot;)
+log.write(&quot;=== Step 26: Visual QC of Cleaned Tracts ===\n\n&quot;)
+
+flags = []
+total = len(subjects) * len(hemis)
+count = 0
+
+for subj in subjects:
+    b0_f = csd / subj / &quot;qc&quot; / &quot;mean_b0.nii.gz&quot;
+    if not b0_f.exists():
+        log.write(f&quot;[{subj}] SKIP: no mean_b0\n&quot;)
+        continue
+
+    bg = nib.load(str(b0_f)).get_fdata()
+
+    for hemi_dir, hemi_label in hemis:
+        count += 1
+        cleaned = (csd / subj / &quot;tckgen&quot; / hemi_dir
+                   / f&quot;{hemi_dir}_{cutoff}_cleaned.tck&quot;)
+        tdi_f = out / f&quot;{subj}_{hemi_dir}_tdi.nii.gz&quot;
+
+        if not cleaned.exists():
+            msg = f&quot;[{count}/{total}] {subj} {hemi_dir} — MISSING&quot;
+            print(msg)
+            log.write(msg + &quot;\n&quot;)
+            flags.append((subj, hemi_dir, &quot;MISSING&quot;))
+            continue
+
+<span class="c">        # Generate TDI via tckmap</span>
+        template = csd / subj / &quot;rois&quot; / &quot;left_VTA_diff.nii.gz&quot;
+        os.system(f&quot;tckmap {cleaned} {tdi_f} &quot;
+                  f&quot;-template {template} -force 2&gt;/dev/null&quot;)
+
+        if not tdi_f.exists():
+            msg = f&quot;[{count}/{total}] {subj} {hemi_dir} — tckmap FAILED&quot;
+            print(msg)
+            log.write(msg + &quot;\n&quot;)
+            flags.append((subj, hemi_dir, &quot;TCKMAP_FAIL&quot;))
+            continue
+
+        tdi = nib.load(str(tdi_f)).get_fdata()
+        n_voxels = int(np.sum(tdi &gt; 0))
+        max_density = float(np.max(tdi))
+
+<span class="c">        # Find best slices</span>
+        best_ax = int(np.argmax(tdi.sum(axis=(0, 1))))
+        best_cor = int(np.argmax(tdi.sum(axis=(0, 2))))
+
+<span class="c">        # Automated flag checks</span>
+        flag = None
+        if n_voxels &lt; 50:
+            flag = f&quot;LOW_VOXELS ({n_voxels})&quot;
+        elif n_voxels &gt; 5000:
+            flag = f&quot;HIGH_VOXELS ({n_voxels})&quot;
+        elif max_density &lt; 5:
+            flag = f&quot;LOW_DENSITY (max={max_density:.0f})&quot;
+
+        if flag:
+            flags.append((subj, hemi_dir, flag))
+
+        status = f&quot;FLAG: {flag}&quot; if flag else &quot;OK&quot;
+        msg = (f&quot;[{count}/{total}] {subj} {hemi_dir} — &quot;
+               f&quot;{status} (voxels={n_voxels}, &quot;
+               f&quot;max_density={max_density:.0f})&quot;)
+        print(msg)
+        log.write(msg + &quot;\n&quot;)
+
+<span class="c">        # Generate QC image</span>
+        fig, axes = plt.subplots(1, 2, figsize=(10, 5))
+        fig.suptitle(f&#x27;{subj} — {hemi_label} (cleaned)&#x27;,
+                     fontsize=13, fontweight=&#x27;bold&#x27;)
+
+        for j, (sl, title) in enumerate([
+            (bg[:, :, best_ax], &#x27;Axial&#x27;),
+            (bg[:, best_cor, :], &#x27;Coronal&#x27;)
+        ]):
+            ax = axes[j]
+            ax.imshow(np.rot90(sl), cmap=&#x27;gray&#x27;)
+            tdi_sl = (tdi[:, :, best_ax] if j == 0
+                      else tdi[:, best_cor, :])
+            mask = tdi_sl &gt; 0
+            overlay = np.ma.masked_where(~mask, tdi_sl)
+            ax.imshow(np.rot90(overlay), cmap=&#x27;hot&#x27;, alpha=0.7)
+            ax.set_title(title, fontsize=11)
+            ax.axis(&#x27;off&#x27;)
+
+        if flag:
+            fig.text(0.5, 0.01, f&quot;FLAG: {flag}&quot;,
+                     ha=&#x27;center&#x27;, fontsize=11,
+                     color=&#x27;red&#x27;, fontweight=&#x27;bold&#x27;)
+
+        plt.tight_layout()
+        plt.savefig(str(out / f&quot;{subj}_{hemi_dir}_qc.png&quot;),
+                    dpi=100, bbox_inches=&#x27;tight&#x27;)
+        plt.close()
+
+        os.remove(str(tdi_f))
+
+log.write(&quot;\n=== FLAGGED SUBJECTS ===\n&quot;)
+if flags:
+    for subj, hemi, reason in flags:
+        log.write(f&quot;  {subj} {hemi}: {reason}\n&quot;)
+else:
+    log.write(&quot;  None — all subjects pass\n&quot;)
+
+log.write(f&quot;\nTotal: {count}/{total}\n&quot;)
+log.write(f&quot;Flagged: {len(flags)}\n&quot;)
+log.write(&quot;STEP26_ALL_DONE\n&quot;)
+log.close()
+
+print(f&quot;\n=== Step 26 Complete ===&quot;)
+print(f&quot;Flagged: {len(flags)}&quot;)
+print(&quot;STEP26_ALL_DONE&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>For every cleaned tract, a track-density image overlaid on the mean b0 to eyeball the shape, with auto-flags for anything too sparse (&lt;50 voxels) or too diffuse (&gt;5000).</p><div class="lead-lbl">Result</div><p class="res">All 114 (and the anterior set) passed and show the expected VTA to hippocampus arc.</p><figure class="fig"><img src="../images/step26_qc_s169_left.png" alt="Cleaned left VTA-HPC TDI on mean b0, s169." loading="lazy"><figcaption>Cleaned left VTA-HPC TDI on mean b0, s169.</figcaption></figure><figure class="fig"><img src="../images/step26_qc_s0105_left.png" alt="Cleaned left VTA-HPC TDI on mean b0, s0105-pilot." loading="lazy"><figcaption>Cleaned left VTA-HPC TDI on mean b0, s0105-pilot.</figcaption></figure></div></details></div></div></div></details>
+  <details class="catgroup"><summary><span class="cname">Microstructure</span><span class="cdesc">FA + NODDI along each tract · dipy / AMICO</span></summary><div class="catbody"><div class="step"><div class="stephead"><span class="cmd">afq_profile: FA</span><span class="pkg">dipy</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/usr/bin/env python3</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Step 27: Node-wise FA Extraction (AFQ-style tract profiling)</span>
+<span class="c"># ============================================================</span>
+<span class="c"># Adapted from Ranesh&#x27;s nodewise_noddi.py — exact same profiling</span>
+<span class="c"># machinery (QuickBundles orientation + AFQ Gaussian-weighted</span>
+<span class="c"># profile), just applied to FA maps from DTIFIT instead of</span>
+<span class="c"># NODDI metrics. Processes both posterior and anterior tracts.</span>
+<span class="c"># ============================================================</span>
+
+from pathlib import Path
+import csv
+import numpy as np
+import matplotlib
+matplotlib.use(&#x27;Agg&#x27;)
+import matplotlib.pyplot as plt
+
+import dipy.stats.analysis as dsa
+import dipy.tracking.streamline as dts
+from dipy.io.streamline import load_tractogram
+from dipy.io.image import load_nifti
+from dipy.segment.clustering import QuickBundles
+from dipy.segment.metricspeed import AveragePointwiseEuclideanMetric
+from dipy.segment.featurespeed import ResampleFeature
+
+<span class="c"># Tracts: both posterior and anterior VTA-HPC (both hemispheres)</span>
+tracts = [
+    &quot;l_vta_l_hipp&quot;,
+    &quot;r_vta_r_hipp&quot;,
+    &quot;anterior_l_vta_l_hipp&quot;,
+    &quot;anterior_r_vta_r_hipp&quot;,
+]
+
+<span class="c"># Paths</span>
+csd_root = Path(&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD&quot;)
+dtifit_root = Path(&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/DTIFIT_OUTPUT&quot;)
+nifti_root = Path(&quot;/data/projects/STUDIES/IMPACT/DTI/NIFTI&quot;)
+
+nodewise = Path(&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/nodewise_fa&quot;)
+nodewise.mkdir(parents=True, exist_ok=True)
+csv_dir = nodewise / &quot;csvs&quot;
+csv_dir.mkdir(parents=True, exist_ok=True)
+
+<span class="c"># Profile parameters (match Ranesh&#x27;s NODDI script)</span>
+num_nodes = 100
+min_streamlines = 5
+
+subjects = sorted([d.name for d in nifti_root.iterdir() if d.is_dir()])
+
+
+<span class="c"># =========================</span>
+<span class="c"># HELPERS (verbatim from Ranesh)</span>
+<span class="c"># =========================</span>
+
+def orient_to_centroid(streamlines, nb_points=num_nodes):
+    &quot;&quot;&quot;Orient all streamlines to match the bundle centroid direction.&quot;&quot;&quot;
+    feat = ResampleFeature(nb_points=nb_points)
+    metric = AveragePointwiseEuclideanMetric(feat)
+    qb = QuickBundles(threshold=np.inf, metric=metric)
+    centroid = qb.cluster(streamlines).centroids[0]
+    oriented = dts.orient_by_streamline(streamlines, centroid)
+    return dts.Streamlines(oriented)
+
+
+def profile_metric(img_path, streamlines, nb_points=num_nodes):
+    &quot;&quot;&quot;AFQ-style Gaussian-weighted profile at nb_points nodes.&quot;&quot;&quot;
+    data, aff = load_nifti(str(img_path))
+    weights = dsa.gaussian_weights(streamlines)
+    prof = dsa.afq_profile(data, streamlines, aff, nb_points=nb_points, weights=weights)
+    return np.asarray(prof, dtype=float)
+
+
+<span class="c"># =========================</span>
+<span class="c"># MAIN</span>
+<span class="c"># =========================</span>
+
+print(f&quot;=== Step 27: Node-wise FA Extraction ===&quot;)
+print(f&quot;Subjects: {len(subjects)}&quot;)
+print(f&quot;Tracts: {len(tracts)}&quot;)
+
+for tract in tracts:
+    print(f&quot;\n{&#x27;=&#x27;*80}\nProcessing tract: {tract}\n{&#x27;=&#x27;*80}&quot;)
+
+    csv_path = csv_dir / f&quot;{tract}_fa_nodewise_all_subjects.csv&quot;
+
+    with open(csv_path, &quot;w&quot;, newline=&quot;&quot;) as fcsv:
+        w = csv.writer(fcsv)
+        w.writerow([&quot;Subject&quot;, &quot;Tract&quot;, &quot;Node&quot;, &quot;FA&quot;])
+
+        for s in subjects:
+            try:
+                in_tck = csd_root / s / &quot;tckgen&quot; / tract / f&quot;{tract}_0.01_cleaned.tck&quot;
+                f_fa = dtifit_root / s / &quot;DTI_FA.nii.gz&quot;
+
+                if not in_tck.exists():
+                    print(f&quot;[{s}] [{tract}] SKIP: missing cleaned tract&quot;)
+                    continue
+                if not f_fa.exists():
+                    print(f&quot;[{s}] [{tract}] SKIP: missing FA map&quot;)
+                    continue
+
+                out_png_dir = nodewise / s / tract
+                out_png_dir.mkdir(parents=True, exist_ok=True)
+
+                tg = load_tractogram(str(in_tck), str(f_fa), bbox_valid_check=False)
+                sl = tg.streamlines
+
+                if len(sl) &lt; min_streamlines:
+                    print(f&quot;[{s}] [{tract}] SKIP: only {len(sl)} streamlines&quot;)
+                    continue
+
+                sl_oriented = orient_to_centroid(sl, nb_points=num_nodes)
+                fa = profile_metric(f_fa, sl_oriented, nb_points=num_nodes)
+
+                for node in range(num_nodes):
+                    w.writerow([s, tract, node, float(fa[node])])
+
+                plt.figure()
+                plt.plot(fa)
+                plt.ylabel(&quot;FA&quot;)
+                plt.xlabel(f&quot;Node along {tract}&quot;)
+                plt.title(f&quot;{s} • {tract} • FA&quot;)
+                plt.tight_layout()
+                plt.savefig(out_png_dir / f&quot;{tract}_FA_profile.png&quot;, dpi=150)
+                plt.close()
+
+                print(f&quot;[{s}] [{tract}] wrote 100 rows to CSV and PNG&quot;)
+
+            except Exception as e:
+                print(f&quot;[{s}] [{tract}] SKIP due to error: {e}&quot;)
+
+print(f&quot;\nALL DONE.\nCSV directory: {csv_dir}&quot;)
+print(&quot;STEP27_ALL_DONE&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Sample FA at 100 nodes evenly spaced along the tract. Every streamline is oriented the same way (via a QuickBundles centroid, so node 1 is always the same end), resampled to 100 points, and Gaussian-weighted (core streamlines count more). Analyses use the middle nodes (~25-75); the ends are dropped for partial-volume contamination. Ported from Ranesh's nodewise_noddi.py.</p><div class="lead-lbl">Result</div><p class="res">228 FA profiles (4 tracts x 57 subjects), zero skips. Each tract CSV is 5,701 rows (57 x 100 + header).</p><figure class="fig"><img src="../images/step27_fa_profile_s1000_posterior_l.png" alt="FA along the posterior left tract, s1000: peaks in deep WM (~0.53), drops toward HPC (0.29)." loading="lazy"><figcaption>FA along the posterior left tract, s1000: peaks in deep WM (~0.53), drops toward HPC (0.29).</figcaption></figure><figure class="fig"><img src="../images/step27_fa_profile_s1000_anterior_l.png" alt="FA along the anterior left tract, s1000: similar start, different late-tract shape." loading="lazy"><figcaption>FA along the anterior left tract, s1000: similar start, different late-tract shape.</figcaption></figure></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">NODDI fit (modulated maps)</span><span class="pkg">AMICO</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre>amico.util.fsl2scheme(bvals, bvecs, bStep=200)   # round b to nearest 200
+ae = amico.Evaluation(study_dir, subject)
+ae.set_model(&#x27;NODDI&#x27;)
+ae.load_data(dwi, scheme, mask, b0_thr=100)
+ae.generate_kernels(regenerate=True)
+ae.fit()
+ae.save_results()   # -&gt; fit_NDI_modulated, fit_ODI_modulated, fit_FWF, fit_RMSE</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Fit NODDI on all shells with AMICO, giving three interpretable maps per voxel: NDI (neurite density), ODI (orientation dispersion), FWF (free-water fraction). We saved the modulated NDI/ODI (tissue-weighted partial-volume correction, per Parker et al. 2021), the version Ranesh used. FWF has no modulated version; the tissue-weighting is itself the correction. Config: bStep=200, b0_thr=100, doSaveModulatedMaps=True, doComputeRMSE=True.</p><div class="lead-lbl">Result</div><p class="res">57/57 pass, full set of NODDI outputs. 3 subjects hit a kernel-directory race on the parallel pass and were re-run serially.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">afq_profile: NDI · ODI · FWF</span><span class="pkg">dipy</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c"># identical machinery to the FA step; only the sampled map changes:</span>
+NDI = profile_metric(&#x27;fit_NDI_modulated.nii.gz&#x27;, sl_oriented)
+ODI = profile_metric(&#x27;fit_ODI_modulated.nii.gz&#x27;, sl_oriented)
+FWF = profile_metric(&#x27;fit_FWF.nii.gz&#x27;,           sl_oriented)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>The FA-profiling step again (identical orient plus Gaussian-weighted profiling, same helpers), applied to the three NODDI maps. This produces the main microstructure measurements the statistics use.</p><div class="lead-lbl">Result</div><p class="res">684 profiles (4 tracts x 57 subjects x 3 metrics), zero skips.</p><figure class="fig"><img src="../images/step30_NDI_profile_s1000_posterior_l.png" alt="NDI along the posterior left tract, s1000." loading="lazy"><figcaption>NDI along the posterior left tract, s1000.</figcaption></figure><figure class="fig"><img src="../images/step30_ODI_profile_s1000_posterior_l.png" alt="ODI along the same tract: higher at the endpoints, low in deep WM." loading="lazy"><figcaption>ODI along the same tract: higher at the endpoints, low in deep WM.</figcaption></figure><figure class="fig"><img src="../images/step30_FWF_profile_s1000_posterior_l.png" alt="FWF: low in deep WM, climbs near the HPC end (CSF proximity)." loading="lazy"><figcaption>FWF: low in deep WM, climbs near the HPC end (CSF proximity).</figcaption></figure></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">fslstats -k HPC -M</span><span class="pkg">FSL</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre>fslstats fit_NDI_modulated.nii.gz -k left_HPC_diff.nii.gz -M   # mean NDI, left HPC
+<span class="c"># repeated for ODI, FWF and the right hemisphere</span></pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>One extra measurement for a control analysis: the mean NODDI value inside the hippocampus ROI itself (the region, not the pathway). Same Harvard-Oxford hippocampus warped to diffusion space. Lets us ask whether memory tracks the tract specifically or just hippocampal tissue in general.</p></div></details></div></div></div></details>
+
+  <p class="small" style="margin-top:26px">Next: <a href="analyses.html">how memory is scored, and how it's tested against the tract →</a></p>
 </div>
 </body></html>
