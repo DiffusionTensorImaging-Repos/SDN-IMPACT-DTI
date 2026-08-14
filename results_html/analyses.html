@@ -844,6 +844,85 @@ for label, pair in [(&quot;Posterior VTA→HPC&quot;, posterior), (&quot;Anterio
 pd.DataFrame(rows).to_csv(out_dir / &quot;lr_correlations_mid50.csv&quot;, index=False)
 print(f&quot;\nCorr table saved: {out_dir / &#x27;lr_correlations_mid50.csv&#x27;}&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Average each metric over the mid-tract nodes (25 to 74) and correlate left vs. right hemisphere, per subject.</p><div class="lead-lbl">Produces</div><p class="res">The L / R correlation table above.</p></div></details></div></div>
 
+  <h3>Effect sizes across the four tracts</h3>
+  <p>Along-tract nodes are highly autocorrelated (the hemispheres above correlate ~0.86 for NDI), so each tract is effectively one subject-level test. "Significant one side, zero nodes the other" is then often a p &lt; .05 threshold difference between two same-direction effects, not a dissociation. Each surviving finding, read by its subject-level partial correlation (mid-tract, covariates out) in all four tracts:</p>
+  <table class="dtable"><thead><tr><th>Finding</th><th>post L</th><th>post R</th><th>ant L</th><th>ant R</th></tr></thead><tbody>
+    <tr><td>Social d′ · NDI</td><td class="sig">+.35*</td><td>+.20</td><td>+.25</td><td>−.05</td></tr>
+    <tr><td>Social FABias · FA</td><td class="sig">−.34*</td><td class="sig">−.46*</td><td class="sig">−.19*</td><td class="sig">−.41*</td></tr>
+    <tr><td>Social FABias · NDI</td><td>−.26</td><td class="sig">−.42*</td><td>−.17</td><td class="sig">−.36*</td></tr>
+    <tr><td>Social FABias · FWF</td><td>+.21</td><td class="sig">+.27*</td><td>+.10</td><td class="sig">+.31*</td></tr>
+    <tr><td>Social FABias · ODI</td><td class="sig">−.13*</td><td class="sig">−.24*</td><td>−.09</td><td class="sig">−.21*</td></tr>
+    <tr><td>Monetary FABias · ODI</td><td class="sig">−.23*</td><td>−.19</td><td>−.01</td><td>−.16</td></tr>
+  </tbody></table>
+  <p class="small">* = surviving cluster (cluster-extent FWE). Values are mid-tract partial r, n = 52.</p>
+  <p>The <b>positivity-bias</b> effect (more positive false memories with lower FA, lower NDI, higher free water) is <b>bilateral and consistent</b> across both hemispheres and both tracts. The <b>social d′ · NDI</b> accuracy effect is <b>left-leaning</b> (left posterior r = +0.35) but the right posterior is a weaker same-direction trend (r = +0.20), a graded difference rather than a clean lateralization. The ODI clusters and the single monetary cluster are weak at the tract level (|r| ≤ 0.24, mostly ns) and are not over-read.</p>
+  <div class="step"><div class="stephead"><span class="cmd">effect_size_audit.py</span><span class="pkg">statsmodels · scipy</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/usr/bin/env python3</span>
+<span class="c">&quot;&quot;&quot;</span>
+Effect-size audit: for every finding (a tract/metric/outcome with a surviving
+cluster), report the subject-level partial correlation (mid-tract NDI-style
+average, covariates residualized) in ALL FOUR tracts.
+
+Why: the node-wise cluster test runs on along-tract profiles whose nodes are
+highly autocorrelated, so one tract is effectively one subject-level test, and
+&quot;significant on the left, zero nodes on the right&quot; can be a p&lt;.05 threshold
+difference between two same-direction effects rather than a real dissociation.
+This script puts the effect sizes next to the significance so the maps are not
+over-read.
+<span class="c">&quot;&quot;&quot;</span>
+import pandas as pd, numpy as np, os, warnings
+from scipy import stats
+import statsmodels.formula.api as smf
+warnings.filterwarnings(&#x27;ignore&#x27;)
+
+AR = &#x27;/Users/dannyzweben/Desktop/SDN/DTI/data.check/analysis_ready&#x27;
+PR = &#x27;/Users/dannyzweben/Desktop/SDN/DTI/data.check/permutation_results&#x27;
+COV = [&#x27;ICV&#x27;, &#x27;Mean_tckstats&#x27;, &#x27;Count_tckstats&#x27;, &#x27;absolute_motion&#x27;, &#x27;maternal_age&#x27;]
+TRACTS = {&#x27;l_vta_l_hipp&#x27;: &#x27;postL&#x27;, &#x27;r_vta_r_hipp&#x27;: &#x27;postR&#x27;,
+          &#x27;anterior_l_vta_l_hipp&#x27;: &#x27;antL&#x27;, &#x27;anterior_r_vta_r_hipp&#x27;: &#x27;antR&#x27;}
+METRICS = [&#x27;FA&#x27;, &#x27;NDI&#x27;, &#x27;ODI&#x27;, &#x27;FWF&#x27;]
+OUTS = [&#x27;SOCIAL_dprime&#x27;, &#x27;MONETARY_dprime&#x27;, &#x27;SOCIAL_HitRateBias&#x27;,
+        &#x27;SOCIAL_FABias&#x27;, &#x27;MONETARY_HitRateBias&#x27;, &#x27;MONETARY_FABias&#x27;]
+
+
+def partial_r(tract, metric, out):
+<span class="c">    &quot;&quot;&quot;mid-tract (nodes 25-74) partial correlation of metric with outcome, covariates out.&quot;&quot;&quot;</span>
+    d = pd.read_csv(f&#x27;{AR}/{tract}__{metric}__analysis.csv&#x27;)
+    d[&#x27;mid&#x27;] = d[[f&#x27;{metric}_{i}&#x27; for i in range(25, 75)]].mean(axis=1)
+    m = d[[&#x27;mid&#x27;, out] + COV].dropna()
+    if len(m) &lt; 10 or m[out].std() == 0:
+        return np.nan, np.nan, len(m)
+    xr = smf.ols(&#x27;mid ~ &#x27; + &#x27;+&#x27;.join(COV), m).fit().resid
+    yr = smf.ols(f&#x27;{out} ~ &#x27; + &#x27;+&#x27;.join(COV), m).fit().resid
+    r, p = stats.pearsonr(xr, yr)
+    return r, p, len(m)
+
+
+def survives(tract, metric, out):
+    f = f&#x27;{PR}/{tract}__{metric}__{out}_summary.csv&#x27;
+    if not os.path.exists(f):
+        return None
+    return int(pd.read_csv(f)[&#x27;NumClustersPassingExtent&#x27;].iloc[0])
+
+
+def main():
+    print(f&quot;{&#x27;outcome&#x27;:20s} {&#x27;metric&#x27;:4s}  &quot; + &#x27;  &#x27;.join(f&#x27;{s:&gt;12s}&#x27; for s in TRACTS.values()))
+    for out in OUTS:
+        for metric in METRICS:
+            surv = {t: survives(t, metric, out) for t in TRACTS}
+            if not any(surv.values()):
+                continue
+            cells = []
+            for t in TRACTS:
+                r, p, n = partial_r(t, metric, out)
+                star = &#x27;*&#x27; if surv[t] else &#x27; &#x27;
+                cells.append(f&#x27;{r:+.2f}{star}(p{p:.2f})&#x27;)
+            print(f&#x27;{out:20s} {metric:4s}  &#x27; + &#x27;  &#x27;.join(f&#x27;{c:&gt;12s}&#x27; for c in cells))
+    print(&quot;\n* = surviving cluster (cluster-extent FWE). r = mid-tract partial correlation.&quot;)
+
+
+if __name__ == &#x27;__main__&#x27;:
+    main()</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>For every surviving finding, the subject-level partial correlation (mid-tract, covariates out) in all four tracts, next to the cluster result. Because along-tract nodes are autocorrelated, one tract is effectively one test, so a one-sided cluster can be a p &lt; .05 threshold difference between two same-direction effects rather than a dissociation.</p><div class="lead-lbl">Produces</div><p class="res">The effect-size table above.</p></div></details></div></div>
+
   <p class="small" style="margin-top:24px">Findings: <a href="results_explorer.html">Results browser</a> · <a href="data_quality.html">data quality</a> · <a href="hpc_region_vs_connection.html">hippocampus</a></p>
 </div>
 </body></html>
