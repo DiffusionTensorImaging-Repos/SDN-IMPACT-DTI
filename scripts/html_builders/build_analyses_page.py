@@ -128,11 +128,14 @@ HTML = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
   {s_breakdown}
 
   <h3>How the scores relate</h3>
-  <table class="dtable"><thead><tr><th>Pair</th><th>r</th><th>p</th></tr></thead><tbody>
-    <tr><td>Social d′ × Monetary d′</td><td>-0.15</td><td>0.29</td></tr>
-    <tr><td>HitRateBias: social × monetary</td><td class="sig">+0.40</td><td class="sig">0.004</td></tr>
-    <tr><td>Social d′ × Social HitRateBias</td><td>+0.28</td><td>0.043</td></tr>
+  <table class="dtable"><thead><tr><th></th><th>Soc d′</th><th>Mon d′</th><th>Soc Hit</th><th>Mon Hit</th><th>Soc FA</th></tr></thead><tbody>
+    <tr><td>Mon d′</td><td>−.15</td><td></td><td></td><td></td><td></td></tr>
+    <tr><td>Soc Hit</td><td class="sig">+.28</td><td>+.05</td><td></td><td></td><td></td></tr>
+    <tr><td>Mon Hit</td><td>−.15</td><td>+.10</td><td class="sig">+.40</td><td></td><td></td></tr>
+    <tr><td>Soc FA</td><td>−.13</td><td>+.08</td><td>+.18</td><td>+.08</td><td></td></tr>
+    <tr><td>Mon FA</td><td>−.00</td><td>−.12</td><td>+.27</td><td class="sig">+.39</td><td>−.04</td></tr>
   </tbody></table>
+  <p class="small">Pearson r, n = 52–53; <b>bold</b> = p&lt;.05. Hit = HitRateBias, FA = FABias. The two d′ are uncorrelated across domains (distinct abilities). Positivity bias in correct memories is trait-like across social and monetary (r = +.40), but bias in false memories is not (r = −.04): the false-memory signal, which the tract effect is about, is domain-specific.</p>
 
   <h2>The tract test</h2>
   <p>Six outcomes (social and monetary × d′, HitRateBias, FABias) tested against each tract's along-node microstructure, for all four metrics, plus the hippocampus region.</p>
