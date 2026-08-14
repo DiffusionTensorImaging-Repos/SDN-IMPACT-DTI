@@ -111,10 +111,6 @@ PRE.append(step(
 
 PRE.append(sub("Build the fiber model"))
 PRE.append(step(
-    "bedpostx", "FSL",
-    "<p>Fits a multi-fiber (ball-and-stick) model at every voxel. Run partly for its own outputs and partly because it produces a tidy, correctly-formatted input folder (data, motion-rotated bvecs, bvals, mask) that later MRtrix and NODDI steps reuse.</p>",
-    (1955, 2026)))
-PRE.append(step(
     "dwiextract", "MRtrix3",
     "<p>Make reduced datasets by shell (b=0,1000 and b=0,1000,2000). The tensor model, next, only wants the low shells.</p>",
     (2126, 2190)))

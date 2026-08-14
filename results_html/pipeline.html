@@ -651,76 +651,7 @@ echo &quot;=== Done. Summary written to: $out_txt ===&quot;
 tail -n 20 &quot;$out_txt&quot;
 
 
-</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Per-subject (QUAD) and group (SQUAD) automated QC, plus a manual FSLeyes scroll-through. The per-subject absolute-motion number becomes a covariate.</p><div class="lead-lbl">Result</div><p class="res">Motion was low across the board. Group mean absolute motion 0.27 mm. The rule was to exclude anyone over 2 mm; nobody hit it.</p><figure class="fig"><img src="../images/qc_summary.png" alt="Group SQUAD QC summary across all subjects." loading="lazy"><figcaption>Group SQUAD QC summary across all subjects.</figcaption></figure></div></details></div></div><div class="subhead">Build the fiber model</div><div class="step"><div class="stephead"><span class="cmd">bedpostx</span><span class="pkg">FSL</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
-<span class="c"># ============================================================</span>
-<span class="c"># Step 9: BEDPOSTX (IMPACT DTI)</span>
-<span class="c"># ============================================================</span>
-<span class="c"># Prepares inputs and runs bedpostx for each subject</span>
-<span class="c"># Dynamically parallelizes across available cores</span>
-<span class="c"># Outputs go to: derivatives/BEDPOSTX/&lt;subj&gt;.bedpostX/</span>
-<span class="c"># ============================================================</span>
-
-set -u -o pipefail
-
-<span class="c"># --- Paths ---</span>
-nifti_base=&quot;/data/projects/STUDIES/IMPACT/DTI/NIFTI&quot;
-eddy_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/EDDY&quot;
-denoise_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/denoise&quot;
-topup_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/TOPUP&quot;
-bedpostx_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX&quot;
-
-mkdir -p &quot;$bedpostx_base&quot;
-
-<span class="c"># --- Dynamic resource detection ---</span>
-ncores=$(nproc)              # total CPU cores
-threads_per_job=4            # cores used *inside* each bedpostx
-max_jobs=$(( ncores / threads_per_job ))
-
-echo &quot;Detected $ncores cores → running up to $max_jobs jobs in parallel&quot;
-export OMP_NUM_THREADS=$threads_per_job
-export MKL_NUM_THREADS=$threads_per_job
-export OPENBLAS_NUM_THREADS=$threads_per_job
-export NUMEXPR_NUM_THREADS=$threads_per_job
-
-<span class="c"># --- Subject processing function ---</span>
-process_subj() {
-    subj=$1
-    echo &quot;&gt;&gt;&gt; [$subj] Preparing and running bedpostx&quot;
-
-    out_dir=&quot;$bedpostx_base/$subj&quot;
-    mkdir -p &quot;$out_dir/bedpostx_input&quot;
-
-<span class="c">    # Copy and rename into FSL’s expected filenames</span>
-    cp &quot;$eddy_base/$subj/${subj}_eddy.nii.gz&quot;                  &quot;$out_dir/bedpostx_input/data.nii.gz&quot;
-    cp &quot;$eddy_base/$subj/${subj}_eddy.eddy_rotated_bvecs&quot;      &quot;$out_dir/bedpostx_input/bvecs&quot;
-    cp &quot;$denoise_base/$subj/mrdegibbs_no_b250/${subj}_modified_bval.bval&quot; \
-       &quot;$out_dir/bedpostx_input/bvals&quot;
-    cp &quot;$topup_base/$subj/topup_output/${subj}_topup_Tmean_brain_mask.nii.gz&quot; \
-       &quot;$out_dir/bedpostx_input/nodif_brain_mask.nii.gz&quot;
-
-<span class="c">    # Run bedpostx</span>
-    bedpostx &quot;$out_dir/bedpostx_input&quot;
-}
-
-export -f process_subj
-export eddy_base denoise_base topup_base bedpostx_base
-
-<span class="c"># --- Loop through subjects with job control ---</span>
-subjects=$(ls -1 &quot;$nifti_base&quot;)
-
-job_count=0
-for subj in $subjects; do
-    process_subj &quot;$subj&quot; &amp;
-    ((job_count++))
-    if (( job_count &gt;= max_jobs )); then
-        wait -n
-        ((job_count--))
-    fi
-done
-
-wait
-echo &quot;=== All BEDPOSTX jobs finished ===&quot;
-</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Fits a multi-fiber (ball-and-stick) model at every voxel. Run partly for its own outputs and partly because it produces a tidy, correctly-formatted input folder (data, motion-rotated bvecs, bvals, mask) that later MRtrix and NODDI steps reuse.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">dwiextract</span><span class="pkg">MRtrix3</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Per-subject (QUAD) and group (SQUAD) automated QC, plus a manual FSLeyes scroll-through. The per-subject absolute-motion number becomes a covariate.</p><div class="lead-lbl">Result</div><p class="res">Motion was low across the board. Group mean absolute motion 0.27 mm. The rule was to exclude anyone over 2 mm; nobody hit it.</p><figure class="fig"><img src="../images/qc_summary.png" alt="Group SQUAD QC summary across all subjects." loading="lazy"><figcaption>Group SQUAD QC summary across all subjects.</figcaption></figure></div></details></div></div><div class="subhead">Build the fiber model</div><div class="step"><div class="stephead"><span class="cmd">dwiextract</span><span class="pkg">MRtrix3</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
 <span class="c">###############################################################################</span>
 <span class="c"># 🧠 IMPACT DTI — Parallel DWIEXTRACT (live + logged output, stable + safe)</span>
 <span class="c">###############################################################################</span>
