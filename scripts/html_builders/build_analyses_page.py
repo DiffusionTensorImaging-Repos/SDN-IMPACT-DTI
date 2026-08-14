@@ -101,7 +101,7 @@ HTML = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
     <div class="formula"><span class="lbl">HitRateBias</span><br>= TrueMem<sub>pos</sub>/Total<sub>pos</sub> − TrueMem<sub>neg</sub>/Total<sub>neg</sub><br><span class="note">skew in <b>correct</b> memories</span></div>
     <div class="formula"><span class="lbl">FABias</span><br>= FalseMem<sub>pos</sub>/Total<sub>pos</sub> − FalseMem<sub>neg</sub>/Total<sub>neg</sub><br><span class="note">skew in <b>false</b> memories</span></div>
   </div>
-  <p class="small">Total<sub>pos</sub> and Total<sub>neg</sub> are the number of positive and negative items shown, so each fraction is a rate for that valence (e.g. TrueMem<sub>pos</sub>/Total<sub>pos</sub> = the share of positive items remembered). A positive score means more positive than negative.</p>
+  <p class="small">Total<sub>pos</sub> and Total<sub>neg</sub> are the number of positive and negative items at test (the ones she chose plus the foils), so each memory count is a fraction of its valence's items — hits over positive items, false alarms over positive items, and the same for negative. A positive score means more positive than negative.</p>
   {s_bias}
 
   <h3>Is memory above chance?</h3>
