@@ -1,0 +1,50 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMPACT — Hit rate &amp; false-alarm rate</title>
+<style>
+:root{--bg:#0f1117;--card:#1a1d27;--card2:#232733;--ink:#e6e9ef;--mut:#9aa3b2;--line:#2c3140;--accent:#a78bfa;}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+header{padding:22px 26px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#171a24,#0f1117)}
+h1{margin:0 0 4px;font-size:21px} .sub{color:var(--mut);font-size:13px}
+a{color:var(--accent);text-decoration:none}
+.wrap{padding:20px 26px;max-width:1200px;margin:0 auto}
+.section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:16px 0}
+.section h2{margin:0 0 12px;font-size:16px;color:var(--accent)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--mut);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid #20242f;font-variant-numeric:tabular-nums}
+.legend{font-size:12px;color:var(--mut);margin-top:10px}
+.script{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#c9d1e0;background:#12141c;border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:4px;white-space:pre-wrap;line-height:1.45}
+summary{cursor:pointer}
+</style></head><body>
+<header>
+<h1>IMPACT · Recognition components — hit rate &amp; false-alarm rate</h1>
+<div class="sub">The two ingredients of d′ (<b>d′ = z(hit rate) − z(false-alarm rate)</b>), tested against VTA→HPC tract microstructure exactly like d′ and bias: 4 outcomes (social &amp; monetary × hit rate, FA rate) × 4 tracts × 4 metrics. Freedman–Lane, 5000-perm cluster-extent FWE at α=.05. &nbsp;·&nbsp; <a href="results_explorer.html">← main results explorer (d′ &amp; bias)</a></div>
+</header>
+<div class="wrap">
+
+<div class="section"><h2>Tract averages</h2>
+<div class="note" style="background:#232733;border-left:3px solid #a78bfa;border-radius:6px;padding:11px 14px;margin:2px 0 14px;font-size:12.5px;color:#c9d1e0">Hit rate = P("remember" | old item she chose); false-alarm rate = P("remember" | foil). Each cell is the mid-tract (nodes 25–74) partial correlation of the metric with the outcome, covariates removed. <b style="color:#4ade80">Green</b> = p&lt;.05 on the average; <b>†</b> = node-wise cluster survived (cluster-extent FWE).</div>
+<details style="margin:4px 0 10px"><summary style="color:#a78bfa;font-size:12.5px;font-weight:600">Each value is a partial correlation <b>r</b> — click for the model</summary>
+<div class="script">For one outcome × tract × metric:
+  mid   = mean of the tract's middle nodes (25-74), per subject
+  x_res = residuals of  lm(mid     ~ ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age)
+  y_res = residuals of  lm(outcome ~ ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age)
+  r     = cor(x_res, y_res)      # partial correlation, covariates removed; two-sided p; n=52/53
+Node-wise: at each of 100 nodes  lm(outcome ~ node + same covariates); adjacent p&lt;.05 nodes form a cluster,
+kept if longer than the 95th percentile of the max chance cluster over 5000 Freedman-Lane permutations.</div>
+</details>
+<table><thead><tr><th>Outcome</th><th>Metric</th><th>post L</th><th>post R</th><th>ant L</th><th>ant R</th></tr></thead><tbody><tr><td rowspan="4"><b>Social hit rate</b></td><td>FA</td><td>+0.19</td><td>+0.22</td><td>+0.02</td><td>+0.10</td></tr><tr><td>NDI</td><td>+0.18</td><td>+0.13</td><td>-0.05</td><td>-0.06</td></tr><tr><td>ODI</td><td>+0.05</td><td>-0.03</td><td>-0.13</td><td>-0.23</td></tr><tr><td>FWF</td><td>-0.11</td><td>-0.07</td><td>-0.01</td><td>+0.00</td></tr><tr><td rowspan="4"><b>Social false-alarm rate</b></td><td>FA</td><td>+0.02</td><td>+0.13</td><td>-0.13</td><td>+0.12</td></tr><tr><td>NDI</td><td>-0.02</td><td>+0.01</td><td>-0.19</td><td>-0.05</td></tr><tr><td>ODI</td><td>+0.06</td><td>-0.06</td><td>-0.13</td><td>-0.18</td></tr><tr><td>FWF</td><td>-0.11</td><td>-0.06</td><td>+0.00</td><td>-0.03</td></tr><tr><td rowspan="4"><b>Monetary hit rate</b></td><td>FA</td><td>-0.01</td><td>+0.17</td><td>-0.10</td><td>+0.19</td></tr><tr><td>NDI</td><td>-0.05</td><td>-0.03</td><td>-0.14</td><td>+0.02</td></tr><tr><td>ODI</td><td>-0.03</td><td>-0.03</td><td>-0.17</td><td>-0.05</td></tr><tr><td>FWF</td><td>+0.01</td><td>+0.04</td><td>+0.07</td><td>+0.06</td></tr><tr><td rowspan="4"><b>Monetary false-alarm rate</b></td><td>FA</td><td>+0.08</td><td style="color:#4ade80;font-weight:700">+0.28</td><td>-0.00</td><td style="color:#4ade80;font-weight:700">+0.28<sup>†</sup></td></tr><tr><td>NDI</td><td>+0.02</td><td>+0.17</td><td>-0.06</td><td>+0.15</td></tr><tr><td>ODI</td><td>-0.05</td><td>-0.03</td><td>-0.15</td><td>-0.05</td></tr><tr><td>FWF</td><td>-0.07</td><td>-0.11</td><td>-0.05</td><td>-0.07</td></tr></tbody></table>
+</div>
+
+<div class="section"><h2>Surviving node-wise clusters</h2>
+<ul style="font-size:13px;color:#c9d1e0"><li>Monetary false-alarm rate · FA · ant R: nodes 53–76 (Positive), cluster p=0.031</li></ul>
+</div>
+
+<div class="section"><h2>Hippocampus</h2>
+<div class="note" style="background:#232733;border-left:3px solid #a78bfa;border-radius:6px;padding:11px 14px;margin:2px 0 14px;font-size:12.5px;color:#c9d1e0">Mean NDI inside the hippocampus ROI (left / right / bilateral), same covariates. β per SD.</div>
+<table><thead><tr><th>Outcome</th><th>NDI left</th><th>NDI right</th><th>NDI bilateral</th></tr></thead><tbody><tr><td>Social hit rate</td><td>+0.018</td><td>-0.021</td><td>-0.001</td></tr><tr><td>Social false-alarm rate</td><td>-0.014</td><td>-0.043</td><td>-0.029</td></tr><tr><td>Monetary hit rate</td><td>-0.016</td><td>-0.020</td><td>-0.019</td></tr><tr><td>Monetary false-alarm rate</td><td>+0.007</td><td>-0.012</td><td>-0.002</td></tr></tbody></table>
+<div class="legend"><b style="color:#4ade80">Green</b> = p&lt;.05; β per standard deviation, n=52/53.</div>
+</div>
+
+</div></body></html>

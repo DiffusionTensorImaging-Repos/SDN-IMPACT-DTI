@@ -115,7 +115,7 @@ a.back{color:var(--accent);text-decoration:none;font-size:13px}
 </style></head><body>
 <header>
 <h1>IMPACT · VTA→HPC Tract Microstructure — Results Explorer</h1>
-<div class="sub">All 96 node-wise permutation analyses — 6 outcomes (social &amp; monetary × d′, positivity bias in false memories, positivity bias in correct memories) × 4 tracts × 4 metrics (FA + NODDI: NDI, ODI, FWF). Freedman–Lane, 5000 permutations, cluster-extent FWE at α=0.05. Click any row for the tract, significant nodes, laterality, stats, and scripts. &nbsp;·&nbsp; <a class="back" href="data_quality.html">→ Memory data &amp; d′</a> &nbsp;·&nbsp; <a class="back" href="hvlt_explorer.html">→ Verbal learning (HVLT)</a></div>
+<div class="sub">All 96 node-wise permutation analyses — 6 outcomes (social &amp; monetary × d′, positivity bias in false memories, positivity bias in correct memories) × 4 tracts × 4 metrics (FA + NODDI: NDI, ODI, FWF). Freedman–Lane, 5000 permutations, cluster-extent FWE at α=0.05. Click any row for the tract, significant nodes, laterality, stats, and scripts. &nbsp;·&nbsp; <a class="back" href="data_quality.html">→ Memory data &amp; d′</a> &nbsp;·&nbsp; <a class="back" href="hvlt_explorer.html">→ Verbal learning (HVLT)</a> &nbsp;·&nbsp; <a class="back" href="hitfa_explorer.html">→ Hit rate &amp; false-alarm rate</a></div>
 </header>
 <div class="wrap">
 
