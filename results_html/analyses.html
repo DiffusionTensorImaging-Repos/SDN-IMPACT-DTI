@@ -143,7 +143,7 @@ if __name__ == &#x27;__main__&#x27;:
     <div class="formula"><span class="lbl">HitRateBias</span><br>= TrueMem<sub>pos</sub>/Total<sub>pos</sub> − TrueMem<sub>neg</sub>/Total<sub>neg</sub><br><span class="note">skew in <b>correct</b> memories</span></div>
     <div class="formula"><span class="lbl">FABias</span><br>= FalseMem<sub>pos</sub>/Total<sub>pos</sub> − FalseMem<sub>neg</sub>/Total<sub>neg</sub><br><span class="note">skew in <b>false</b> memories</span></div>
   </div>
-  <p class="small">Zero-valence rule: a 0/0 term is set to 0 (defined, maximally positive) rather than dropping the subject.</p>
+  <p class="small">Total<sub>pos</sub> and Total<sub>neg</sub> are the number of positive and negative items shown, so each fraction is a rate for that valence (e.g. TrueMem<sub>pos</sub>/Total<sub>pos</sub> = the share of positive items remembered). A positive score means more positive than negative.</p>
   <div class="step"><div class="stephead"><span class="cmd">compute_bias_scores.py</span><span class="pkg">pandas</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">&quot;&quot;&quot;</span>
 Positivity-bias scores (HitRateBias, FABias) from the study&#x27;s valence-coded counts,
 with the zero-valence rule, written into the analysis-ready CSVs.
