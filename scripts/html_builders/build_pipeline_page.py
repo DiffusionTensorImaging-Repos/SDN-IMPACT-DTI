@@ -162,9 +162,9 @@ PRE.append(step(
     (3387, 3444)))
 
 # ==================================================== TRACTOGRAPHY
-PROV = ('<div class="callout"><b>The three ROI inputs</b> (from Ranesh Mopuru, Olson lab; all MNI space). '
+PROV = ('<div class="callout"><b>The three ROI inputs</b> (all MNI space). '
         'Seed = VTA, Pauli atlas at 25%. Target = hippocampus, Harvard-Oxford at 50%. '
-        'Tract atlas = his VTA-HPC group mean, built from ~170 HCP 7T subjects, used to build the exclusion corridor.</div>')
+        'Tract atlas = a VTA-HPC group mean built from ~170 HCP 7T subjects, used to build the exclusion corridor.</div>')
 TRACT = [sub("Fiber drawing"), PROV]
 TRACT.append(step(
     "antsRegistrationSyNQuick.sh", "ANTs (SyN)",
