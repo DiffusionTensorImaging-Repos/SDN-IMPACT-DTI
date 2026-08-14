@@ -13,58 +13,14 @@
 </nav>
 <div class="wrap">
   <h1>Analyses</h1>
-  <p class="lead">The RAFT feedback-memory task, how the memory outcomes are scored from it, and how each is tested against the along-tract microstructure. The findings themselves live in the <a href="results_explorer.html">Results</a> browser.</p>
-
-  <h2>The task</h2>
-  <p>On each encoding trial a pair of stimuli appears and the mother chooses one; her choice is followed by valenced feedback: a positive (green) or negative (red) outcome, or a neutral one. Two domains are interleaved: <b>faces</b> (social) and <b>doors</b> (monetary). A later surprise recognition test presents old and new stimuli and asks which she saw, and memory is scored from that test.</p>
-  <figure class="fig"><img src="../images/raft_task.jpg" alt="RAFT task schematic: face pairs (social) and door pairs (monetary), each choice followed by positive, negative, or neutral feedback" loading="lazy"><figcaption>The RAFT task. Faces (social, left) and doors (monetary, right); each chosen pair returns a green (positive), red (negative), or neutral (empty) outcome.</figcaption></figure>
+  <p class="lead">How the memory outcomes are scored from the RAFT task (see <a href="background.html">Background</a>), and how each is tested against the along-tract microstructure. The findings live in <a href="results_explorer.html">Results</a>.</p>
 
   <h2>1 · Calculating memory</h2>
-  <p>From the feedback task, each mother gets, per condition (social faces, monetary doors), one accuracy score and two positivity-bias scores.</p>
+  <p>Per condition (social faces, monetary doors): one accuracy score and two positivity-bias scores.</p>
 
   <h3>Accuracy: d′</h3>
-  <div class="formula"><span class="lbl">d′</span> = z(hit rate) − z(false-alarm rate)<br><span class="note">z is the inverse-normal. Higher d′ means better discrimination of chosen items from foils.</span></div>
-  <p class="small"><b>Hit rate</b> is the proportion of items she chose during the task that she later calls "remember" (correct). <b>False-alarm rate</b> is the proportion of non-chosen foils she calls "remember" (incorrect). d′ is high when hits are common and false alarms are rare.</p>
-
-  <h3>Positivity bias: two scores</h3>
-  <div class="two">
-    <div class="formula"><span class="lbl">HitRateBias</span><br>= TrueMem<sub>pos</sub>/Total<sub>pos</sub> − TrueMem<sub>neg</sub>/Total<sub>neg</sub><br><span class="note">positivity skew in <b>correct</b> memories</span></div>
-    <div class="formula"><span class="lbl">FABias</span><br>= FalseMem<sub>pos</sub>/Total<sub>pos</sub> − FalseMem<sub>neg</sub>/Total<sub>neg</sub><br><span class="note">positivity skew in <b>false</b> memories</span></div>
-  </div>
-  <p class="small">Zero-valence rule: a term whose denominator is 0 (a mother who produced no memories of one valence) is set to 0, giving her a defined, maximally-positive score rather than dropping her. Compliance is screened first, so it never rescues a yes-to-everything responder.</p>
-
-  <h3>The scores across mothers</h3>
-  <table class="dtable"><thead><tr><th>Score</th><th>Social, M ± SD</th><th>Monetary, M ± SD</th><th>n</th></tr></thead><tbody>
-    <tr><td>d′ (accuracy)</td><td>0.10 ± 0.29</td><td>0.22 ± 0.33</td><td>52 / 53</td></tr>
-    <tr><td>HitRateBias</td><td>+0.12 ± 0.19</td><td>+0.12 ± 0.16</td><td>52 / 53</td></tr>
-    <tr><td>FABias</td><td>+0.07 ± 0.19</td><td>+0.07 ± 0.16</td><td>52 / 53</td></tr>
-  </tbody></table>
-
-  <h3>Is memory above chance?</h3>
-  <table class="dtable"><thead><tr><th>Condition</th><th>mean d′</th><th>t vs 0</th><th>p</th><th>verdict</th></tr></thead><tbody>
-    <tr><td>Social</td><td>+0.098</td><td>2.47</td><td class="sig">0.017</td><td>above chance</td></tr>
-    <tr><td>Monetary</td><td>+0.215</td><td>4.77</td><td class="sig">&lt;0.001</td><td>above chance</td></tr>
-  </tbody></table>
-  <p>Both are above chance. Social and monetary d′ are also uncorrelated at the subject level (r = -0.15, p = 0.29): they are distinct abilities, not two views of one signal.</p>
-
-  <h3>Why is social d′ lower than monetary?</h3>
-  <p>d′ has two ingredients: the hit rate (memory strength) and the false-alarm rate (false positives). Splitting them shows the difference is entirely in false alarms.</p>
-  <table class="dtable"><thead><tr><th>Component</th><th>Social</th><th>Monetary</th><th>diff (S−M)</th><th>paired test</th><th>differ?</th></tr></thead><tbody>
-    <tr><td>Hit rate</td><td>0.560</td><td>0.539</td><td>+0.021</td><td>t=0.86, p=0.395</td><td>no</td></tr>
-    <tr><td>False-alarm rate</td><td>0.527</td><td>0.460</td><td>+0.067</td><td>t=2.77, p=0.008</td><td class="sig">yes</td></tr>
-    <tr><td>d′</td><td>0.098</td><td>0.218</td><td>−0.119</td><td>t=−1.83, p=0.073</td><td>no</td></tr>
-  </tbody></table>
-  <p>Social and monetary items are remembered equally well; hit rates are essentially identical (0.56 vs 0.54, p = 0.40). The only difference is that the social task produces significantly more false alarms (0.527 vs 0.460, p = 0.008). So the lower social d′ is not weaker memory, it is more false positives, which is exactly where the social signal lives.</p>
-
-  <h3>How the scores relate</h3>
-  <table class="dtable"><thead><tr><th>Pair</th><th>r</th><th>p</th><th>reading</th></tr></thead><tbody>
-    <tr><td>Social d′ × Monetary d′</td><td>-0.15</td><td>0.29</td><td>independent abilities</td></tr>
-    <tr><td>HitRateBias: social × monetary</td><td class="sig">+0.40</td><td class="sig">0.004</td><td>positivity in correct memories is trait-like across domains</td></tr>
-    <tr><td>Social d′ × Social HitRateBias</td><td>+0.28</td><td>0.043</td><td>better social accuracy goes with more positive correct memories</td></tr>
-    <tr><td>d′ × FABias (within domain)</td><td>≈ -0.13</td><td>ns</td><td>accuracy unrelated to false-memory skew</td></tr>
-  </tbody></table>
-
-  <div class="subhead">Scripts</div>
+  <div class="formula"><span class="lbl">d′</span> = z(hit rate) − z(false-alarm rate)</div>
+  <p class="small"><b>Hit rate</b> = proportion of items she chose that she later calls "remember." <b>False-alarm rate</b> = proportion of non-chosen foils she calls "remember." d′ is high when hits are common and false alarms rare.</p>
   <div class="step"><div class="stephead"><span class="cmd">recompute_dprime_all.py</span><span class="pkg">pandas · scipy</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre>import pandas as pd, numpy as np, glob, json, os
 from scipy.stats import norm, pearsonr
 def z(p): return norm.ppf(np.clip(p,1e-6,1-1e-6))
@@ -115,7 +71,8 @@ df.to_json(&#x27;/Users/dannyzweben/Desktop/SDN/DTI/SDN-IMPACT-DTI/results_html/
 <span class="c"># NOTE: does NOT write meta_data[&#x27;data_quality&#x27;][&#x27;dprime_recompute&#x27;] — build_demo_dq.py is the</span>
 <span class="c"># single source of truth for that value (analysis d′ vs export on the clean roster). This script&#x27;s</span>
 <span class="c"># recompute↔export r can include DQ-excluded sessions and must not clobber the published value.</span>
-print(&quot;NOTE: meta_data recompute is owned by build_demo_dq.py; not overwriting here.&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Recompute d′ straight from each mother's raw Encoding and Recall trial files (build the set of faces she chose vs. saw-but-did-not-choose, count remember responses, d′ = z(hit) − z(FA)) as a transparency check on the study's exported scores.</p><div class="lead-lbl">Produces</div><p class="res">Recompute vs. export matched closely: social r = 0.96, monetary r = 0.99.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">compliance_screen.py</span><span class="pkg">pandas</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">&quot;&quot;&quot;</span>
+print(&quot;NOTE: meta_data recompute is owned by build_demo_dq.py; not overwriting here.&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Recompute d′ straight from each mother's raw Encoding and Recall trials as a transparency check on the study's exported scores.</p><div class="lead-lbl">Produces</div><p class="res">Matched the export: social r = 0.96, monetary r = 0.99.</p></div></details></div></div>
+  <div class="step"><div class="stephead"><span class="cmd">compliance_screen.py</span><span class="pkg">pandas</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">&quot;&quot;&quot;</span>
 Compliance screen — a PRE-ANALYSIS data-quality gate for the memory task.
 
 Flags &quot;yes-to-everything&quot; responders: mothers who pressed &quot;remember&quot; to ~all items
@@ -179,7 +136,15 @@ def main():
     print(f&quot;  -&gt; wrote {OUT}&quot;)
 
 if __name__ == &#x27;__main__&#x27;:
-    main()</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>A pre-analysis data-quality gate. Flags yes-to-everything responders (pressed remember to essentially every item, old and new), whose d′ is degenerate. Rule: exclude a condition at a remember-rate of 0.95 or higher.</p><div class="lead-lbl">Produces</div><p class="res">Excludes s4210 (100% remember on both tasks) from every memory outcome, before the tract analyses.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">compute_bias_scores.py</span><span class="pkg">pandas</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">&quot;&quot;&quot;</span>
+    main()</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Pre-analysis gate: flag yes-to-everything responders (remember-rate ≥ 0.95), whose d′ is degenerate, and drop that condition.</p><div class="lead-lbl">Produces</div><p class="res">Excludes s4210 from every memory outcome.</p></div></details></div></div>
+
+  <h3>Positivity bias: two scores</h3>
+  <div class="two">
+    <div class="formula"><span class="lbl">HitRateBias</span><br>= TrueMem<sub>pos</sub>/Total<sub>pos</sub> − TrueMem<sub>neg</sub>/Total<sub>neg</sub><br><span class="note">skew in <b>correct</b> memories</span></div>
+    <div class="formula"><span class="lbl">FABias</span><br>= FalseMem<sub>pos</sub>/Total<sub>pos</sub> − FalseMem<sub>neg</sub>/Total<sub>neg</sub><br><span class="note">skew in <b>false</b> memories</span></div>
+  </div>
+  <p class="small">Zero-valence rule: a 0/0 term is set to 0 (defined, maximally positive) rather than dropping the subject.</p>
+  <div class="step"><div class="stephead"><span class="cmd">compute_bias_scores.py</span><span class="pkg">pandas</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">&quot;&quot;&quot;</span>
 Positivity-bias scores (HitRateBias, FABias) from the study&#x27;s valence-coded counts,
 with the zero-valence rule, written into the analysis-ready CSVs.
 
@@ -234,7 +199,30 @@ def main():
         print(f&quot;  {bc:22s} N={pd.to_numeric(ref[bc], errors=&#x27;coerce&#x27;).notna().sum()}&quot;)
 
 if __name__ == &#x27;__main__&#x27;:
-    main()</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Build the two positivity-bias scores from the valence-coded counts, applying the zero-valence rule (a 0/0 term is set to 0 rather than dropping the subject). Valid only where that condition's d′ is valid.</p><div class="lead-lbl">Produces</div><p class="res">HitRateBias and FABias per condition, written into the 16 analysis tables.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">dprime_breakdown.py</span><span class="pkg">pandas · scipy</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">&quot;&quot;&quot;</span>
+    main()</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Build HitRateBias and FABias from the valence-coded counts, with the zero-valence rule.</p><div class="lead-lbl">Produces</div><p class="res">The two bias scores per condition, written into the analysis tables.</p></div></details></div></div>
+
+  <h3>The scores</h3>
+  <table class="dtable"><thead><tr><th>Score</th><th>Social</th><th>Monetary</th><th>n</th></tr></thead><tbody>
+    <tr><td>d′</td><td>0.10 ± 0.29</td><td>0.22 ± 0.33</td><td>52 / 53</td></tr>
+    <tr><td>HitRateBias</td><td>+0.12 ± 0.19</td><td>+0.12 ± 0.16</td><td>52 / 53</td></tr>
+    <tr><td>FABias</td><td>+0.07 ± 0.19</td><td>+0.07 ± 0.16</td><td>52 / 53</td></tr>
+  </tbody></table>
+
+  <h3>Is memory above chance?</h3>
+  <table class="dtable"><thead><tr><th>Condition</th><th>mean d′</th><th>t vs 0</th><th>p</th></tr></thead><tbody>
+    <tr><td>Social</td><td>+0.098</td><td>2.47</td><td class="sig">0.017</td></tr>
+    <tr><td>Monetary</td><td>+0.215</td><td>4.77</td><td class="sig">&lt;0.001</td></tr>
+  </tbody></table>
+  <p>Both above chance. Social and monetary d′ are uncorrelated (r = -0.15, p = 0.29): distinct abilities.</p>
+
+  <h3>Why social d′ is lower</h3>
+  <table class="dtable"><thead><tr><th>Component</th><th>Social</th><th>Monetary</th><th>paired test</th></tr></thead><tbody>
+    <tr><td>Hit rate</td><td>0.560</td><td>0.539</td><td>p = 0.395</td></tr>
+    <tr><td>False-alarm rate</td><td>0.527</td><td>0.460</td><td class="sig">p = 0.008</td></tr>
+    <tr><td>d′</td><td>0.098</td><td>0.218</td><td>p = 0.073</td></tr>
+  </tbody></table>
+  <p>Hit rates are equal; the social task just produces more false alarms. The lower social d′ is more false positives, not weaker memory, which is exactly where the social signal lives.</p>
+  <div class="step"><div class="stephead"><span class="cmd">dprime_breakdown.py</span><span class="pkg">pandas · scipy</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">&quot;&quot;&quot;</span>
 d&#x27; component breakdown: split each mother&#x27;s d&#x27; into hit rate (memory strength) and
 false-alarm rate (false positives), then paired-compare social vs monetary. Applies the
 SAME data-quality gates as the analysis: exclude corrupted (&lt;80% recall/encode overlap),
@@ -289,31 +277,21 @@ def main():
     print(f&quot;dprime_breakdown.json  (n={bd[&#x27;n&#x27;]}): hit p={bd[&#x27;hit&#x27;][&#x27;p&#x27;]}  fa p={bd[&#x27;fa&#x27;][&#x27;p&#x27;]}&quot;)
 
 if __name__ == &#x27;__main__&#x27;:
-    main()</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Split each d′ into its hit rate and false-alarm rate and paired-compare social vs. monetary, under the same data-quality and compliance gates as the analysis.</p><div class="lead-lbl">Produces</div><p class="res">The hit / false-alarm breakdown above (hits equal; social false-alarms higher).</p></div></details></div></div>
+    main()</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Split each d′ into hit rate and false-alarm rate, paired social vs. monetary, under the same data-quality and compliance gates.</p><div class="lead-lbl">Produces</div><p class="res">The hit / false-alarm breakdown above.</p></div></details></div></div>
+
+  <h3>How the scores relate</h3>
+  <table class="dtable"><thead><tr><th>Pair</th><th>r</th><th>p</th></tr></thead><tbody>
+    <tr><td>Social d′ × Monetary d′</td><td>-0.15</td><td>0.29</td></tr>
+    <tr><td>HitRateBias: social × monetary</td><td class="sig">+0.40</td><td class="sig">0.004</td></tr>
+    <tr><td>Social d′ × Social HitRateBias</td><td>+0.28</td><td>0.043</td></tr>
+  </tbody></table>
 
   <h2>2 · Analyses</h2>
-  <p>Six outcomes (social and monetary × d′, HitRateBias, FABias) tested against each tract's along-node microstructure, for all four metrics, plus a hippocampus-region control.</p>
+  <p>Six outcomes (social and monetary × d′, HitRateBias, FABias) tested against each tract's along-node microstructure, for all four metrics, plus the hippocampus region.</p>
 
   <h3>Model, per node</h3>
-  <p>At each of the 100 nodes, a linear model of the outcome on that node's microstructure value plus five nuisance covariates: ICV, tract streamline count and mean length (so a result is not just a bigger or denser tract), head motion, and maternal age.</p>
+  <p>At each of the 100 nodes, the outcome on that node's microstructure value plus five covariates: ICV, tract streamline count and mean length, head motion, and maternal age.</p>
   <div class="formula"><span class="lbl">full</span>&nbsp;&nbsp;&nbsp; y ~ node + ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age<br><span class="lbl">reduced</span>&nbsp; y ~ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age</div>
-
-  <h3>Correction: cluster-extent FWE by permutation</h3>
-  <p>Neighboring significant nodes form a cluster. To keep 100 tests from inflating false positives, the null is built by Freedman-Lane permutation: take the reduced model's residuals, shuffle them, re-run all 100 nodes, 5,000 times, recording the largest chance cluster each time. An observed cluster counts only if it beats 95% of those. Run across 6 outcomes × 4 tracts × 4 metrics = 96 analyses.</p>
-
-  <h3>Hippocampus control</h3>
-  <p>The same framework, but predicting memory from the mean NODDI inside the hippocampus ROI itself (hemisphere-matched, same covariates) instead of along the tract. This separates a pathway effect from generic hippocampal tissue. Results on the <a href="hpc_region_vs_connection.html">hippocampus page</a>.</p>
-
-  <h3>Check: hemisphere consistency (lateralization)</h3>
-  <p>Left and right tracts should be measuring the same thing. Correlating the mid-tract (nodes 25 to 74) average of each metric across hemispheres, per subject (n = 57):</p>
-  <table class="dtable"><thead><tr><th>Tract</th><th>FA</th><th>NDI</th><th>ODI</th><th>FWF</th></tr></thead><tbody>
-    <tr><td>Posterior VTA→HPC</td><td>0.52</td><td>0.86</td><td>0.88</td><td>0.70</td></tr>
-    <tr><td>Anterior VTA→HPC</td><td>0.53</td><td>0.81</td><td>0.80</td><td>0.70</td></tr>
-  </tbody></table>
-  <figure class="fig"><img src="../images/lr_scatterplots_mid50.png" alt="Left versus right hemisphere scatterplots, mid-tract node averages" loading="lazy"><figcaption>Each point is a subject; dashed line is identity, red is best-fit. Top row posterior, bottom row anterior.</figcaption></figure>
-  <p>Neurite density and orientation dispersion are highly consistent across hemispheres (r ≈ 0.80 to 0.88); free water is moderate (≈ 0.70); FA is noisier (≈ 0.52).</p>
-
-  <div class="subhead">Scripts</div>
   <div class="step"><div class="stephead"><span class="cmd">build_analysis_csvs.py</span><span class="pkg">pandas</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/usr/bin/env python3</span>
 <span class="c">&quot;&quot;&quot;</span>
 ================================================================================
@@ -473,7 +451,11 @@ for tract in TRACTS:
         out.to_csv(out_path, index=False)
         print(f&quot;  wrote {out_path.name}  shape={out.shape}&quot;)
 
-print(&quot;\nAll 16 analysis-ready CSVs written.&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Assemble the 16 analysis tables (4 tracts × 4 metrics). Each row is a subject; columns are the outcomes, the 5 covariates, and the 100 along-tract node values, merged from the node-profile CSVs, REDCap, and the imaging covariates.</p><div class="lead-lbl">Produces</div><p class="res">16 analysis-ready CSVs, the input to the permutation test.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">permutation_one.R</span><span class="pkg">R</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c"># =========================================================================</span>
+print(&quot;\nAll 16 analysis-ready CSVs written.&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Assemble the 16 analysis tables (4 tracts × 4 metrics): one row per subject, with the outcomes, the 5 covariates, and the 100 node values.</p><div class="lead-lbl">Produces</div><p class="res">16 analysis-ready CSVs, the input to the permutation test.</p></div></details></div></div>
+
+  <h3>Correction: cluster-extent FWE</h3>
+  <p>Adjacent significant nodes form a cluster; the null is a Freedman-Lane permutation (shuffle the reduced-model residuals, refit all 100 nodes, 5,000 times), and a cluster is kept only if it beats 95% of the chance clusters. Run across 96 analyses.</p>
+  <div class="step"><div class="stephead"><span class="cmd">permutation_one.R</span><span class="pkg">R</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c"># =========================================================================</span>
 <span class="c"># IMPACT — Cluster-extent permutation testing (Freedman-Lane)</span>
 <span class="c"># Adapted from Ranesh&#x27;s vta_hippocampus_substance_use_noddi_permutation_testing.R</span>
 <span class="c"># =========================================================================</span>
@@ -687,7 +669,8 @@ summary_df &lt;- tibble(
 )
 write_csv(summary_df, file.path(out_dir, paste0(base, &quot;_summary.csv&quot;)))
 message(&quot;Done: &quot;, base, &quot; — clusters=&quot;, num_clusters,
-        &quot; sig nodes=&quot;, num_sig_nodes, &quot; ext_thr=&quot;, extent_threshold)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>The node-wise test for one (tract, metric, outcome). At each of 100 nodes it fits the full vs. reduced model and records the t on the node term; adjacent significant nodes form clusters; the null is the Freedman-Lane permutation (shuffle reduced-model residuals, refit, 5,000 times) and clusters are kept by cluster-extent FWE.</p><div class="lead-lbl">Produces</div><p class="res">Per-analysis nodewise, clusters, and summary CSVs. Surviving clusters are in the Results browser.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">run_all_permutations.sh</span><span class="pkg">bash</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+        &quot; sig nodes=&quot;, num_sig_nodes, &quot; ext_thr=&quot;, extent_threshold)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>The node-wise test for one (tract, metric, outcome): fit full vs. reduced at each node, form clusters of adjacent significant nodes, and keep them by cluster-extent FWE against a Freedman-Lane null.</p><div class="lead-lbl">Produces</div><p class="res">Per-analysis nodewise, clusters, and summary CSVs.</p></div></details></div></div>
+  <div class="step"><div class="stephead"><span class="cmd">run_all_permutations.sh</span><span class="pkg">bash</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
 <span class="c"># Run all 80 permutation tests (5 outcomes × 4 metrics × 4 tracts)</span>
 DATA=&quot;/Users/dannyzweben/Desktop/SDN/DTI/data.check/analysis_ready&quot;
 OUT=&quot;/Users/dannyzweben/Desktop/SDN/DTI/data.check/permutation_results&quot;
@@ -718,7 +701,11 @@ for outcome in &quot;${OUTCOMES[@]}&quot;; do
     done
   done
 done
-echo &quot;ALL_PERMUTATIONS_DONE&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Driver that loops permutation_one.R over every outcome × tract × metric. Across the memory and bias outcomes this is 6 × 4 × 4 = 96 analyses, one core each.</p><div class="lead-lbl">Produces</div><p class="res">The full grid of per-analysis result CSVs.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">hpc_analysis.py</span><span class="pkg">statsmodels</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre>import pandas as pd, numpy as np, json
+echo &quot;ALL_PERMUTATIONS_DONE&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Driver that loops the test over every outcome × tract × metric (96 analyses).</p><div class="lead-lbl">Produces</div><p class="res">The full grid of result CSVs.</p></div></details></div></div>
+
+  <h3>Within the hippocampus</h3>
+  <p>The same framework, but predicting memory from the mean NODDI inside the hippocampus ROI itself instead of along the tract, to separate a pathway effect from hippocampal tissue. Results on the <a href="hpc_region_vs_connection.html">hippocampus page</a>.</p>
+  <div class="step"><div class="stephead"><span class="cmd">hpc_analysis.py</span><span class="pkg">statsmodels</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre>import pandas as pd, numpy as np, json
 import statsmodels.formula.api as smf
 from scipy.stats import zscore
 import warnings; warnings.filterwarnings(&#x27;ignore&#x27;)
@@ -778,7 +765,16 @@ for key,lbl in NODDI:
 json.dump({&#x27;models&#x27;:models,&#x27;bias_models&#x27;:bias,&#x27;qc&#x27;:qc,&#x27;noddi&#x27;:[k for k,_ in NODDI]},
    open(&#x27;/Users/dannyzweben/Desktop/SDN/DTI/SDN-IMPACT-DTI/results_html/hpc_region_data.json&#x27;,&#x27;w&#x27;),indent=1)
 df.to_csv(&#x27;/Users/dannyzweben/Desktop/SDN/DTI/SDN-IMPACT-DTI/data/hpc_region_measures.csv&#x27;,index=False)
-print(&quot;\nsaved hpc_region_data.json + hpc_region_measures.csv&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>The hippocampus control: predict each memory outcome from the mean NODDI inside the hippocampus ROI itself (matched, cross, and bilateral hemispheres), with the same nuisance covariates, to separate a pathway effect from generic hippocampal tissue.</p><div class="lead-lbl">Produces</div><p class="res">hpc_region_data.json, shown on the hippocampus Results page.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">mid50_correlations.py</span><span class="pkg">pandas</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/usr/bin/env python3</span>
+print(&quot;\nsaved hpc_region_data.json + hpc_region_measures.csv&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Predict each memory outcome from the mean NODDI inside the hippocampus ROI itself (matched, cross, and bilateral), same covariates, to separate a pathway effect from hippocampal tissue.</p><div class="lead-lbl">Produces</div><p class="res">hpc_region_data.json, shown on the hippocampus Results page.</p></div></details></div></div>
+
+  <h3>Check: hemisphere consistency</h3>
+  <p>Left and right tracts should measure the same thing. Mid-tract (nodes 25 to 74) averages correlated across hemispheres (n = 57):</p>
+  <table class="dtable"><thead><tr><th>Tract</th><th>FA</th><th>NDI</th><th>ODI</th><th>FWF</th></tr></thead><tbody>
+    <tr><td>Posterior VTA→HPC</td><td>0.52</td><td>0.86</td><td>0.88</td><td>0.70</td></tr>
+    <tr><td>Anterior VTA→HPC</td><td>0.53</td><td>0.81</td><td>0.80</td><td>0.70</td></tr>
+  </tbody></table>
+  <figure class="fig"><img src="../images/lr_scatterplots_mid50.png" alt="Left versus right hemisphere scatterplots, mid-tract node averages" loading="lazy"><figcaption>Each point a subject; dashed line is identity. Top row posterior, bottom row anterior.</figcaption></figure>
+  <div class="step"><div class="stephead"><span class="cmd">mid50_correlations.py</span><span class="pkg">pandas</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/usr/bin/env python3</span>
 <span class="c">&quot;&quot;&quot;</span>
 Mid-50-nodes (25-74) average + L/R hemisphere correlations.
 Per Ranesh&#x27;s request before the meeting.
@@ -846,7 +842,7 @@ for label, pair in [(&quot;Posterior VTA→HPC&quot;, posterior), (&quot;Anterio
         r, n = lr_pair(pair, metric)
         rows.append({&quot;Tract_Pair&quot;: label, &quot;Metric&quot;: metric, &quot;L_vs_R_r&quot;: round(r, 3), &quot;n&quot;: n})
 pd.DataFrame(rows).to_csv(out_dir / &quot;lr_correlations_mid50.csv&quot;, index=False)
-print(f&quot;\nCorr table saved: {out_dir / &#x27;lr_correlations_mid50.csv&#x27;}&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Average each metric over the mid-tract nodes (25 to 74) and correlate left vs. right hemisphere, per subject, as the lateralization check.</p><div class="lead-lbl">Produces</div><p class="res">The L / R correlation table above.</p></div></details></div></div>
+print(f&quot;\nCorr table saved: {out_dir / &#x27;lr_correlations_mid50.csv&#x27;}&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Average each metric over the mid-tract nodes (25 to 74) and correlate left vs. right hemisphere, per subject.</p><div class="lead-lbl">Produces</div><p class="res">The L / R correlation table above.</p></div></details></div></div>
 
   <p class="small" style="margin-top:24px">Findings: <a href="results_explorer.html">Results browser</a> · <a href="data_quality.html">data quality</a> · <a href="hpc_region_vs_connection.html">hippocampus</a></p>
 </div>
