@@ -59,19 +59,6 @@ a.back{color:var(--accent);text-decoration:none;font-size:13px}
 </header>
 <div class="wrap">
 
-<div class="section"><h2>Hippocampus</h2>
-<div class="note" style="background:#232733;border-left:3px solid #a78bfa;border-radius:6px;padding:11px 14px;margin:2px 0 14px;font-size:12.5px;color:#c9d1e0">NDI (neurite density) sampled inside the anatomical hippocampus ROI itself, not along the tract, same covariates, asking whether memory tracks the pathway or hippocampal tissue in general. Left / right / bilateral is just which hippocampus the NDI came from (bilateral = the two averaged). ODI and FWF are null for every outcome, so only NDI is shown. β is per standard deviation; left and right hippocampal NDI correlate r=0.84.</div>
-<table><thead><tr><th>Outcome</th><th>NDI left</th><th>NDI right</th><th>NDI bilateral</th></tr></thead><tbody>
-<tr><td>Social d′ (accuracy)</td><td style="color:#4ade80;font-weight:700">+.089 *</td><td>+.052</td><td>+.074</td></tr>
-<tr><td>Social HitRateBias (correct-memory positivity)</td><td>+.052</td><td>+.024</td><td>+.040</td></tr>
-<tr><td>Social FABias (false-memory positivity)</td><td>−.049</td><td>−.054</td><td>−.054</td></tr>
-<tr><td>Monetary d′</td><td>−.077</td><td>−.037</td><td>−.060</td></tr>
-<tr><td>Monetary HitRateBias</td><td>−.016</td><td>−.011</td><td>−.015</td></tr>
-<tr><td>Monetary FABias</td><td>−.006</td><td>+.015</td><td>+.004</td></tr>
-</tbody></table>
-<div class="legend">β per SD, n=52 social / 53 monetary; * p&lt;.05. Only <b>left hippocampal NDI × social d′</b> is significant (β=+.089, p=.039). Social FABias is a same-direction right-NDI trend (p=.05) and social HitRateBias a weak left trend (p=.07); everything monetary is null. So the neurite-density signal is shared by the pathway and the region, not generic tissue. Full model set incl. ODI/FWF: <a href="hpc_region_vs_connection.html" style="color:#a78bfa">hippocampus page</a>.</div>
-</div>
-
 <div class="section"><h2>Tract averages</h2>
 <div class="note" style="background:#232733;border-left:3px solid #a78bfa;border-radius:6px;padding:11px 14px;margin:2px 0 14px;font-size:12.5px;color:#c9d1e0">The simplest version of each test: average the mid-tract nodes (25–74) per subject, then regress the outcome on that single value with the same covariates. One effect size and one p per tract. Useful as a check on the node-wise map, since along-tract nodes are highly autocorrelated (left/right correlate ~0.86 for NDI), so one tract is effectively one test. <b style="color:#4ade80">Green</b> = p&lt;.05 on the average; <b>†</b> = the node-wise cluster survived (cluster-extent FWE).</div>
 <table><thead><tr><th>Finding</th><th>post L</th><th>post R</th><th>ant L</th><th>ant R</th></tr></thead><tbody>
@@ -104,6 +91,19 @@ a.back{color:var(--accent);text-decoration:none;font-size:13px}
 <th data-k="best_p">Cluster p</th><th data-k="passed">FWE</th>
 </tr></thead><tbody id="tbody"></tbody></table>
 <div class="legend">FWE = cluster passes permutation extent threshold. Direction: <span class="badge b-pos">Positive</span> higher metric → higher outcome · <span class="badge b-neg">Negative</span> higher metric → lower outcome.<br><b>Node values are partial-regression t-statistics</b> (each node = outcome regressed on that node’s metric + covariates), not zero-order correlations. In the detail view, the <b>Hemispheric node overlap</b> panel stacks the L and R tracts aligned by node so you can see whether the significant nodes fall in the same place; nodes significant on <span style="color:#4ade80">both</span> sides are shown in green.</div>
+</div>
+
+<div class="section"><h2>Hippocampus</h2>
+<div class="note" style="background:#232733;border-left:3px solid #a78bfa;border-radius:6px;padding:11px 14px;margin:2px 0 14px;font-size:12.5px;color:#c9d1e0">NDI (neurite density) sampled inside the anatomical hippocampus ROI itself, not along the tract, same covariates, asking whether memory tracks the pathway or hippocampal tissue in general. Left / right / bilateral is just which hippocampus the NDI came from (bilateral = the two averaged). ODI and FWF are null for every outcome, so only NDI is shown. β is per standard deviation; left and right hippocampal NDI correlate r=0.84.</div>
+<table><thead><tr><th>Outcome</th><th>NDI left</th><th>NDI right</th><th>NDI bilateral</th></tr></thead><tbody>
+<tr><td>Social d′ (accuracy)</td><td style="color:#4ade80;font-weight:700">+.089 *</td><td>+.052</td><td>+.074</td></tr>
+<tr><td>Social HitRateBias (correct-memory positivity)</td><td>+.052</td><td>+.024</td><td>+.040</td></tr>
+<tr><td>Social FABias (false-memory positivity)</td><td>−.049</td><td>−.054</td><td>−.054</td></tr>
+<tr><td>Monetary d′</td><td>−.077</td><td>−.037</td><td>−.060</td></tr>
+<tr><td>Monetary HitRateBias</td><td>−.016</td><td>−.011</td><td>−.015</td></tr>
+<tr><td>Monetary FABias</td><td>−.006</td><td>+.015</td><td>+.004</td></tr>
+</tbody></table>
+<div class="legend">β per SD, n=52 social / 53 monetary; * p&lt;.05. Only <b>left hippocampal NDI × social d′</b> is significant (β=+.089, p=.039). Social FABias is a same-direction right-NDI trend (p=.05) and social HitRateBias a weak left trend (p=.07); everything monetary is null. So the neurite-density signal is shared by the pathway and the region, not generic tissue. Full model set incl. ODI/FWF: <a href="hpc_region_vs_connection.html" style="color:#a78bfa">hippocampus page</a>.</div>
 </div>
 
 </div>
