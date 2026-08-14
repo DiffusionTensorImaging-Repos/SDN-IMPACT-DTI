@@ -91,7 +91,11 @@ HTML = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 </nav>
 <div class="wrap">
   <h1>Analyses</h1>
-  <p class="lead">Two parts: how the memory outcomes are built from the recognition task, and how each is tested against the along-tract microstructure. The findings themselves live in the <a href="results_explorer.html">Results</a> browser.</p>
+  <p class="lead">The RAFT feedback-memory task, how the memory outcomes are scored from it, and how each is tested against the along-tract microstructure. The findings themselves live in the <a href="results_explorer.html">Results</a> browser.</p>
+
+  <h2>The task</h2>
+  <p>On each encoding trial a pair of stimuli appears and the mother chooses one; her choice is followed by valenced feedback: a positive (green) or negative (red) outcome, or a neutral one. Two domains are interleaved: <b>faces</b> (social) and <b>doors</b> (monetary). A later surprise recognition test presents old and new stimuli and asks which she saw, and memory is scored from that test.</p>
+  <figure class="fig"><img src="../images/raft_task.jpg" alt="RAFT task schematic: face pairs (social) and door pairs (monetary), each choice followed by positive, negative, or neutral feedback" loading="lazy"><figcaption>The RAFT task. Faces (social, left) and doors (monetary, right); each chosen pair returns a green (positive), red (negative), or neutral (empty) outcome.</figcaption></figure>
 
   <h2>1 · Calculating memory</h2>
   <p>From the feedback task, each mother gets, per condition (social faces, monetary doors), one accuracy score and two positivity-bias scores.</p>
