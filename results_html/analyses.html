@@ -201,13 +201,6 @@ def main():
 if __name__ == &#x27;__main__&#x27;:
     main()</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Build HitRateBias and FABias from the valence-coded counts, with the zero-valence rule.</p><div class="lead-lbl">Produces</div><p class="res">The two bias scores per condition, written into the analysis tables.</p></div></details></div></div>
 
-  <h3>The scores</h3>
-  <table class="dtable"><thead><tr><th>Score</th><th>Social</th><th>Monetary</th><th>n</th></tr></thead><tbody>
-    <tr><td>d′</td><td>0.10 ± 0.29</td><td>0.22 ± 0.33</td><td>52 / 53</td></tr>
-    <tr><td>HitRateBias</td><td>+0.12 ± 0.19</td><td>+0.12 ± 0.16</td><td>52 / 53</td></tr>
-    <tr><td>FABias</td><td>+0.07 ± 0.19</td><td>+0.07 ± 0.16</td><td>52 / 53</td></tr>
-  </tbody></table>
-
   <h3>Is memory above chance?</h3>
   <table class="dtable"><thead><tr><th>Condition</th><th>mean d′</th><th>t vs 0</th><th>p</th></tr></thead><tbody>
     <tr><td>Social</td><td>+0.098</td><td>2.47</td><td class="sig">0.017</td></tr>
@@ -215,13 +208,15 @@ if __name__ == &#x27;__main__&#x27;:
   </tbody></table>
   <p>Both above chance. Social and monetary d′ are uncorrelated (r = -0.15, p = 0.29): distinct abilities.</p>
 
-  <h3>Why social d′ is lower</h3>
-  <table class="dtable"><thead><tr><th>Component</th><th>Social</th><th>Monetary</th><th>paired test</th></tr></thead><tbody>
-    <tr><td>Hit rate</td><td>0.560</td><td>0.539</td><td>p = 0.395</td></tr>
-    <tr><td>False-alarm rate</td><td>0.527</td><td>0.460</td><td class="sig">p = 0.008</td></tr>
-    <tr><td>d′</td><td>0.098</td><td>0.218</td><td>p = 0.073</td></tr>
+  <h3>Social vs. monetary</h3>
+  <table class="dtable"><thead><tr><th>Component</th><th>Social</th><th>Monetary</th><th>differ?</th></tr></thead><tbody>
+    <tr><td>Hit rate</td><td>0.560</td><td>0.539</td><td>no (p=.40)</td></tr>
+    <tr><td>False-alarm rate</td><td>0.527</td><td>0.460</td><td class="sig">yes (p=.008)</td></tr>
+    <tr><td>d′ (accuracy)</td><td>0.10 ± .29</td><td>0.22 ± .33</td><td>no (p=.07)</td></tr>
+    <tr><td>HitRateBias (correct-memory positivity)</td><td>+0.12 ± .19</td><td>+0.12 ± .16</td><td>no (p=.92)</td></tr>
+    <tr><td>FABias (false-memory positivity)</td><td>+0.07 ± .19</td><td>+0.08 ± .16</td><td>no (p=.82)</td></tr>
   </tbody></table>
-  <p>Hit rates are equal; the social task just produces more false alarms. The lower social d′ is more false positives, not weaker memory, which is exactly where the social signal lives.</p>
+  <p class="small">Paired t-tests, n = 52. The only difference between domains is the <b>false-alarm rate</b>: the social task produces more false alarms. Hit rate, d′, and both positivity biases are equivalent, so the lower social d′ is more false positives, not weaker memory, and the social signal lives specifically in false memories.</p>
   <div class="step"><div class="stephead"><span class="cmd">dprime_breakdown.py</span><span class="pkg">pandas · scipy</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">&quot;&quot;&quot;</span>
 d&#x27; component breakdown: split each mother&#x27;s d&#x27; into hit rate (memory strength) and
 false-alarm rate (false positives), then paired-compare social vs monetary. Applies the
@@ -278,16 +273,6 @@ def main():
 
 if __name__ == &#x27;__main__&#x27;:
     main()</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Split each d′ into hit rate and false-alarm rate, paired social vs. monetary, under the same data-quality and compliance gates.</p><div class="lead-lbl">Produces</div><p class="res">The hit / false-alarm breakdown above.</p></div></details></div></div>
-
-  <h3>How the scores relate</h3>
-  <table class="dtable"><thead><tr><th></th><th>Soc d′</th><th>Mon d′</th><th>Soc Hit</th><th>Mon Hit</th><th>Soc FA</th></tr></thead><tbody>
-    <tr><td>Mon d′</td><td>−.15</td><td></td><td></td><td></td><td></td></tr>
-    <tr><td>Soc Hit</td><td class="sig">+.28</td><td>+.05</td><td></td><td></td><td></td></tr>
-    <tr><td>Mon Hit</td><td>−.15</td><td>+.10</td><td class="sig">+.40</td><td></td><td></td></tr>
-    <tr><td>Soc FA</td><td>−.13</td><td>+.08</td><td>+.18</td><td>+.08</td><td></td></tr>
-    <tr><td>Mon FA</td><td>−.00</td><td>−.12</td><td>+.27</td><td class="sig">+.39</td><td>−.04</td></tr>
-  </tbody></table>
-  <p class="small">Pearson r, n = 52–53; <b>bold</b> = p&lt;.05. Hit = HitRateBias, FA = FABias. The two d′ are uncorrelated across domains (distinct abilities). Positivity bias in correct memories is trait-like across social and monetary (r = +.40), but bias in false memories is not (r = −.04): the false-memory signal, which the tract effect is about, is domain-specific.</p>
 
   <h2>The tract test</h2>
   <p>Six outcomes (social and monetary × d′, HitRateBias, FABias) tested against each tract's along-node microstructure, for all four metrics, plus the hippocampus region.</p>
