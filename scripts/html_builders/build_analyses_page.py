@@ -69,10 +69,6 @@ s_lat = step("mid50_correlations.py", "pandas",
     "<p>Average each metric over the mid-tract nodes (25 to 74) and correlate left vs. right hemisphere, per subject.</p>",
     "scripts/mid50_correlations.py",
     "The L / R correlation table above.")
-s_audit = step("effect_size_audit.py", "statsmodels · scipy",
-    "<p>For every surviving finding, the subject-level partial correlation (mid-tract, covariates out) in all four tracts, next to the cluster result. Because along-tract nodes are autocorrelated, one tract is effectively one test, so a one-sided cluster can be a p &lt; .05 threshold difference between two same-direction effects rather than a dissociation.</p>",
-    "scripts/effect_size_audit.py",
-    "The effect-size table above.")
 
 HTML = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -164,19 +160,6 @@ HTML = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
   <figure class="fig"><img src="../images/lr_scatterplots_mid50.png" alt="Left versus right hemisphere scatterplots, mid-tract node averages" loading="lazy"><figcaption>Each point a subject; dashed line is identity. Top row posterior, bottom row anterior.</figcaption></figure>
   {s_lat}
 
-  <h3>Effect sizes across the four tracts</h3>
-  <p>Along-tract nodes are highly autocorrelated (the hemispheres above correlate ~0.86 for NDI), so each tract is effectively one subject-level test. "Significant one side, zero nodes the other" is then often a p &lt; .05 threshold difference between two same-direction effects, not a dissociation. Each surviving finding, read by its subject-level partial correlation (mid-tract, covariates out) in all four tracts:</p>
-  <table class="dtable"><thead><tr><th>Finding</th><th>post L</th><th>post R</th><th>ant L</th><th>ant R</th></tr></thead><tbody>
-    <tr><td>Social d′ · NDI</td><td class="sig">+.35*</td><td>+.20</td><td>+.25</td><td>−.05</td></tr>
-    <tr><td>Social FABias · FA</td><td class="sig">−.34*</td><td class="sig">−.46*</td><td class="sig">−.19*</td><td class="sig">−.41*</td></tr>
-    <tr><td>Social FABias · NDI</td><td>−.26</td><td class="sig">−.42*</td><td>−.17</td><td class="sig">−.36*</td></tr>
-    <tr><td>Social FABias · FWF</td><td>+.21</td><td class="sig">+.27*</td><td>+.10</td><td class="sig">+.31*</td></tr>
-    <tr><td>Social FABias · ODI</td><td class="sig">−.13*</td><td class="sig">−.24*</td><td>−.09</td><td class="sig">−.21*</td></tr>
-    <tr><td>Monetary FABias · ODI</td><td class="sig">−.23*</td><td>−.19</td><td>−.01</td><td>−.16</td></tr>
-  </tbody></table>
-  <p class="small">* = surviving cluster (cluster-extent FWE). Values are mid-tract partial r, n = 52.</p>
-  <p>The <b>positivity-bias</b> effect (more positive false memories with lower FA, lower NDI, higher free water) is <b>bilateral and consistent</b> across both hemispheres and both tracts. The <b>social d′ · NDI</b> accuracy effect is <b>left-leaning</b> (left posterior r = +0.35) but the right posterior is a weaker same-direction trend (r = +0.20), a graded difference rather than a clean lateralization. The ODI clusters and the single monetary cluster are weak at the tract level (|r| ≤ 0.24, mostly ns) and are not over-read.</p>
-  {s_audit}
 </div>
 </body></html>
 """
