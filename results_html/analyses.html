@@ -91,6 +91,13 @@ for (i in 1:5000) {
 
   <h3>Hippocampus control: region vs. connection</h3>
   <p>The same framework, but predicting memory from the mean NODDI inside the hippocampus ROI itself (hemisphere-matched, same covariates) instead of along the tract. This asks whether a memory signal is specific to the pathway or just reflects hippocampal tissue.</p>
+  <table class="dtable"><thead><tr><th>Outcome</th><th>Side</th><th>Measure</th><th>β</th><th>p</th></tr></thead><tbody>
+    <tr><td>Social d′</td><td>Left</td><td>NDI density</td><td>+0.089</td><td class="sig">0.039</td></tr>
+    <tr><td>Social d′</td><td>Bilateral</td><td>NDI density</td><td>+0.074</td><td>0.085</td></tr>
+    <tr><td>Social d′</td><td>Left</td><td>ODI / FWF</td><td>~0</td><td>ns</td></tr>
+    <tr><td>Monetary d′</td><td>any</td><td>NDI / ODI / FWF</td><td>~0</td><td>ns</td></tr>
+  </tbody></table>
+  <div class="callout"><b>HPC-region result.</b> Left hippocampal <b>NDI density tracks social d′</b> (β = +0.089, p = 0.039). ODI, FWF, and all monetary models are null. This is the same left-lateralized neurite-density signal seen along the tract, so the effect reflects a neurite-density property the circuit shares, not generic hippocampal tissue or volume.</div>
 
   <h3>What the tests show</h3>
   <p>Full detail, all 96 tests, is in the <a href="results_explorer.html">Results browser</a>. The headline:</p>
@@ -99,6 +106,15 @@ for (i in 1:5000) {
     <li><b>Social d′ tracks neurite density (NDI), on the left.</b> The same left-NDI signal appears in the tract (p = 0.003) and in the hippocampus region itself (β = +0.089, p = 0.039). The region control says this is a neurite-density effect the circuit shares, not generic hippocampal tissue.</li>
     <li><b>Monetary is essentially null</b> (one isolated cluster), consistent with the within-subject control doing its job.</li>
   </ul>
+
+  <h3>Check: hemisphere consistency (lateralization)</h3>
+  <p>Left and right tracts should be measuring the same thing. Correlating the mid-tract (nodes 25 to 74) average of each metric across hemispheres, per subject (n = 57):</p>
+  <table class="dtable"><thead><tr><th>Tract</th><th>FA</th><th>NDI</th><th>ODI</th><th>FWF</th></tr></thead><tbody>
+    <tr><td>Posterior VTA→HPC</td><td>0.52</td><td>0.86</td><td>0.88</td><td>0.70</td></tr>
+    <tr><td>Anterior VTA→HPC</td><td>0.53</td><td>0.81</td><td>0.80</td><td>0.70</td></tr>
+  </tbody></table>
+  <figure class="fig"><img src="../images/lr_scatterplots_mid50.png" alt="Left versus right hemisphere scatterplots, mid-tract node averages" loading="lazy"><figcaption>Each point is a subject; dashed line is identity, red is best-fit. Top row posterior, bottom row anterior.</figcaption></figure>
+  <p>Neurite density and orientation dispersion are highly consistent across hemispheres (r ≈ 0.80 to 0.88); free water is moderate (≈ 0.70); FA is noisier (≈ 0.52). The density and dispersion measures are near-symmetric and stable, consistent with the FABias effect appearing broadly across metrics and both hemispheres rather than in one isolated spot.</p>
 
   <p class="small" style="margin-top:24px">See it interactively: <a href="results_explorer.html">Results browser</a> · <a href="data_quality.html">data quality</a> · <a href="hpc_region_vs_connection.html">hippocampus</a></p>
 </div>
