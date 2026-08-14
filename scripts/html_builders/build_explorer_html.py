@@ -13,6 +13,48 @@ SCRIPTS={
  'runner':'scripts/run_perm_cr2.sh — parallel runner on cr2 (128 cores).',
 }
 
+import pandas as pd, numpy as np, os, warnings
+from scipy import stats
+import statsmodels.formula.api as smf
+warnings.filterwarnings('ignore')
+
+def _tract_avg_table():
+    """Full tract-average grid: all 6 outcomes x 4 metrics x 4 tracts (partial r)."""
+    base='/Users/dannyzweben/Desktop/SDN/DTI'
+    AR=f'{base}/data.check/analysis_ready'; PR=f'{base}/data.check/permutation_results'
+    COV=['ICV','Mean_tckstats','Count_tckstats','absolute_motion','maternal_age']
+    TRACTS=['l_vta_l_hipp','r_vta_r_hipp','anterior_l_vta_l_hipp','anterior_r_vta_r_hipp']
+    METRICS=['FA','NDI','ODI','FWF']
+    OUTS=[('Social d′','SOCIAL_dprime'),('Monetary d′','MONETARY_dprime'),
+          ('Social correct-mem bias','SOCIAL_HitRateBias'),('Monetary correct-mem bias','MONETARY_HitRateBias'),
+          ('Social false-mem bias','SOCIAL_FABias'),('Monetary false-mem bias','MONETARY_FABias')]
+    def pr(tract,metric,out):
+        d=pd.read_csv(f'{AR}/{tract}__{metric}__analysis.csv')
+        d['mid']=d[[f'{metric}_{i}' for i in range(25,75)]].mean(axis=1)
+        m=d[['mid',out]+COV].dropna()
+        if len(m)<10 or m[out].std()==0: return np.nan,np.nan
+        xr=smf.ols('mid ~ '+'+'.join(COV),m).fit().resid
+        yr=smf.ols(f'{out} ~ '+'+'.join(COV),m).fit().resid
+        return stats.pearsonr(xr,yr)
+    def surv(tract,metric,out):
+        f=f'{PR}/{tract}__{metric}__{out}_summary.csv'
+        return os.path.exists(f) and int(pd.read_csv(f)['NumClustersPassingExtent'].iloc[0])>0
+    def cell(t,metric,out):
+        r,p=pr(t,metric,out)
+        if np.isnan(r): return '<td>—</td>'
+        txt=f'{r:+.2f}'.replace('0.','.').replace('-','−')
+        dag='<sup>†</sup>' if surv(t,metric,out) else ''
+        sty=' style="color:#4ade80;font-weight:700"' if p<0.05 else ''
+        return f'<td{sty}>{txt}{dag}</td>'
+    rows=''
+    for lbl,col in OUTS:
+        for i,metric in enumerate(METRICS):
+            first=f'<td rowspan="4" style="border-right:1px solid #2c3140;vertical-align:top">{lbl}</td>' if i==0 else ''
+            rows+=f'<tr>{first}<td>{metric}</td>'+''.join(cell(t,metric,col) for t in TRACTS)+'</tr>'
+    return ('<table><thead><tr><th>Outcome</th><th>Metric</th><th>post&nbsp;L</th><th>post&nbsp;R</th>'
+            '<th>ant&nbsp;L</th><th>ant&nbsp;R</th></tr></thead><tbody>'+rows+'</tbody></table>')
+TRACTAVG=_tract_avg_table()
+
 data_js=json.dumps(results)
 meta_js=json.dumps(meta)
 
@@ -78,7 +120,7 @@ a.back{color:var(--accent);text-decoration:none;font-size:13px}
 <div class="wrap">
 
 <div class="section"><h2>Tract averages</h2>
-<div class="note" style="background:#232733;border-left:3px solid #a78bfa;border-radius:6px;padding:11px 14px;margin:2px 0 14px;font-size:12.5px;color:#c9d1e0">The simplest version of each test: average the mid-tract nodes (25–74) per subject, then regress the outcome on that single value with the same covariates. One effect size and one p per tract. Useful as a check on the node-wise map, since along-tract nodes are highly autocorrelated (left/right correlate ~0.86 for NDI), so one tract is effectively one test. <b style="color:#4ade80">Green</b> = p&lt;.05 on the average; <b>†</b> = the node-wise cluster survived (cluster-extent FWE).</div>
+<div class="note" style="background:#232733;border-left:3px solid #a78bfa;border-radius:6px;padding:11px 14px;margin:2px 0 14px;font-size:12.5px;color:#c9d1e0">The simplest version of each test: average the mid-tract nodes (25–74) per subject, then regress the outcome on that single value with the same covariates. One effect size and one p per tract, for every outcome × metric. Useful as a check on the node-wise map, since along-tract nodes are highly autocorrelated (left/right correlate ~0.86 for NDI), so one tract is effectively one test. <b style="color:#4ade80">Green</b> = p&lt;.05 on the average; <b>†</b> = the node-wise cluster survived (cluster-extent FWE).</div>
 <details style="margin:4px 0 10px"><summary style="cursor:pointer;color:#a78bfa;font-size:12.5px;font-weight:600">Each value is a partial correlation <b>r</b> (covariates removed) — click for the model</summary>
 <div class="script">For one outcome × tract × metric:
   mid   = mean of the tract's middle nodes (25-74), per subject
@@ -87,15 +129,8 @@ a.back{color:var(--accent);text-decoration:none;font-size:13px}
   r     = cor(x_res, y_res)      # partial correlation of tract with outcome, covariates removed; two-sided p; n=52
 Same thing as the standardized slope of the tract in  lm(outcome ~ mid + covariates).</div>
 </details>
-<table><thead><tr><th>Finding</th><th>post L</th><th>post R</th><th>ant L</th><th>ant R</th></tr></thead><tbody>
-<tr><td>Social d′ · NDI</td><td style="color:#4ade80;font-weight:700">+.35<sup>†</sup></td><td>+.20</td><td>+.25</td><td>−.05</td></tr>
-<tr><td>Social FABias · FA</td><td style="color:#4ade80;font-weight:700">−.34<sup>†</sup></td><td style="color:#4ade80;font-weight:700">−.46<sup>†</sup></td><td>−.19<sup>†</sup></td><td style="color:#4ade80;font-weight:700">−.41<sup>†</sup></td></tr>
-<tr><td>Social FABias · NDI</td><td>−.26</td><td style="color:#4ade80;font-weight:700">−.42<sup>†</sup></td><td>−.17</td><td style="color:#4ade80;font-weight:700">−.36<sup>†</sup></td></tr>
-<tr><td>Social FABias · FWF</td><td>+.21</td><td>+.27<sup>†</sup></td><td>+.10</td><td style="color:#4ade80;font-weight:700">+.31<sup>†</sup></td></tr>
-<tr><td>Social FABias · ODI</td><td>−.13<sup>†</sup></td><td>−.24<sup>†</sup></td><td>−.09</td><td>−.21<sup>†</sup></td></tr>
-<tr><td>Monetary FABias · ODI</td><td>−.23<sup>†</sup></td><td>−.19</td><td>−.01</td><td>−.16</td></tr>
-</tbody></table>
-<div class="legend">r = partial correlation of the mid-tract average with the outcome (covariates removed), n=52. The <b>false-memory positivity bias (FABias)</b> on FA and NDI is significant on the average and bilateral. <b>Social d′ · NDI</b> is significant on the average only in the left posterior tract. The <b>ODI</b> clusters and the <b>lone monetary</b> cluster carry a † (survived node-wise) but are <b>not</b> significant on the average (|r| ≤ 0.24) — weak, not over-read. <b>Correct-memory positivity bias (HitRateBias)</b> produced no surviving cluster and no significant tract-average effect in any tract or metric.</div>
+__TRACTAVG__
+<div class="legend">Every outcome × metric × tract. r = partial correlation of the mid-tract average with the outcome (covariates removed), n = 52–53. <b style="color:#4ade80">Green</b> = p&lt;.05 on the tract average; <b>†</b> = the node-wise cluster survived (cluster-extent FWE). The consistent effect is <b>social false-memory bias</b> on FA and NDI (bilateral); <b>social d′</b> tracks NDI, left-leaning. Correct-memory bias and everything monetary are essentially null on the average.</div>
 </div>
 
 <div class="section"><h2>All results</h2>
@@ -317,6 +352,6 @@ function render(){
 render();
 </script></body></html>'''
 
-html=html.replace('__DATA__',data_js).replace('__META__',meta_js).replace('__SCRIPTS__',json.dumps(SCRIPTS))
+html=html.replace('__TRACTAVG__',TRACTAVG).replace('__DATA__',data_js).replace('__META__',meta_js).replace('__SCRIPTS__',json.dumps(SCRIPTS))
 open(f'{OUT}/results_explorer.html','w').write(html)
 print("wrote results_explorer.html",len(html),"bytes")
