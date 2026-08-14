@@ -77,26 +77,29 @@ a.back{color:var(--accent);text-decoration:none;font-size:13px}
 </header>
 <div class="wrap">
 
-<div class="section"><h2>Sample — mothers (DTI analysis cohort)</h2>
-<div class="note" style="background:#232733;border-left:3px solid #a78bfa;border-radius:6px;padding:11px 14px;margin:2px 0 14px;font-size:12.5px;color:#c9d1e0">
-<b>One consistent roster.</b> 55 mothers with complete VTA→HPC tractography (2 pilot scans removed; maternal age recovered for all 55). Memory outcomes are computed directly from the raw trial files, then two data-quality screens run before analysis: <b>broken sessions</b> (corrupted / heavily-missed recall) and a <b>compliance screen</b> that removes one "yes-to-everything" responder (s4210, who pressed "remember" to every item). Resulting per-outcome N: <b>social d′ = 52, monetary d′ = 53, social bias = 52, monetary bias = 53</b>. Details and the compliance figure are on the <a href="data_quality.html" style="color:#a78bfa">Memory data &amp; d′ page</a>. The exact N is shown on every result row.</div>
-<div id="demo"></div></div>
+<div class="section"><h2>Hippocampus</h2>
+<div class="note" style="background:#232733;border-left:3px solid #a78bfa;border-radius:6px;padding:11px 14px;margin:2px 0 14px;font-size:12.5px;color:#c9d1e0">Mean NODDI sampled inside the anatomical hippocampus ROI (not along the tract), same covariates, to ask whether memory tracks the pathway specifically or hippocampal tissue in general. The effect is on <b>NDI</b>; ODI and FWF are null throughout. Left and right hippocampal NDI correlate r=0.84 (n=52).</div>
+<table><thead><tr><th>Outcome</th><th>HPC NDI · matched side</th><th>HPC NDI · bilateral</th></tr></thead><tbody>
+<tr><td>Social d′</td><td style="color:#4ade80;font-weight:700">β=+0.089, p=.039 (left) *</td><td>β=+0.074, p=.085</td></tr>
+<tr><td>Social bias (false memories)</td><td>β=−0.054, p=.053 (right)</td><td>β=−0.054, p=.058</td></tr>
+<tr><td>Monetary d′</td><td>β=−0.037, p=.44</td><td>β=−0.060, p=.21</td></tr>
+<tr><td>Monetary bias (false memories)</td><td>β=+0.015, p=.52</td><td>β=+0.004, p=.85</td></tr>
+</tbody></table>
+<div class="legend">* p&lt;.05. β is per standard deviation (z-scored), n=52 social / 53 monetary. <b>Left hippocampal NDI density tracks social d′</b>; social false-memory positivity bias shows the same-direction NDI trend (p≈.05); monetary is null. The neurite-density signal is shared by the pathway and the region, not generic hippocampal tissue. Full model set (matched / cross / bilateral × NDI / ODI / FWF): <a href="hpc_region_vs_connection.html" style="color:#a78bfa">hippocampus page</a>.</div>
+</div>
 
-<div class="section"><h2>Outcomes analysed — definitions</h2>
-<div class="grid" style="grid-template-columns:1fr;gap:12px">
- <div class="stat"><div class="k">Memory accuracy — d′</div>
-  <div style="font-size:13.5px;margin-top:5px">Signal-detection sensitivity: how well a mother tells apart items she actually saw (with feedback) from lures. <span class="tag">d′ = z(hit rate) − z(false-alarm rate). Higher = sharper memory. Run separately for the <b>social</b> (faces/feedback) and <b>monetary</b> (doors) tasks.</span></div></div>
- <div class="stat"><div class="k">Positivity bias — false memories &nbsp;(<code>FABias</code>)</div>
-  <div style="font-size:13.5px;margin-top:5px">Among items she <b>falsely</b> "remembered" (never actually shown), was she more likely to false-alarm to <b>positive</b> than <b>negative</b> items?
-  <div class="script" style="margin-top:6px">FABias = P(false alarm | positive item) − P(false alarm | negative item)
-       = (FalseMem_positive / N_positive) − (FalseMem_negative / N_negative)</div>
-  <span class="tag">Positive value → she conjures up more <i>positive</i> false memories (rose-tinted misremembering). Negative value → more negative false memories.</span></div></div>
- <div class="stat"><div class="k">Positivity bias — correct memories &nbsp;(<code>HitRateBias</code>)</div>
-  <div style="font-size:13.5px;margin-top:5px">Among items she actually saw, was she more likely to <b>correctly</b> remember <b>positive</b> than <b>negative</b> ones?
-  <div class="script" style="margin-top:6px">HitRateBias = P(hit | positive item) − P(hit | negative item)
-          = (TrueMem_positive / N_positive) − (TrueMem_negative / N_negative)</div>
-  <span class="tag">Positive value → better memory for positive material. This is the "accuracy" side of valence bias, vs. FABias which is the "error" side.</span></div></div>
-</div></div>
+<div class="section"><h2>Tract averages</h2>
+<div class="note" style="background:#232733;border-left:3px solid #a78bfa;border-radius:6px;padding:11px 14px;margin:2px 0 14px;font-size:12.5px;color:#c9d1e0">The simplest version of each test: average the mid-tract nodes (25–74) per subject, then regress the outcome on that single value with the same covariates. One effect size and one p per tract. Useful as a check on the node-wise map, since along-tract nodes are highly autocorrelated (left/right correlate ~0.86 for NDI), so one tract is effectively one test. <b style="color:#4ade80">Green</b> = p&lt;.05 on the average; <b>†</b> = the node-wise cluster survived (cluster-extent FWE).</div>
+<table><thead><tr><th>Finding</th><th>post L</th><th>post R</th><th>ant L</th><th>ant R</th></tr></thead><tbody>
+<tr><td>Social d′ · NDI</td><td style="color:#4ade80;font-weight:700">+.35<sup>†</sup></td><td>+.20</td><td>+.25</td><td>−.05</td></tr>
+<tr><td>Social bias · FA</td><td style="color:#4ade80;font-weight:700">−.34<sup>†</sup></td><td style="color:#4ade80;font-weight:700">−.46<sup>†</sup></td><td>−.19<sup>†</sup></td><td style="color:#4ade80;font-weight:700">−.41<sup>†</sup></td></tr>
+<tr><td>Social bias · NDI</td><td>−.26</td><td style="color:#4ade80;font-weight:700">−.42<sup>†</sup></td><td>−.17</td><td style="color:#4ade80;font-weight:700">−.36<sup>†</sup></td></tr>
+<tr><td>Social bias · FWF</td><td>+.21</td><td>+.27<sup>†</sup></td><td>+.10</td><td style="color:#4ade80;font-weight:700">+.31<sup>†</sup></td></tr>
+<tr><td>Social bias · ODI</td><td>−.13<sup>†</sup></td><td>−.24<sup>†</sup></td><td>−.09</td><td>−.21<sup>†</sup></td></tr>
+<tr><td>Monetary bias · ODI</td><td>−.23<sup>†</sup></td><td>−.19</td><td>−.01</td><td>−.16</td></tr>
+</tbody></table>
+<div class="legend">r = partial correlation of the mid-tract average with the outcome (covariates removed), n=52. The <b>false-memory positivity bias</b> on FA and NDI is significant on the average and bilateral. <b>Social d′ · NDI</b> is significant on the average only in the left posterior tract. The <b>ODI</b> clusters and the <b>lone monetary</b> cluster carry a † (survived node-wise) but are <b>not</b> significant on the average (|r| ≤ 0.24) — weak, not over-read.</div>
+</div>
 
 <div class="section"><h2>All results</h2>
 <div class="controls">
@@ -119,30 +122,6 @@ a.back{color:var(--accent);text-decoration:none;font-size:13px}
 <div class="legend">FWE = cluster passes permutation extent threshold. Direction: <span class="badge b-pos">Positive</span> higher metric → higher outcome · <span class="badge b-neg">Negative</span> higher metric → lower outcome.<br><b>Node values are partial-regression t-statistics</b> (each node = outcome regressed on that node’s metric + covariates), not zero-order correlations. In the detail view, the <b>Hemispheric node overlap</b> panel stacks the L and R tracts aligned by node so you can see whether the significant nodes fall in the same place; nodes significant on <span style="color:#4ade80">both</span> sides are shown in green.</div>
 </div>
 
-<div class="section"><h2>Within the hippocampus — region, not pathway</h2>
-<div class="note" style="background:#232733;border-left:3px solid #a78bfa;border-radius:6px;padding:11px 14px;margin:2px 0 14px;font-size:12.5px;color:#c9d1e0">Mean NODDI sampled inside the anatomical hippocampus ROI (not along the tract), same covariates, to ask whether memory tracks the pathway specifically or hippocampal tissue in general. The effect is on <b>NDI</b>; ODI and FWF are null throughout. Left and right hippocampal NDI correlate r=0.84 (n=52).</div>
-<table><thead><tr><th>Outcome</th><th>HPC NDI · matched side</th><th>HPC NDI · bilateral</th></tr></thead><tbody>
-<tr><td>Social d′</td><td style="color:#4ade80;font-weight:700">β=+0.089, p=.039 (left) *</td><td>β=+0.074, p=.085</td></tr>
-<tr><td>Social bias (false memories)</td><td>β=−0.054, p=.053 (right)</td><td>β=−0.054, p=.058</td></tr>
-<tr><td>Monetary d′</td><td>β=−0.037, p=.44</td><td>β=−0.060, p=.21</td></tr>
-<tr><td>Monetary bias (false memories)</td><td>β=+0.015, p=.52</td><td>β=+0.004, p=.85</td></tr>
-</tbody></table>
-<div class="legend">* p&lt;.05. β is per standard deviation (z-scored), n=52 social / 53 monetary. <b>Left hippocampal NDI density tracks social d′</b>; social false-memory positivity bias shows the same-direction NDI trend (p≈.05); monetary is null. The neurite-density signal is shared by the pathway and the region, not generic hippocampal tissue. Full model set (matched / cross / bilateral × NDI / ODI / FWF): <a href="hpc_region_vs_connection.html" style="color:#a78bfa">hippocampus page</a>.</div>
-</div>
-
-<div class="section"><h2>Effect sizes on the tract average</h2>
-<div class="note" style="background:#232733;border-left:3px solid #a78bfa;border-radius:6px;padding:11px 14px;margin:2px 0 14px;font-size:12.5px;color:#c9d1e0">The simplest version of each test: average the mid-tract nodes (25–74) per subject, then regress the outcome on that single value with the same covariates. One effect size and one p per tract. Useful as a check on the node-wise map, since along-tract nodes are highly autocorrelated (left/right correlate ~0.86 for NDI), so one tract is effectively one test. <b style="color:#4ade80">Green</b> = p&lt;.05 on the average; <b>†</b> = the node-wise cluster survived (cluster-extent FWE).</div>
-<table><thead><tr><th>Finding</th><th>post L</th><th>post R</th><th>ant L</th><th>ant R</th></tr></thead><tbody>
-<tr><td>Social d′ · NDI</td><td style="color:#4ade80;font-weight:700">+.35<sup>†</sup></td><td>+.20</td><td>+.25</td><td>−.05</td></tr>
-<tr><td>Social bias · FA</td><td style="color:#4ade80;font-weight:700">−.34<sup>†</sup></td><td style="color:#4ade80;font-weight:700">−.46<sup>†</sup></td><td>−.19<sup>†</sup></td><td style="color:#4ade80;font-weight:700">−.41<sup>†</sup></td></tr>
-<tr><td>Social bias · NDI</td><td>−.26</td><td style="color:#4ade80;font-weight:700">−.42<sup>†</sup></td><td>−.17</td><td style="color:#4ade80;font-weight:700">−.36<sup>†</sup></td></tr>
-<tr><td>Social bias · FWF</td><td>+.21</td><td>+.27<sup>†</sup></td><td>+.10</td><td style="color:#4ade80;font-weight:700">+.31<sup>†</sup></td></tr>
-<tr><td>Social bias · ODI</td><td>−.13<sup>†</sup></td><td>−.24<sup>†</sup></td><td>−.09</td><td>−.21<sup>†</sup></td></tr>
-<tr><td>Monetary bias · ODI</td><td>−.23<sup>†</sup></td><td>−.19</td><td>−.01</td><td>−.16</td></tr>
-</tbody></table>
-<div class="legend">r = partial correlation of the mid-tract average with the outcome (covariates removed), n=52. The <b>false-memory positivity bias</b> on FA and NDI is significant on the average and bilateral. <b>Social d′ · NDI</b> is significant on the average only in the left posterior tract. The <b>ODI</b> clusters and the <b>lone monetary</b> cluster carry a † (survived node-wise) but are <b>not</b> significant on the average (|r| ≤ 0.24) — weak, not over-read.</div>
-</div>
-
 </div>
 
 <script>
@@ -152,7 +131,7 @@ const SCRIPTS=__SCRIPTS__;
 
 // ---- demographics ----
 (function(){
- const d=META.demographics; const el=document.getElementById('demo');
+ const d=META.demographics; const el=document.getElementById('demo'); if(!el)return;
  function dist(o){return Object.entries(o).map(([k,v])=>`<span class="pill">${k}: ${v}</span>`).join('')}
  let h='<div class="grid demo-grid">';
  h+=`<div class="stat"><div class="k">N (DTI roster)</div><div class="v">${d.n_dti}</div><div class="d">mothers w/ tractography (2 pilots excluded)</div></div>`;
