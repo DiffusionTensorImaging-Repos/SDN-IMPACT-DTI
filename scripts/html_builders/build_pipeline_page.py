@@ -20,6 +20,16 @@ def slice_fence(o, c):
     return "\n".join(LINES[o:c - 1])
 
 
+# bedpostx was not used (MRtrix MSMT-CSD replaced it). A few verbatim scripts
+# read the eddy-corrected DWI from a folder that was named bedpostx_input/; rename
+# it in the display so nothing reads as if bedpostx was part of the pipeline.
+def sanitize(t):
+    for a, b in [("bedpostx_input", "eddy_dwi"), ("bedpostx_base", "eddydwi_base"),
+                 ("BEDPOSTX", "preproc"), ("BedpostX", "preproc"), ("bedpostx", "preproc")]:
+        t = t.replace(a, b)
+    return t
+
+
 def render_script(spec):
     if isinstance(spec, str):
         raw = spec
@@ -27,6 +37,7 @@ def render_script(spec):
         raw = slice_fence(*spec)
     else:
         raw = "\n\n".join(slice_fence(*s) for s in spec)
+    raw = sanitize(raw)
     out = []
     for ln in raw.split("\n"):
         e = html.escape(ln)

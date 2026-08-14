@@ -662,7 +662,7 @@ log_file=&quot;$HOME/dwiextract.log&quot;
 echo &quot;=== Starting DWIEXTRACT ===&quot; | tee -a &quot;$log_file&quot;
 
 <span class="c"># --- base directories ---</span>
-base_dir=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX&quot;
+base_dir=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/preproc&quot;
 mrtrix3_1000_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/mrtrix3_1000&quot;
 mrtrix3_2000_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/mrtrix3_2000&quot;
 
@@ -671,7 +671,7 @@ mkdir -p &quot;$mrtrix3_1000_base&quot; &quot;$mrtrix3_2000_base&quot;
 <span class="c"># --- function: process one subject ---</span>
 process_subj() {
     subj=&quot;$1&quot;
-    subj_dir=&quot;$base_dir/$subj/bedpostx_input&quot;
+    subj_dir=&quot;$base_dir/$subj/eddy_dwi&quot;
 
     echo &quot;&gt;&gt;&gt; [$subj] START&quot; | tee -a &quot;$log_file&quot;
 
@@ -924,20 +924,20 @@ echo &quot;=== All ICV jobs finished. Results in $csv_file ===&quot; | tee -a &q
 <span class="c"># ============================================================</span>
 <span class="c"># Converts eddy-corrected DWI + gradients + brain mask from</span>
 <span class="c"># NIfTI to MRtrix .mif format for CSD pipeline</span>
-<span class="c"># Input: BEDPOSTX/bedpostx_input/ (data.nii.gz, bvecs, bvals, mask)</span>
+<span class="c"># Input: preproc/eddy_dwi/ (data.nii.gz, bvecs, bvals, mask)</span>
 <span class="c"># Output: CSD/&lt;subj&gt;/dwi.mif, mask.mif</span>
 <span class="c"># ============================================================</span>
 
 export PATH=/data/tools/mrtrix3/bin:$PATH
 
-bedpostx_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX&quot;
+eddydwi_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/preproc&quot;
 csd_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD&quot;
 nifti_base=&quot;/data/projects/STUDIES/IMPACT/DTI/NIFTI&quot;
 
 process_subj() {
     subj=$1
     echo &quot;&gt;&gt;&gt; [$subj] Converting to MRtrix format&quot;
-    in_dir=&quot;$bedpostx_base/$subj/bedpostx_input&quot;
+    in_dir=&quot;$eddydwi_base/$subj/eddy_dwi&quot;
     out_dir=&quot;$csd_base/$subj&quot;
     mkdir -p &quot;$out_dir&quot;
 
@@ -960,7 +960,7 @@ process_subj() {
 }
 
 export -f process_subj
-export bedpostx_base csd_base
+export eddydwi_base csd_base
 
 subjects=$(ls -1 &quot;$nifti_base&quot;)
 for subj in $subjects; do
@@ -1046,7 +1046,7 @@ echo &quot;=== Group-average response functions finished ===&quot;</pre></div></
 <span class="c"># ============================================================</span>
 <span class="c"># Uses group-averaged response functions to estimate fiber</span>
 <span class="c"># orientation distributions (FODs) for each tissue type.</span>
-<span class="c"># This is the MRtrix equivalent of BedpostX fiber modeling.</span>
+<span class="c"># This is the MRtrix equivalent of preproc fiber modeling.</span>
 <span class="c"># Input:  CSD/&lt;subj&gt;/dwi.mif, mask.mif + CSD/group_*_response.txt</span>
 <span class="c"># Output: CSD/&lt;subj&gt;/wm_fod.mif, gm_fod.mif, csf_fod.mif</span>
 <span class="c"># ============================================================</span>
@@ -1229,7 +1229,7 @@ roi_base=&quot;/data/projects/STUDIES/IMPACT/DTI/ROIs/VTA-HPC&quot;
 csd_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD&quot;
 ants_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/ANTs&quot;
 transforms_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/TRANSFORMS&quot;
-bedpostx_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX&quot;
+eddydwi_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/preproc&quot;
 nifti_base=&quot;/data/projects/STUDIES/IMPACT/DTI/NIFTI&quot;
 
 <span class="c"># ROI files (MNI space) and their output names</span>
@@ -1254,7 +1254,7 @@ process_subj() {
     warp=&quot;$reg_dir/mni2t1_1Warp.nii.gz&quot;
     affine=&quot;$reg_dir/mni2t1_0GenericAffine.mat&quot;
     flirt_mat=&quot;$transforms_base/$subj/str2diff_${subj}.mat&quot;
-    diff_ref=&quot;$bedpostx_base/$subj/bedpostx_input/nodif_brain_mask.nii.gz&quot;
+    diff_ref=&quot;$eddydwi_base/$subj/eddy_dwi/nodif_brain_mask.nii.gz&quot;
 
 <span class="c">    # Check all required files exist</span>
     if [[ ! -f &quot;$warp&quot; || ! -f &quot;$affine&quot; ]]; then
@@ -1307,7 +1307,7 @@ process_subj() {
 }
 
 export -f process_subj
-export roi_base csd_base ants_base transforms_base bedpostx_base ROI_FILES
+export roi_base csd_base ants_base transforms_base eddydwi_base ROI_FILES
 
 subjects=$(ls -1 &quot;$nifti_base&quot;)
 for subj in $subjects; do
@@ -1743,7 +1743,7 @@ with open(log_file, &#x27;w&#x27;) as log:
             ref_img = csd_base / subj / &quot;qc&quot; / &quot;mean_b0.nii.gz&quot;
             if not ref_img.exists():
                 ref_img = Path(f&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/&quot;
-                               f&quot;BEDPOSTX/{subj}/bedpostx_input/data.nii.gz&quot;)
+                               f&quot;preproc/{subj}/eddy_dwi/data.nii.gz&quot;)
 
             msg = f&quot;[{count}/{total}] {subj} {hemi}&quot;
 
