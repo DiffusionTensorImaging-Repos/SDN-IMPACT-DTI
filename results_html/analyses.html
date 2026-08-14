@@ -13,9 +13,9 @@
 </nav>
 <div class="wrap">
   <h1>Analyses</h1>
-  <p class="lead">How the memory outcomes are scored from the RAFT task (see <a href="background.html">Background</a>), and how each is tested against the along-tract microstructure. The findings live in <a href="results_explorer.html">Results</a>.</p>
+  <p class="lead">Memory was scored as accuracy (d′) and two positivity-bias scores, then tested node by node against each tract's microstructure.</p>
 
-  <h2>1 · Calculating memory</h2>
+  <h2>Memory scoring</h2>
   <p>Per condition (social faces, monetary doors): one accuracy score and two positivity-bias scores.</p>
 
   <h3>Accuracy: d′</h3>
@@ -286,7 +286,7 @@ if __name__ == &#x27;__main__&#x27;:
     <tr><td>Social d′ × Social HitRateBias</td><td>+0.28</td><td>0.043</td></tr>
   </tbody></table>
 
-  <h2>2 · Analyses</h2>
+  <h2>The tract test</h2>
   <p>Six outcomes (social and monetary × d′, HitRateBias, FABias) tested against each tract's along-node microstructure, for all four metrics, plus the hippocampus region.</p>
 
   <h3>Model, per node</h3>
@@ -704,7 +704,7 @@ done
 echo &quot;ALL_PERMUTATIONS_DONE&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Driver that loops the test over every outcome × tract × metric (96 analyses).</p><div class="lead-lbl">Produces</div><p class="res">The full grid of result CSVs.</p></div></details></div></div>
 
   <h3>Within the hippocampus</h3>
-  <p>The same framework, but predicting memory from the mean NODDI inside the hippocampus ROI itself instead of along the tract, to separate a pathway effect from hippocampal tissue. Results on the <a href="hpc_region_vs_connection.html">hippocampus page</a>.</p>
+  <p>The same framework, but predicting memory from the mean NODDI inside the hippocampus ROI itself instead of along the tract, to separate a pathway effect from hippocampal tissue.</p>
   <div class="step"><div class="stephead"><span class="cmd">hpc_analysis.py</span><span class="pkg">statsmodels</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre>import pandas as pd, numpy as np, json
 import statsmodels.formula.api as smf
 from scipy.stats import zscore
@@ -922,7 +922,5 @@ def main():
 
 if __name__ == &#x27;__main__&#x27;:
     main()</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>For every surviving finding, the subject-level partial correlation (mid-tract, covariates out) in all four tracts, next to the cluster result. Because along-tract nodes are autocorrelated, one tract is effectively one test, so a one-sided cluster can be a p &lt; .05 threshold difference between two same-direction effects rather than a dissociation.</p><div class="lead-lbl">Produces</div><p class="res">The effect-size table above.</p></div></details></div></div>
-
-  <p class="small" style="margin-top:24px">Findings: <a href="results_explorer.html">Results browser</a> · <a href="data_quality.html">data quality</a> · <a href="hpc_region_vs_connection.html">hippocampus</a></p>
 </div>
 </body></html>

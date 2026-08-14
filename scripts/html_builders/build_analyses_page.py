@@ -89,9 +89,9 @@ HTML = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 </nav>
 <div class="wrap">
   <h1>Analyses</h1>
-  <p class="lead">How the memory outcomes are scored from the RAFT task (see <a href="background.html">Background</a>), and how each is tested against the along-tract microstructure. The findings live in <a href="results_explorer.html">Results</a>.</p>
+  <p class="lead">Memory was scored as accuracy (d′) and two positivity-bias scores, then tested node by node against each tract's microstructure.</p>
 
-  <h2>1 · Calculating memory</h2>
+  <h2>Memory scoring</h2>
   <p>Per condition (social faces, monetary doors): one accuracy score and two positivity-bias scores.</p>
 
   <h3>Accuracy: d′</h3>
@@ -138,7 +138,7 @@ HTML = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
     <tr><td>Social d′ × Social HitRateBias</td><td>+0.28</td><td>0.043</td></tr>
   </tbody></table>
 
-  <h2>2 · Analyses</h2>
+  <h2>The tract test</h2>
   <p>Six outcomes (social and monetary × d′, HitRateBias, FABias) tested against each tract's along-node microstructure, for all four metrics, plus the hippocampus region.</p>
 
   <h3>Model, per node</h3>
@@ -152,7 +152,7 @@ HTML = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
   {s_runperm}
 
   <h3>Within the hippocampus</h3>
-  <p>The same framework, but predicting memory from the mean NODDI inside the hippocampus ROI itself instead of along the tract, to separate a pathway effect from hippocampal tissue. Results on the <a href="hpc_region_vs_connection.html">hippocampus page</a>.</p>
+  <p>The same framework, but predicting memory from the mean NODDI inside the hippocampus ROI itself instead of along the tract, to separate a pathway effect from hippocampal tissue.</p>
   {s_hpc}
 
   <h3>Check: hemisphere consistency</h3>
@@ -177,8 +177,6 @@ HTML = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
   <p class="small">* = surviving cluster (cluster-extent FWE). Values are mid-tract partial r, n = 52.</p>
   <p>The <b>positivity-bias</b> effect (more positive false memories with lower FA, lower NDI, higher free water) is <b>bilateral and consistent</b> across both hemispheres and both tracts. The <b>social d′ · NDI</b> accuracy effect is <b>left-leaning</b> (left posterior r = +0.35) but the right posterior is a weaker same-direction trend (r = +0.20), a graded difference rather than a clean lateralization. The ODI clusters and the single monetary cluster are weak at the tract level (|r| ≤ 0.24, mostly ns) and are not over-read.</p>
   {s_audit}
-
-  <p class="small" style="margin-top:24px">Findings: <a href="results_explorer.html">Results browser</a> · <a href="data_quality.html">data quality</a> · <a href="hpc_region_vs_connection.html">hippocampus</a></p>
 </div>
 </body></html>
 """

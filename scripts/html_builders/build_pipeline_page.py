@@ -271,14 +271,13 @@ HTML = f"""<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 </nav>
 <div class="wrap">
   <h1>Pipeline</h1>
-  <p class="lead">Preprocessing, tractography, and microstructure. Each command has two buttons: the script that ran, and its outputs (decisions, results, figures).</p>
+  <p class="lead">Preprocessing, tractography, and microstructure. The script and outputs for each step are behind it.</p>
   <p class="small">57 subjects, run in parallel on the Temple cluster inside tmux. Scripts are verbatim from the project <a href="https://github.com/DiffusionTensorImaging-Repos/SDN-IMPACT-DTI">ReadMe</a> (Steps 1–30); audit blocks omitted.</p>
 
   {cat('Preprocessing', 'standard cleanup + fiber model · MRtrix / FSL / ANTs', PRE, first=True)}
   {cat('Tractography', 'draw the VTA→HPC tract, then clean it · MRtrix3 / ANTs / pyAFQ', TRACT)}
   {cat('Microstructure', 'FA + NODDI along each tract · dipy / AMICO', MICRO)}
 
-  <p class="small" style="margin-top:26px">Next: <a href="analyses.html">how memory is scored, and how it's tested against the tract →</a></p>
 </div>
 </body></html>
 """
