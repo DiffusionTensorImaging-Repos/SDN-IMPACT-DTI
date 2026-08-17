@@ -23,8 +23,9 @@ The output columns (the explorer's format):
   + you may append ANY extra label columns (family, condition, cohort ...); each
     becomes a filter in the explorer.
 """
-import sys, os, glob, re
+import sys, os, glob, re, warnings
 import pandas as pd
+warnings.simplefilter('ignore', FutureWarning)
 
 def hemi_of(tract):
     t = tract.lower()
