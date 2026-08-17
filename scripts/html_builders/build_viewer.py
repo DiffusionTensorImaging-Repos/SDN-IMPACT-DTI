@@ -274,8 +274,8 @@ Everything else is derived here in the browser from your node rows: sig-node cou
 </div>"""
 
 TEMPLATE = """outcome,tract,metric,node,t,p,hemisphere,N,covariates,extent_threshold,cluster_p,passed
-SOCIAL_dprime,l_vta_l_hipp,NDI,0,2.040,0.0472,L,52,"ICV, Mean_tckstats, Count_tckstats, absolute_motion, maternal_age",26,0.0032,1
-SOCIAL_dprime,l_vta_l_hipp,NDI,1,2.057,0.0455,L,52,"ICV, Mean_tckstats, Count_tckstats, absolute_motion, maternal_age",26,0.0032,1
+memory_score,uncinate,FA,0,2.040,0.0472,L,52,"age, sex, motion",26,0.0032,1
+memory_score,uncinate,FA,1,2.057,0.0455,L,52,"age, sex, motion",26,0.0032,1
 ...   one row per node, then the next tract / metric / outcome"""
 
 BODY = f"""<header>
