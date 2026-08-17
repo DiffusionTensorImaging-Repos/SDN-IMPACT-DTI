@@ -255,8 +255,7 @@ if(_durl)fetch(_durl).then(r=>r.text()).then(t=>loadText(t,_durl)).catch(()=>sho
 </script>"""
 
 DOC = """<div class="doc">
-<b>Match the sample CSV and you're done.</b> One row per node; six required columns (<code>outcome, tract, metric, node, t, p</code>) and the rest optional. Any node-wise permutation output has these — <code>permutation_one.R</code>'s <code>_nodewise.csv</code> already gives you <code>Node, t_value, p_value</code> per analysis; you just stack the analyses into one file and add the outcome / tract / metric labels. Column names are case-insensitive, and the R script's own names are accepted as-is (<code>Node</code>, <code>t_value</code>, <code>p_value</code>, <code>N_subjects</code>, <code>Covariates</code>, <code>ExtentThresholdNodes</code>, <code>ClusterPValue</code>, <code>PassExtentThreshold</code>).
-<br><br><span class="tag">Optional shortcut if you used this exact R script: <code>python scripts/stack_permutation_results.py &lt;results_dir&gt; my_results.csv [--hemi]</code> builds the file from a results folder (pulling N / covariates / threshold / cluster-p from the matching <code>_summary</code> and <code>_clusters</code> files; <code>--hemi</code> parses L/R from tract names).</span>
+<b>Fit your data to the sample CSV.</b> One row per node. Six required columns — <code>outcome, tract, metric, node, t, p</code> — everything else optional. Your permutation output already has the node-wise <code>t</code> and <code>p</code>; you just stack your analyses into one file and label each row with its outcome, tract, and metric. Column names are case-insensitive (<code>Node</code>, <code>t_value</code>, <code>p_value</code> etc. are fine as-is).
 <br><br><b>Columns:</b>
 <table><thead><tr><th>Column</th><th>Required?</th><th>Meaning</th></tr></thead><tbody>
 <tr><td><code>outcome</code></td><td>yes</td><td>what was predicted (e.g. SOCIAL_dprime)</td></tr>
@@ -291,7 +290,7 @@ BODY = f"""<header>
 <details style="margin-top:14px" open><summary style="cursor:pointer;color:var(--accent);font-weight:600;font-size:13px">Data format</summary>
 {DOC}
 <div class="script" style="margin-top:10px">{TEMPLATE}</div>
-<div class="tag" style="margin-top:6px">Files: <a href="sample_results.csv" download style="color:var(--accent)">sample_results.csv</a> (small, to copy the structure) · <a href="example_results_long.csv" style="color:var(--accent)">example_results_long.csv</a> (the stacker's full output for IMPACT) · <a href="../scripts/stack_permutation_results.py" style="color:var(--accent)">stack_permutation_results.py</a></div>
+<div class="tag" style="margin-top:6px"><a href="sample_results.csv" download style="color:var(--accent)">sample_results.csv</a> (small, copy this structure) · <a href="example_results_long.csv" style="color:var(--accent)">example_results_long.csv</a> (the full IMPACT file). If you happen to use IMPACT's <code>permutation_one.R</code>, <a href="../scripts/stack_permutation_results.py" style="color:var(--accent)">stack_permutation_results.py</a> builds this file from a results folder.</div>
 </details>
 </div>
 
