@@ -65,7 +65,7 @@ function parseCSV(text){
 // ---- long CSV -> analyses (derive everything) ----
 function fromLong(rows){
   const cols=Object.keys(rows[0]);
-  // case-insensitive lookup + aliases so permutation_one.R's own column names work as-is
+  // case-insensitive lookup + common aliases (Node, t_value, p_value, ...) work as-is
   const ALIAS={node:['node'],t:['t','t_value','tvalue','tstat','statistic'],p:['p','p_value','pvalue','pval'],
     n:['n','n_subjects','nsubjects'],covariates:['covariates','covariate'],extent_threshold:['extent_threshold','extentthresholdnodes','extent_thr'],
     cluster_p:['cluster_p','clusterpvalue','cluster_pvalue','fwe_p'],passed:['passed','passextentthreshold','fwe','significant','sig'],
@@ -249,7 +249,7 @@ const dz=document.getElementById('drop');
 ['dragover','dragenter'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('over');}));
 ['dragleave','dragend'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('over');}));
 dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');if(e.dataTransfer.files[0])readFile(e.dataTransfer.files[0]);});
-document.getElementById('loadex').onclick=e=>{e.preventDefault();fetch('example_results_long.csv').then(r=>r.text()).then(t=>loadText(t,'IMPACT example (CSV)')).catch(()=>showMsg('Could not load the example.',false));};
+document.getElementById('loadex').onclick=e=>{e.preventDefault();fetch('example_results_long.csv').then(r=>r.text()).then(t=>loadText(t,'example dataset')).catch(()=>showMsg('Could not load the example.',false));};
 const _durl=new URLSearchParams(location.search).get('data');
 if(_durl)fetch(_durl).then(r=>r.text()).then(t=>loadText(t,_durl)).catch(()=>showMsg('Could not load '+_durl,false));
 </script>"""
@@ -270,7 +270,7 @@ DOC = """<div class="doc">
 <tr><td><b>any other column</b></td><td>—</td><td><b>becomes a filter</b> (family, condition, cohort, site, task …). Single-valued columns are auto-hidden. <code>Estimate</code> and <code>df</code> are ignored.</td></tr>
 </tbody></table>
 Everything else is derived here in the browser from your node rows: sig-node counts, clusters (contiguous p&lt;.05 runs), max cluster, laterality and the hemispheric-overlap panel. You never compute cluster stats yourself. Nothing is uploaded.
-<br>Optional page labels via URL: <code>?title=…&amp;method=Freedman–Lane&amp;node0=VTA&amp;node1=HPC&amp;n_perms=5000</code>, or <code>?data=URL</code> to auto-load a hosted CSV.
+<br>Optional page labels via URL: <code>?title=…&amp;method=Freedman–Lane&amp;node0=start&amp;node1=end&amp;n_perms=5000</code>, or <code>?data=URL</code> to auto-load a hosted CSV.
 </div>"""
 
 TEMPLATE = """outcome,tract,metric,node,t,p,hemisphere,N,covariates,extent_threshold,cluster_p,passed
@@ -285,12 +285,12 @@ BODY = f"""<header>
 <div class="wrap">
 <div class="section" id="loader"><h2>Load results</h2>
 <div id="drop" class="drop">Drop your results <b>.csv</b> here — or <label class="flink">choose a file<input type="file" id="file" accept=".csv,text/csv,.json" hidden></label></div>
-<div style="margin-top:10px;font-size:13px;color:var(--mut)">New here? <a href="sample_results.csv" download class="flink" style="font-weight:600">Download the sample CSV</a> to see exactly how to structure yours (a small real subset: 2 outcomes × 2 tracts × 2 metrics, all 100 nodes) &nbsp;·&nbsp; or <a href="#" id="loadex" class="flink">load the full IMPACT example</a> to see the explorer populated.</div>
+<div style="margin-top:10px;font-size:13px;color:var(--mut)">New here? <a href="sample_results.csv" download class="flink" style="font-weight:600">Download the sample CSV</a> to see exactly how to structure yours (a small real example: 2 outcomes × 2 tracts × 2 metrics, 100 nodes) &nbsp;·&nbsp; or <a href="#" id="loadex" class="flink">load a full example dataset</a> to see the explorer populated.</div>
 <div id="loaderr" class="loaderr" style="display:none"></div>
 <details style="margin-top:14px" open><summary style="cursor:pointer;color:var(--accent);font-weight:600;font-size:13px">Data format</summary>
 {DOC}
 <div class="script" style="margin-top:10px">{TEMPLATE}</div>
-<div class="tag" style="margin-top:6px"><a href="sample_results.csv" download style="color:var(--accent)">sample_results.csv</a> (small, copy this structure) · <a href="example_results_long.csv" style="color:var(--accent)">example_results_long.csv</a> (the full IMPACT file). If you happen to use IMPACT's <code>permutation_one.R</code>, <a href="../scripts/stack_permutation_results.py" style="color:var(--accent)">stack_permutation_results.py</a> builds this file from a results folder.</div>
+<div class="tag" style="margin-top:6px"><a href="sample_results.csv" download style="color:var(--accent)">sample_results.csv</a> (small, copy this structure) · <a href="example_results_long.csv" style="color:var(--accent)">example_results_long.csv</a> (a full example dataset)</div>
 </details>
 </div>
 
