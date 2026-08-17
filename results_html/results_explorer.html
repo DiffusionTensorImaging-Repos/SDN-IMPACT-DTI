@@ -225,7 +225,7 @@ function detail(r){
     <div class="tag" style="margin-top:6px">Overlapping significant nodes (sig on <b>both</b> L &amp; R): ${(lat.overlap_nodes&&lat.overlap_nodes.length)?'<span style="color:#4ade80">'+lat.overlap_nodes.join(', ')+'</span>':'none'}</div>
    </div>
    <div class="dcol">
-    <h4>Node-wise t-values <span class="tag">(partial-regression t, covariate-adjusted — not a raw correlation; green = FWE cluster; colored bars = p&lt;0.05)</span></h4>
+    <h4>Node-wise t-values <span class="tag">(each bar = a separate regression across subjects: outcome ~ that node's metric + covariates; the plot is a profile along the tract, not the tract's shape; green = FWE cluster; colored bars = p&lt;0.05)</span></h4>
     <div class="nodeviz">${nodeViz(r)}</div>
     <h4 style="margin-top:14px">Clusters</h4>${clusters}
     <h4 style="margin-top:14px">Significant nodes (p&lt;0.05, uncorrected)</h4>

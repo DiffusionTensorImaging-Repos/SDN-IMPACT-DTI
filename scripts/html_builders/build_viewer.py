@@ -198,7 +198,7 @@ function detail(r){
      ${r.extent_threshold!=null?`<div class="k">Extent threshold</div><div>${r.extent_threshold} nodes</div>`:''}
      <div class="k">FWE verdict</div><div>${r.passed?'<span class="badge b-sig">SIGNIFICANT</span>'+(r.best_p!=null?' (cluster p='+fmtP(r.best_p)+')':''):'<span class="badge b-ns">n.s.</span>'}</div>
     </div>${cov}${latHTML}</div>
-    <div class="dcol"><h4>Node-wise values <span class="tag">(green = FWE cluster; colored bars = p&lt;0.05)</span></h4><div class="nodeviz">${nodeViz(r)}</div>
+    <div class="dcol"><h4>Node-wise values <span class="tag">(each bar = a separate regression across subjects at that node; a profile along the tract, not its shape; green = FWE cluster; colored bars = p&lt;0.05)</span></h4><div class="nodeviz">${nodeViz(r)}</div>
      <h4 style="margin-top:14px">Clusters</h4>${clusters}
      <h4 style="margin-top:14px">Significant nodes (p&lt;0.05, uncorrected)</h4><div class="tag" style="line-height:1.6">${r.sig_node_list.length?r.sig_node_list.join(', '):'none'}</div></div></div>${prov}</div></td>`;
 }
