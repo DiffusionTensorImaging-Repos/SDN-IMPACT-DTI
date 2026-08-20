@@ -8,3 +8,6 @@
 # Ignore git attributes file if you don’t want it tracked
 .gitattributes
 
+
+# Meeting transcripts/notes — candid, keep local (Deepu asked not to share broadly)
+meetings/
