@@ -7,14 +7,14 @@ nav_order: 20
 
 # Step 20 — ANTs Registration: MNI → T1 Space
 
-The ROIs from Ranesh are in MNI standard space (1mm). Tractography runs in each subject's native diffusion space. To get ROIs from MNI → diffusion, we need two transforms applied in sequence:
+The ROIs are in MNI standard space (1mm). Tractography runs in each subject's native diffusion space. To get ROIs from MNI → diffusion, we need two transforms applied in sequence:
 
 1. **MNI → T1** (ANTs nonlinear warp — this step)
 2. **T1 → Diffusion** (FLIRT linear transform — Step 21, using existing matrices from Step 12)
 
 We need the **nonlinear** ANTs warp for the MNI → T1 step because every brain is shaped differently from the MNI template. A linear (affine) transform can handle rotation, scaling, and shearing, but it cannot account for the fact that one person's hippocampus is a little wider, or their VTA sits a few mm lower, than the template. ANTs SyN registration deforms the MNI template to match each subject's specific brain shape, so the ROIs land precisely where they should.
 
-Ranesh used `antsRegistrationSyNQuick.sh` for this same purpose. We use the same tool with the same approach. The only difference is that Ranesh's HCP data was already T1-aligned to diffusion (no Step 21 needed), whereas our IMPACT data requires the additional FLIRT step.
+The reference pipeline used `antsRegistrationSyNQuick.sh` for this same purpose. We use the same tool with the same approach. The only difference is that the HCP data was already T1-aligned to diffusion (no Step 21 needed), whereas our IMPACT data requires the additional FLIRT step.
 
 **Input (per subject):**
 - `/data/projects/STUDIES/IMPACT/DTI/derivatives/ANTs/<subj>/<subj>_BrainExtractionBrain.nii.gz` (skull-stripped T1 from Step 2)

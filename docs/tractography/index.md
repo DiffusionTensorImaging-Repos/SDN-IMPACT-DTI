@@ -18,7 +18,7 @@ CSD model fitting → ROI registration → atlas-based exclusion-mask tractograp
 | 17 | responsemean | Group-average response functions |
 | 18 | dwi2fod (MSMT-CSD) | Multi-shell multi-tissue CSD |
 | 19 | mtnormalise | FOD intensity normalization |
-| — | ROI Upload | Ranesh's VTA / HPC / atlas files |
+| — | ROI Upload | the reference VTA / HPC / atlas files |
 | 20 | ANTs registration | MNI → T1 nonlinear warp |
 | 21 | ROI warping | MNI → T1 → diffusion + visual QC |
 | 22 | Atlas-based exclusion masks | Dilated-corridor masks |
@@ -26,4 +26,4 @@ CSD model fitting → ROI registration → atlas-based exclusion-mask tractograp
 | 24 | Full tractography | All 57 subjects |
 | 25 | pyAFQ cleaning | Mahalanobis distance cleanup |
 | 26 | Visual QC | All 57 cleaned tracts |
-| — | Anterior Tract Addendum | Same pipeline re-run with Ranesh's anterior atlas |
+| — | Anterior Tract Addendum | Same pipeline re-run with the reference anterior atlas |

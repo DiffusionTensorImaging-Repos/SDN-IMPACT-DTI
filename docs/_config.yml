@@ -1,5 +1,5 @@
 title: "SDN IMPACT DTI Pipeline"
-description: "End-to-end documentation for the DTI tractography pipeline used in the IMPACT project (Temple SDN Lab × Olson Lab collaboration)"
+description: "End-to-end documentation for the DTI tractography pipeline used in the IMPACT project (Temple SDN Lab)"
 remote_theme: just-the-docs/just-the-docs
 
 # Theme settings
@@ -12,7 +12,7 @@ aux_links:
     - "https://github.com/DiffusionTensorImaging-Repos/SDN-IMPACT-DTI"
 
 # Footer
-footer_content: "SDN Lab × Olson Lab — IMPACT DTI"
+footer_content: "SDN Lab — IMPACT DTI"
 
 # Compress
 sass:

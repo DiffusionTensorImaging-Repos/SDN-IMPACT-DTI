@@ -7,7 +7,7 @@ nav_order: 26
 
 # Step 26 — Visual QC of Cleaned Tracts (All 57 Subjects)
 
-Ranesh emphasized that visual QC is mandatory after both tractography and cleaning. In this step, we generate tract density images (TDIs) for every cleaned tract across all 57 subjects and both hemispheres, overlay them on each subject's mean b0, and inspect for anatomical plausibility.
+Visual QC is mandatory after both tractography and cleaning. In this step, we generate tract density images (TDIs) for every cleaned tract across all 57 subjects and both hemispheres, overlay them on each subject's mean b0, and inspect for anatomical plausibility.
 
 **What we're looking for:**
 - The VTA→HPC arc — a curved bundle running from the ventral midbrain laterally into the medial temporal lobe

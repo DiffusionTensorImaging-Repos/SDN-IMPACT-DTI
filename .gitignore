@@ -11,3 +11,6 @@
 
 # Meeting transcripts/notes — candid, keep local (Deepu asked not to share broadly)
 meetings/
+
+# Claude Code session files
+.claude/

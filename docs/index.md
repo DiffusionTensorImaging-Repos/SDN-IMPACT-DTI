@@ -9,7 +9,7 @@ permalink: /
 # 🧠 SDN Lab — Project IMPACT DTI Pipeline
 {: .fs-9 }
 
-End-to-end documentation for the diffusion tractography pipeline built for the IMPACT project (Temple SDN Lab × Olson Lab collaboration).
+End-to-end documentation for the diffusion tractography pipeline built for the IMPACT project (Temple SDN Lab).
 {: .fs-6 .fw-300 }
 
 [Browse on GitHub](https://github.com/DiffusionTensorImaging-Repos/SDN-IMPACT-DTI){: .btn .btn-primary .fs-5 .mb-4 .mb-md-0 .mr-2 }
@@ -29,13 +29,13 @@ This site walks through every step of the IMPACT DTI pipeline — from raw DICOM
 
 ## Two tracts of interest
 
-We extracted **bilateral VTA→hippocampus tracts in two pathway variants** (posterior and anterior — both provided by Ranesh's group atlas) and pulled both **FA** (DTIFIT) and **NODDI** metrics (NDI / ODI / FWF, modulated maps) along 100 nodes per tract.
+We extracted **bilateral VTA→hippocampus tracts in two pathway variants** (posterior and anterior — both provided by the reference group atlas) and pulled both **FA** (DTIFIT) and **NODDI** metrics (NDI / ODI / FWF, modulated maps) along 100 nodes per tract.
 
 | Tract | Status |
 |-------|--------|
 | Posterior VTA → HPC (L + R) | ✅ Complete |
 | Anterior VTA → HPC (L + R) | ✅ Complete |
-| VTA → striatum / NAcc (control) | Pending — atlas request to Ranesh |
+| VTA → striatum / NAcc (control) | Pending — atlas not yet available |
 
 ## Pipeline at a glance
 
@@ -49,9 +49,7 @@ We extracted **bilateral VTA→hippocampus tracts in two pathway variants** (pos
 
 - **Danny Zweben** — Clinical Psych PhD student, Temple SDN Lab (project lead)
 - **Johanna Jarcho** — PhD advisor, SDN Lab Director
-- **Ingrid Olson** — PI, Olson Lab (collaborating)
-- **Ranesh Mopuru** — Postdoc, Olson Lab (provided VTA-HPC group atlas, NODDI / cleaning / permutation testing scripts)
-- **Blake Elliott** — Olson Lab (collaborating on anterior vs. posterior pathway analyses)
+- **Collaborating lab (Temple)** — provided the VTA→HPC group tract atlas and ROIs, and the reference tractography, NODDI and permutation-testing pipeline this one was adapted from
 
 ---
 

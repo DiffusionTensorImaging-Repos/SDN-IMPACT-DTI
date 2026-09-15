@@ -1,357 +1,210 @@
+#!/usr/bin/env python3
+"""
+Build results_html/results_explorer.html.
+
+Reported analysis first (whole-tract model with a subregion term, then quartiles and the metric
+comparison), then an interactive browser over every node-wise permutation test that was run, then
+the hippocampal gray-matter and HVLT tables. Data: results_data.json + models_data.json
+(scripts/html_builders/build_results_data.py).
+"""
 import json
-OUT='/Users/dannyzweben/Desktop/SDN/DTI/SDN-IMPACT-DTI/results_html'
-results=json.load(open(f'{OUT}/results_data.json'))
-meta=json.load(open(f'{OUT}/meta_data.json'))
-demo=meta['demographics']
+OUT = '/Users/dannyzweben/Desktop/SDN/DTI/SDN-IMPACT-DTI/results_html'
+DATA = json.load(open(f'{OUT}/results_data.json'))
+MODELS = json.load(open(f'{OUT}/models_data.json'))
+ORDER = ['Social FABias', 'Social d′', 'Social misattribution', 'Monetary FABias', 'Monetary d′', 'Monetary misattribution']
+NICE = {'Social FABias': 'Social positive FA bias', 'Monetary FABias': 'Monetary positive FA bias'}
 
-# scripts registry (shown in detail panel)
-SCRIPTS={
- 'extraction':'scripts/run_step27_fa_extraction.py (FA) / run_step30_noddi_extraction.py (NDI/ODI/FWF) — AFQ-style tract profiling, 100 nodes, Gaussian-weighted.',
- 'covariates':'scripts/extract_imaging_covariates.py — head motion (eddy QUAD qc_mot_abs), ICV (fslstats), streamline count + mean length (tckstats).',
- 'merge':'scripts/build_analysis_csvs.py — merges tract profiles + covariates + REDCap outcomes into wide analysis CSVs.',
- 'permute':'scripts/permutation_one.R — Freedman–Lane 5000-perm cluster-extent test, one outcome×tract×metric.',
- 'runner':'scripts/run_perm_cr2.sh — parallel runner on cr2 (128 cores).',
-}
 
-import pandas as pd, numpy as np, os, warnings
-from scipy import stats
-import statsmodels.formula.api as smf
-warnings.filterwarnings('ignore')
+def pcell(p, star=True):
+    if p is None: return '<td>—</td>'
+    s = f'{p:.3f}'.replace('0.', '.', 1) if p >= .001 else '&lt;.001'
+    return f'<td class="sig">{s}{" *" if star else ""}</td>' if p < .05 else f'<td>{s}</td>'
 
-def _tract_avg_table():
-    """Full tract-average grid: all 6 outcomes x 4 metrics x 4 tracts (partial r)."""
-    base='/Users/dannyzweben/Desktop/SDN/DTI'
-    AR=f'{base}/data.check/analysis_ready'; PR=f'{base}/data.check/permutation_results'
-    COV=['ICV','Mean_tckstats','Count_tckstats','absolute_motion','maternal_age']
-    TRACTS=['l_vta_l_hipp','r_vta_r_hipp','anterior_l_vta_l_hipp','anterior_r_vta_r_hipp']
-    METRICS=['FA','NDI','ODI','FWF']
-    OUTS=[('Social d′','SOCIAL_dprime'),('Monetary d′','MONETARY_dprime'),
-          ('Social correct-mem bias','SOCIAL_HitRateBias'),('Monetary correct-mem bias','MONETARY_HitRateBias'),
-          ('Social false-mem bias','SOCIAL_FABias'),('Monetary false-mem bias','MONETARY_FABias')]
-    def pr(tract,metric,out):
-        d=pd.read_csv(f'{AR}/{tract}__{metric}__analysis.csv')
-        d['mid']=d[[f'{metric}_{i}' for i in range(25,75)]].mean(axis=1)
-        m=d[['mid',out]+COV].dropna()
-        if len(m)<10 or m[out].std()==0: return np.nan,np.nan
-        xr=smf.ols('mid ~ '+'+'.join(COV),m).fit().resid
-        yr=smf.ols(f'{out} ~ '+'+'.join(COV),m).fit().resid
-        return stats.pearsonr(xr,yr)
-    def surv(tract,metric,out):
-        f=f'{PR}/{tract}__{metric}__{out}_summary.csv'
-        return os.path.exists(f) and int(pd.read_csv(f)['NumClustersPassingExtent'].iloc[0])>0
-    def cell(t,metric,out):
-        r,p=pr(t,metric,out)
-        if np.isnan(r): return '<td>—</td>'
-        txt=f'{r:+.2f}'.replace('0.','.').replace('-','−')
-        dag='<sup>†</sup>' if surv(t,metric,out) else ''
-        sty=' style="color:#4ade80;font-weight:700"' if p<0.05 else ''
-        return f'<td{sty}>{txt}{dag}</td>'
-    rows=''
-    for lbl,col in OUTS:
-        for i,metric in enumerate(METRICS):
-            first=f'<td rowspan="4" style="border-right:1px solid #2c3140;vertical-align:top">{lbl}</td>' if i==0 else ''
-            rows+=f'<tr>{first}<td>{metric}</td>'+''.join(cell(t,metric,col) for t in TRACTS)+'</tr>'
-    return ('<table><thead><tr><th>Outcome</th><th>Metric</th><th>post&nbsp;L</th><th>post&nbsp;R</th>'
-            '<th>ant&nbsp;L</th><th>ant&nbsp;R</th></tr></thead><tbody>'+rows+'</tbody></table>')
-TRACTAVG=_tract_avg_table()
 
-data_js=json.dumps(results)
-meta_js=json.dumps(meta)
+def bcell(b): return f'<td>{b:+.3f}</td>'
 
-html='''<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+
+def rows(analysis, metric=None, segment=None):
+    return [r for r in MODELS if r['analysis'] == analysis and (metric is None or r['metric'] == metric)
+            and (segment is None or r['segment'] == segment)]
+
+
+def whole_table():
+    h = '<table class="dtable"><thead><tr><th>Outcome</th><th>Interaction p</th><th>Main effect b</th><th>Main effect p</th></tr></thead><tbody>'
+    for o in ORDER:
+        r = next(x for x in rows('whole_tract') if x['outcome'] == o)
+        h += f'<tr><td>{NICE.get(o,o)}</td>{pcell(r["interaction_p"], False)}{bcell(r["main_b"])}{pcell(r["main_p"])}</tr>'
+    return h + '</tbody></table>'
+
+
+def quart_table(key):
+    segs = ['Q1', 'Q2', 'Q3', 'Q4']
+    h = f'<table class="dtable"><thead><tr><th>Outcome</th>' + ''.join(f'<th>{s}</th>' for s in segs) + '<th>Whole</th></tr></thead><tbody>'
+    for o in ORDER:
+        cells = ''
+        for s in segs:
+            r = next(x for x in rows('quartile', 'NDI', s) if x['outcome'] == o); cells += pcell(r[key], key == 'main_p')
+        w = next(x for x in rows('whole_tract') if x['outcome'] == o); cells += pcell(w[key], key == 'main_p')
+        h += f'<tr><td>{NICE.get(o,o)}</td>{cells}</tr>'
+    return h + '</tbody></table>'
+
+
+def metric_table():
+    mets = ['NDI', 'ODI', 'FWF', 'FA']
+    h = '<table class="dtable"><thead><tr><th>Main-effect p</th>' + ''.join(f'<th>{m}</th>' for m in mets) + '</tr></thead><tbody>'
+    for o in ORDER:
+        cells = ''
+        for m in mets:
+            r = next((x for x in rows('metric', m) if x['outcome'] == o), None); cells += pcell(r['main_p']) if r else '<td>—</td>'
+        h += f'<tr><td>{NICE.get(o,o)}</td>{cells}</tr>'
+    return h + '</tbody></table>'
+
+
+def hpc_table():
+    h = '<table class="dtable"><thead><tr><th>Outcome</th><th>β</th><th>p</th><th>n</th></tr></thead><tbody>'
+    for o in ORDER:
+        r = next(x for x in rows('hpc_gm_ndi') if x['outcome'] == o)
+        h += f'<tr><td>{NICE.get(o,o)}</td>{bcell(r["main_b"])}{pcell(r["main_p"])}<td>{r["n"]}</td></tr>'
+    return h + '</tbody></table>'
+
+
+def hvlt_table():
+    h = '<table class="dtable"><thead><tr><th>HVLT</th><th>b</th><th>p</th><th>n</th></tr></thead><tbody>'
+    for r in rows('hvlt'):
+        h += f'<tr><td>{r["outcome"]}</td>{bcell(r["main_b"])}{pcell(r["main_p"])}<td>{r["n"]}</td></tr>'
+    return h + '</tbody></table>'
+
+
+n_all = len(DATA); n_rep = sum(r['reported'] for r in DATA); n_sig = sum(r['passed'] for r in DATA)
+
+HTML = f'''<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>IMPACT VTA→HPC — Results Explorer</title>
+<title>IMPACT · Results</title>
+<link rel="stylesheet" href="_pres.css">
 <style>
-:root{--bg:#0f1117;--card:#1a1d27;--card2:#232733;--ink:#e6e9ef;--mut:#9aa3b2;--line:#2c3140;
---pos:#f4664a;--neg:#3b82f6;--sig:#22c55e;--accent:#a78bfa;}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
-header{padding:22px 26px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#171a24,#0f1117)}
-h1{margin:0 0 4px;font-size:22px}
-.sub{color:var(--mut);font-size:13px}
-.wrap{padding:20px 26px;max-width:1400px;margin:0 auto}
-.pill{display:inline-block;background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:3px 11px;margin:2px;font-size:12px;color:var(--mut)}
-.section{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;margin:16px 0}
-.section h2{margin:0 0 12px;font-size:16px;color:var(--accent)}
-.grid{display:grid;gap:10px}
-.demo-grid{grid-template-columns:repeat(auto-fit,minmax(190px,1fr))}
-.stat{background:var(--card2);border:1px solid var(--line);border-radius:9px;padding:11px 13px}
-.stat .k{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
-.stat .v{font-size:19px;font-weight:600;margin-top:3px}
-.stat .d{color:var(--mut);font-size:12px;margin-top:2px}
-.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
-.controls select,.controls input{background:var(--card2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:13px}
-.controls label{color:var(--mut);font-size:12px;margin-right:3px}
-.count{color:var(--mut);font-size:13px;margin-left:auto}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th{text-align:left;color:var(--mut);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer;user-select:none;white-space:nowrap}
-th:hover{color:var(--ink)}
-td{padding:8px 10px;border-bottom:1px solid #20242f}
-tr.row{cursor:pointer}
-tr.row:hover{background:var(--card2)}
-tr.sig td{background:rgba(34,197,94,.06)}
-.badge{display:inline-block;border-radius:6px;padding:2px 7px;font-size:11px;font-weight:600}
-.b-sig{background:rgba(34,197,94,.16);color:#4ade80}
-.b-ns{background:#242835;color:var(--mut)}
-.b-pos{background:rgba(244,102,74,.16);color:#fb7a5e}
-.b-neg{background:rgba(59,130,246,.16);color:#60a5fa}
-.hemi{font-weight:600}
-.detail{background:var(--card2);border-top:2px solid var(--accent)}
-.detail td{padding:0}
-.dbox{padding:18px 22px}
-.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-.dcol h4{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--accent)}
-.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px}
-.kv .k{color:var(--mut)}
-.nodeviz{margin-top:10px;background:#12141c;border:1px solid var(--line);border-radius:8px;padding:10px}
-.script{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;color:#c9d1e0;background:#12141c;border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:4px;white-space:pre-wrap;line-height:1.45}
-.latbar{display:flex;height:26px;border-radius:6px;overflow:hidden;border:1px solid var(--line);margin-top:6px}
-.latbar .L{background:#3b82f6;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff}
-.latbar .R{background:#f4664a;display:flex;align-items:center;justify-center;justify-content:center;font-size:11px;color:#fff}
-a.back{color:var(--accent);text-decoration:none;font-size:13px}
-.legend{font-size:12px;color:var(--mut);margin-top:8px}
-.tag{font-size:11px;color:var(--mut)}
-.clbl{font-size:11px;color:var(--mut)}
+.wrap{{max-width:1040px}}
+.controls{{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0 6px}}
+.controls label{{font-size:12px;color:var(--mut);margin-right:3px}}
+.controls select,.controls input{{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-size:13px}}
+.count{{margin-left:auto;font-size:13px;color:var(--mut)}}
+#tbl th{{cursor:pointer;user-select:none;white-space:nowrap}} #tbl th:hover{{color:var(--ink)}}
+tr.row{{cursor:pointer}} tr.row:hover td{{background:var(--shade)}}
+tr.rep td:first-child{{font-weight:600}}
+.badge{{display:inline-block;border-radius:5px;padding:1px 7px;font-size:11.5px;font-weight:600}}
+.b-sig{{background:var(--accent-soft);color:var(--accent)}} .b-ns{{background:var(--shade);color:var(--mut)}}
+.b-pos{{background:#eef3f1;color:#3a6a5f}} .b-neg{{background:#f6ece8;color:#a8553f}}
+tr.detail-row td{{padding:0;background:var(--shade)}}
+.dbox{{padding:16px 18px}} .dgrid{{display:grid;grid-template-columns:1fr 1.2fr;gap:18px}} @media (max-width:760px){{.dgrid{{grid-template-columns:1fr}}}}
+.dbox h4{{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut)}}
+.kv2{{display:grid;grid-template-columns:auto 1fr;gap:3px 14px;font-size:13.5px}} .kv2 .k{{color:var(--mut)}}
+.viz{{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:8px;margin-top:6px}}
+.tag{{font-size:12.5px;color:var(--mut)}}
 </style></head><body>
-<header>
-<h1>IMPACT · VTA→HPC Tract Microstructure — Results Explorer</h1>
-<div class="sub">All 96 node-wise permutation analyses — 6 outcomes (social &amp; monetary × d′, positivity bias in false memories, positivity bias in correct memories) × 4 tracts × 4 metrics (FA + NODDI: NDI, ODI, FWF). Freedman–Lane, 5000 permutations, cluster-extent FWE at α=0.05. Click any row for the tract, significant nodes, laterality, stats, and scripts. &nbsp;·&nbsp; <a class="back" href="data_quality.html">→ Memory data &amp; d′</a> &nbsp;·&nbsp; <a class="back" href="hvlt_explorer.html">→ Verbal learning (HVLT)</a> &nbsp;·&nbsp; <a class="back" href="hitfa_explorer.html">→ Hit rate &amp; false-alarm rate</a></div>
-</header>
+<nav class="topnav">
+  <span class="brand">IMPACT · <span>VTA→HPC</span> &amp; Motivated Memory</span>
+  <a href="intro.html">Overview</a>
+  <a href="background.html">Background</a>
+  <a href="pipeline.html">Pipeline</a>
+  <a href="analyses.html">Analyses</a>
+  <a href="results_explorer.html" class="active results">Results</a>
+</nav>
 <div class="wrap">
+  <h1>Results</h1>
+  <p class="lead">One bilateral VTA→hippocampus pathway, neurite density. Three social memory effects, every monetary counterpart null. The reported model comes first; everything that was run follows.</p>
+  <p class="small">n = 52 social, 53 monetary. Covariates throughout: ICV, tract length, streamline count, absolute motion, maternal age. * p &lt; .05.</p>
 
-<div class="section"><h2>Tract averages</h2>
-<div class="note" style="background:#232733;border-left:3px solid #a78bfa;border-radius:6px;padding:11px 14px;margin:2px 0 14px;font-size:12.5px;color:#c9d1e0">The simplest version of each test: average the mid-tract nodes (25–74) per subject, then regress the outcome on that single value with the same covariates. One effect size and one p per tract, for every outcome × metric. Useful as a check on the node-wise map, since along-tract nodes are highly autocorrelated (left/right correlate ~0.86 for NDI), so one tract is effectively one test. <b style="color:#4ade80">Green</b> = p&lt;.05 on the average; <b>†</b> = the node-wise cluster survived (cluster-extent FWE).</div>
-<details style="margin:4px 0 10px"><summary style="cursor:pointer;color:#a78bfa;font-size:12.5px;font-weight:600">Each value is a partial correlation <b>r</b> (covariates removed) — click for the model</summary>
-<div class="script">For one outcome × tract × metric:
-  mid   = mean of the tract's middle nodes (25-74), per subject
-  x_res = residuals of  lm(mid     ~ ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age)
-  y_res = residuals of  lm(outcome ~ ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age)
-  r     = cor(x_res, y_res)      # partial correlation of tract with outcome, covariates removed; two-sided p; n=52
-Same thing as the standardized slope of the tract in  lm(outcome ~ mid + covariates).</div>
-</details>
-__TRACTAVG__
-<div class="legend">Every outcome × metric × tract. r = partial correlation of the mid-tract average with the outcome (covariates removed), n = 52–53. <b style="color:#4ade80">Green</b> = p&lt;.05 on the tract average; <b>†</b> = the node-wise cluster survived (cluster-extent FWE). The consistent effect is <b>social false-memory bias</b> on FA and NDI (bilateral); <b>social d′</b> tracks NDI, left-leaning. Correct-memory bias and everything monetary are essentially null on the average.</div>
-</div>
+  <h2>Whole tract, both subregions in one model</h2>
+  <p>NDI averaged over all 100 nodes, one value per subject per subregion, two rows per subject (anterior, posterior). NDI regressed on memory, subregion and the covariates with a random intercept for subject; each row carries its own tract length and streamline count. Maximum likelihood. The interaction (memory × subregion) is tested by likelihood ratio and dropped when it does not improve fit.</p>
+  {whole_table()}
+  <p>The interaction is droppable for every outcome, so there is no evidence the two hippocampal subregions relate to memory differently. All three social effects hold with it dropped; the monetary counterparts are null and monetary misattribution runs in the opposite direction.</p>
 
-<div class="section"><h2>All results</h2>
-<details style="margin:0 0 12px"><summary style="cursor:pointer;color:#a78bfa;font-size:12.5px;font-weight:600">Each node is a <b>t-statistic</b>; the table shows cluster stats — click for the model</summary>
-<div class="script">At each of the 100 nodes:  lm( outcome ~ node_value + ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age ), record the t on node_value.
-Adjacent nodes with p&lt;.05 form a cluster; a cluster is kept if its length beats the 95th percentile of the largest chance cluster over 5000 Freedman-Lane permutations (cluster-extent FWE at alpha=.05). Click any row for its scripts and node plot.</div>
-</details>
-<div class="controls">
-<span><label>Outcome family</label><select id="f_family"></select></span>
-<span><label>Condition</label><select id="f_cond"></select></span>
-<span><label>Tract</label><select id="f_tract"></select></span>
-<span><label>Hemisphere</label><select id="f_hemi"></select></span>
-<span><label>Metric</label><select id="f_metric"></select></span>
-<span><label>Show</label><select id="f_sig"><option value="all">All</option><option value="sig">FWE-significant only</option><option value="trend">≥5 sig nodes</option></select></span>
-<input id="f_search" placeholder="search…" style="min-width:130px">
-<span class="count" id="count"></span>
-</div>
-<table id="tbl"><thead><tr>
-<th data-k="outcome_label">Outcome</th><th data-k="family">Family</th><th data-k="condition">Cond</th>
-<th data-k="tract_label">Tract</th><th data-k="hemisphere">Hemi</th><th data-k="tract_type">Type</th>
-<th data-k="metric">Metric</th><th data-k="N">N</th><th data-k="n_sig_nodes">Sig nodes</th>
-<th data-k="obs_max_cluster">Max cluster</th><th data-k="extent_threshold">Thresh</th>
-<th data-k="best_p">Cluster p</th><th data-k="passed">FWE</th>
-</tr></thead><tbody id="tbody"></tbody></table>
-<div class="legend">FWE = cluster passes permutation extent threshold. Direction: <span class="badge b-pos">Positive</span> higher metric → higher outcome · <span class="badge b-neg">Negative</span> higher metric → lower outcome.<br><b>Node values are partial-regression t-statistics</b> (each node = outcome regressed on that node’s metric + covariates), not zero-order correlations. In the detail view, the <b>Hemispheric node overlap</b> panel stacks the L and R tracts aligned by node so you can see whether the significant nodes fall in the same place; nodes significant on <span style="color:#4ade80">both</span> sides are shown in green.</div>
-</div>
+  <h2>Quartiles</h2>
+  <p>The same model with NDI averaged within each quarter of the tract. Q1 is nodes 0 to 24 at the VTA end, Q4 is 75 to 99 at the hippocampus. Whole repeats the model above.</p>
+  <h3>Interaction p</h3>{quart_table('interaction_p')}
+  <h3>Main-effect p, interaction dropped</h3>{quart_table('main_p')}
+  <p>Positive false-alarm bias is significant in all four segments and the interaction is droppable in all four, so that effect is uniform along the tract. d′ and misattribution hold on the whole-tract average but not segment by segment. Contrasting Q1 against Q4 is null for all three social outcomes (difference p = .44, .45, .95) while the mean carries the effect: the signal is diffuse rather than focal.</p>
 
-<div class="section"><h2>Hippocampus</h2>
-<div class="note" style="background:#232733;border-left:3px solid #a78bfa;border-radius:6px;padding:11px 14px;margin:2px 0 14px;font-size:12.5px;color:#c9d1e0">NDI (neurite density) sampled inside the anatomical hippocampus ROI itself, not along the tract, same covariates, asking whether memory tracks the pathway or hippocampal tissue in general. Left / right / bilateral is just which hippocampus the NDI came from (bilateral = the two averaged). ODI and FWF are null for every outcome, so only NDI is shown. β is per standard deviation; left and right hippocampal NDI correlate r=0.84.</div>
-<details style="margin:4px 0 10px"><summary style="cursor:pointer;color:#a78bfa;font-size:12.5px;font-weight:600">Each value is a regression <b>β</b> (per SD) — click for the model</summary>
-<div class="script">For one outcome × hippocampal NDI (left / right / bilateral):
-  lm( outcome ~ z(HPC_NDI) + ICV + absolute_motion + maternal_age )
-  β = slope on z(HPC_NDI): change in the memory outcome per 1 SD of hippocampal NDI, covariates held constant.
-  (n = 52 social / 53 monetary.)</div>
-</details>
-<table><thead><tr><th>Outcome</th><th>NDI left</th><th>NDI right</th><th>NDI bilateral</th></tr></thead><tbody>
-<tr><td>Social d′ (accuracy)</td><td style="color:#4ade80;font-weight:700">+.089 *</td><td>+.052</td><td>+.074</td></tr>
-<tr><td>Social HitRateBias (correct-memory positivity)</td><td>+.052</td><td>+.024</td><td>+.040</td></tr>
-<tr><td>Social FABias (false-memory positivity)</td><td>−.049</td><td>−.054</td><td>−.054</td></tr>
-<tr><td>Monetary d′</td><td>−.077</td><td>−.037</td><td>−.060</td></tr>
-<tr><td>Monetary HitRateBias</td><td>−.016</td><td>−.011</td><td>−.015</td></tr>
-<tr><td>Monetary FABias</td><td>−.006</td><td>+.015</td><td>+.004</td></tr>
-</tbody></table>
-<div class="legend">β per SD, n=52 social / 53 monetary; * p&lt;.05. Only <b>left hippocampal NDI × social d′</b> is significant (β=+.089, p=.039). Social FABias is a same-direction right-NDI trend (p=.05) and social HitRateBias a weak left trend (p=.07); everything monetary is null. So the neurite-density signal is shared by the pathway and the region, not generic tissue. Full model set incl. ODI/FWF: <a href="hpc_region_vs_connection.html" style="color:#a78bfa">hippocampus page</a>.</div>
-</div>
+  <h2>Metric comparison</h2>
+  <p>Same whole-tract model, each microstructure metric in turn.</p>
+  {metric_table()}
+  <p>NDI is the only metric carrying all three social effects with every monetary outcome null. FA tracks it and is the supplement for traditional-DTI readers. FWF adds only the bias effect plus a control-domain hit, and is dropped. ODI's bias effect runs in the same direction as NDI rather than opposite, which is atypical for the pair.</p>
 
+  <h2>Node-wise</h2>
+  <p>Every node-wise permutation test that was run: {n_all} analyses over the two bilateral tracts ({n_sig} FWE-significant). Each row is one outcome × tract × metric. At each of the 100 nodes the outcome is regressed on that node's metric plus the covariates; contiguous nodes with p &lt; .05 form a cluster; a cluster survives if its extent exceeds the 95th percentile of the maximum cluster under 5000 Freedman–Lane permutations. Click a row for the profile along the tract. Because the effect is diffuse, this view is descriptive; the whole-tract model above is the inferential unit.</p>
+  <div class="controls">
+    <span><label>Show</label><select id="f_show"><option value="rep">Reported outcomes</option><option value="sig">FWE-significant</option><option value="all">All measures</option></select></span>
+    <span><label>Condition</label><select id="f_cond"></select></span>
+    <span><label>Tract</label><select id="f_tract"></select></span>
+    <span><label>Metric</label><select id="f_metric"></select></span>
+    <span><label>Family</label><select id="f_family"></select></span>
+    <input id="f_search" placeholder="search" style="min-width:120px">
+    <span class="count" id="count"></span>
+  </div>
+  <table id="tbl" class="dtable"><thead><tr>
+    <th data-k="outcome_label">Outcome</th><th data-k="condition">Condition</th><th data-k="tract_label">Tract</th><th data-k="metric">Metric</th>
+    <th data-k="N">n</th><th data-k="n_sig_nodes">Sig nodes</th><th data-k="obs_max_cluster">Max cluster</th><th data-k="extent_threshold">Threshold</th>
+    <th data-k="best_p">Cluster p</th><th data-k="passed">FWE</th>
+  </tr></thead><tbody id="tbody"></tbody></table>
+
+  <h2>Hippocampal gray-matter NDI</h2>
+  <p>Bilateral hippocampal NDI from a NODDI refit at the gray-matter parallel diffusivity (1.1e-3 mm²/s), regressed on each outcome with ICV, hippocampal volume, motion and maternal age. Standardized β. Hippocampal volume on its own predicts none of them. <a href="hpc_region_vs_connection.html">Detail</a>.</p>
+  {hpc_table()}
+
+  <h2>HVLT</h2>
+  <p>Collapsed whole-tract NDI with each subregion's streamline count entered separately. HVLT trial 1 and RAFT social d′ correlate at −.05, so this is a separate finding, not convergent validation of the RAFT. <a href="hvlt_explorer.html">Detail</a>.</p>
+  {hvlt_table()}
 </div>
 
 <script>
 const DATA=__DATA__;
-const META=__META__;
-const SCRIPTS=__SCRIPTS__;
-
-// ---- demographics ----
-(function(){
- const d=META.demographics; const el=document.getElementById('demo'); if(!el)return;
- function dist(o){return Object.entries(o).map(([k,v])=>`<span class="pill">${k}: ${v}</span>`).join('')}
- let h='<div class="grid demo-grid">';
- h+=`<div class="stat"><div class="k">N (DTI roster)</div><div class="v">${d.n_dti}</div><div class="d">mothers w/ tractography (2 pilots excluded)</div></div>`;
- h+=`<div class="stat"><div class="k">Maternal age</div><div class="v">${d.age.mean} ± ${d.age.sd}</div><div class="d">range ${d.age.min}–${d.age.max} (n=${d.age.n})</div></div>`;
- if(d.income&&d.income.median)h+=`<div class="stat"><div class="k">Household income</div><div class="v">$${(d.income.median/1000).toFixed(0)}k</div><div class="d">median · range $${(d.income.min/1000).toFixed(0)}k–$${(d.income.max/1000).toFixed(0)}k</div></div>`;
- h+='</div>';
- h+='<div style="margin-top:12px"><div class="clbl">Race</div>'+dist(d.race)+'</div>';
- h+='<div style="margin-top:8px"><div class="clbl">Ethnicity</div>'+dist(d.ethnicity)+'</div>';
- h+='<div style="margin-top:8px"><div class="clbl">Education</div>'+dist(d.education)+'</div>';
- h+='<div style="margin-top:8px"><div class="clbl">Marital status</div>'+dist(d.marital)+'</div>';
- el.innerHTML=h;
-})();
-
-// ---- filters ----
-function uniq(k){return [...new Set(DATA.map(r=>r[k]))].sort()}
-function fillSel(id,vals,label){const s=document.getElementById(id);s.innerHTML=`<option value="">${label}</option>`+vals.map(v=>`<option>${v}</option>`).join('')}
-fillSel('f_family',uniq('family'),'All families');
-fillSel('f_cond',uniq('condition'),'All');
-fillSel('f_tract',uniq('tract_label'),'All tracts');
-fillSel('f_hemi',uniq('hemisphere'),'All');
-fillSel('f_metric',uniq('metric'),'All');
-
+function uniq(k){{return [...new Set(DATA.map(r=>r[k]))].sort()}}
+function fill(id,vals,label){{const s=document.getElementById(id);s.innerHTML=`<option value="">${{label}}</option>`+vals.map(v=>`<option>${{v}}</option>`).join('')}}
+fill('f_cond',uniq('condition'),'Both');fill('f_tract',uniq('tract_label'),'Both tracts');fill('f_metric',uniq('metric'),'All');fill('f_family',uniq('family'),'All families');
 let sortK='best_p',sortDir=1;
-document.querySelectorAll('th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(sortK===k)sortDir*=-1;else{sortK=k;sortDir=1}render()});
-
-function passFilters(r){
- const fam=f_family.value,cond=f_cond.value,tr=f_tract.value,he=f_hemi.value,me=f_metric.value,sg=f_sig.value,q=f_search.value.toLowerCase();
- if(fam&&r.family!==fam)return false;
- if(cond&&r.condition!==cond)return false;
- if(tr&&r.tract_label!==tr)return false;
- if(he&&r.hemisphere!==he)return false;
- if(me&&r.metric!==me)return false;
- if(sg==='sig'&&!r.passed)return false;
- if(sg==='trend'&&r.n_sig_nodes<5)return false;
- if(q&&!(r.outcome_label+' '+r.tract_label+' '+r.metric+' '+r.family).toLowerCase().includes(q))return false;
- return true;
-}
-['f_family','f_cond','f_tract','f_hemi','f_metric','f_sig','f_search'].forEach(id=>document.getElementById(id).oninput=render);
-
-function dirBadge(d){return d==='Positive'?'<span class="badge b-pos">Positive</span>':'<span class="badge b-neg">Negative</span>'}
-function fmtP(p){return (p===0||p===0.0)?'<0.0002':p}  // permutation p of 0 = 0/5000 → floor to <1/nperm
-
-function nodeViz(r){
- // inline SVG bar of t-values, sig nodes highlighted
- const W=560,H=90,pad=18,n=100;
- const ts=r.tvals.map(x=>x==null?0:x);
- const mx=Math.max(3,...ts.map(Math.abs));
- const bw=(W-2*pad)/n;
- let bars='';
- for(let i=0;i<n;i++){
-  const t=ts[i];const sig=r.pvals[i]!=null&&r.pvals[i]<0.05;
-  const h=Math.abs(t)/mx*(H/2-8);
-  const y=t>=0?(H/2-h):(H/2);
-  const col=sig?(t>=0?'#f4664a':'#3b82f6'):'#39404f';
-  bars+=`<rect x="${pad+i*bw}" y="${y}" width="${Math.max(bw-0.4,0.6)}" height="${h}" fill="${col}"><title>node ${i}: t=${t}</title></rect>`;
- }
- // cluster shading
- let shade='';
- r.clusters.forEach(c=>{if(c.passes)shade+=`<rect x="${pad+c.start*bw}" y="4" width="${(c.end-c.start+1)*bw}" height="${H-8}" fill="rgba(34,197,94,.10)" stroke="rgba(34,197,94,.4)"/>`;});
- return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px">
-  ${shade}<line x1="${pad}" y1="${H/2}" x2="${W-pad}" y2="${H/2}" stroke="#4a5163" stroke-width="1"/>${bars}
-  <text x="${pad}" y="${H-2}" fill="#6b7280" font-size="9">VTA (node 0)</text>
-  <text x="${W-pad}" y="${H-2}" fill="#6b7280" font-size="9" text-anchor="end">HPC (node 99)</text>
- </svg>`;
-}
-
-function detail(r){
- const lat=r.laterality;
- const Lp=lat.pct_left!=null?lat.pct_left:0, Rp=lat.pct_right!=null?lat.pct_right:0;
- let clusters=r.clusters.length?('<table style="width:auto"><thead><tr><th>Nodes</th><th>Size</th><th>Dir</th><th>mean t</th><th>max|t|</th><th>@node</th><th>cluster p</th><th>FWE</th></tr></thead><tbody>'+
-   r.clusters.map(c=>`<tr><td>${c.start}–${c.end}</td><td>${c.size}</td><td>${dirBadge(c.dir)}</td><td>${c.mean_t}</td><td>${c.max_abs_t}</td><td>${c.max_abs_t_node}</td><td>${fmtP(c.p)}</td><td>${c.passes?'<span class="badge b-sig">PASS</span>':'<span class="badge b-ns">no</span>'}</td></tr>`).join('')+'</tbody></table>')
-   :'<span class="tag">No contiguous clusters formed.</span>';
- const signodes=r.sig_node_list.length?r.sig_node_list.join(', '):'none';
- return `<td colspan="13" class="detail"><div class="dbox">
-  <div class="dgrid">
-   <div class="dcol">
-    <h4>${r.outcome_label} &nbsp;·&nbsp; ${r.tract_label} &nbsp;·&nbsp; ${r.metric}</h4>
-    <div class="kv">
-     <div class="k">Outcome family</div><div>${r.family}</div>
-     <div class="k">Condition</div><div>${r.condition}</div>
-     <div class="k">Tract</div><div>${r.tract_label} <span class="tag">(${r.tract_type}, ${r.hemisphere} hemisphere)</span></div>
-     <div class="k">Microstructure metric</div><div>${r.metric}</div>
-     <div class="k">N (after listwise deletion)</div><div>${r.N} <span class="tag">(${r.dropped} dropped)</span></div>
-     <div class="k">Permutations</div><div>${r.n_perms} (Freedman–Lane)</div>
-     <div class="k">Nodewise-significant nodes</div><div>${r.n_sig_nodes} / 100</div>
-     <div class="k">Observed max cluster</div><div>${r.obs_max_cluster} nodes</div>
-     <div class="k">Extent threshold (95th %ile null)</div><div>${r.extent_threshold} nodes</div>
-     <div class="k">FWE verdict</div><div>${r.passed?'<span class="badge b-sig">SIGNIFICANT</span> (cluster p='+fmtP(r.best_p)+')':'<span class="badge b-ns">n.s.</span>'}</div>
-    </div>
-    <h4 style="margin-top:16px">Controlled for (covariates)</h4>
-    <div class="tag">${r.covariates}</div>
-    <h4 style="margin-top:16px">Laterality <span class="tag">(nodewise-sig nodes, ${r.tract_type} L vs R, ${r.metric})</span></h4>
-    <div class="latbar"><div class="L" style="width:${Lp}%">L ${lat.L_sig} (${Lp}%)</div><div class="R" style="width:${Rp}%">R ${lat.R_sig} (${Rp}%)</div></div>
-    <h4 style="margin-top:14px">Hemispheric node overlap <span class="tag">(same outcome+metric, both ${r.tract_type} tracts aligned by node)</span></h4>
-    <div class="nodeviz">${dualLatViz(r)}</div>
-    <div class="tag" style="margin-top:6px">Overlapping significant nodes (sig on <b>both</b> L &amp; R): ${(lat.overlap_nodes&&lat.overlap_nodes.length)?'<span style="color:#4ade80">'+lat.overlap_nodes.join(', ')+'</span>':'none'}</div>
-   </div>
-   <div class="dcol">
-    <h4>Node-wise t-values <span class="tag">(each bar = a separate regression across subjects: outcome ~ that node's metric + covariates; the plot is a profile along the tract, not the tract's shape; green = FWE cluster; colored bars = p&lt;0.05)</span></h4>
-    <div class="nodeviz">${nodeViz(r)}</div>
-    <h4 style="margin-top:14px">Clusters</h4>${clusters}
-    <h4 style="margin-top:14px">Significant nodes (p&lt;0.05, uncorrected)</h4>
-    <div class="tag" style="line-height:1.6">${signodes}</div>
-   </div>
-  </div>
-  <h4 style="margin-top:18px">Scripts used to produce this result</h4>
-  <div class="script">1. Tract profiling → ${r.metric==='FA'?SCRIPTS.extraction.split(' / ')[0]:SCRIPTS.extraction.split(' / ')[1]}
-2. Covariates → ${SCRIPTS.covariates}
-3. Merge → ${SCRIPTS.merge}
-4. Permutation test → ${SCRIPTS.permute}
-5. Parallel runner → ${SCRIPTS.runner}
-Command: Rscript permutation_one.R &lt;csv&gt; ${r.outcome} ${r.metric}_ &lt;out&gt; ${r.id}</div>
- </div></td>`;
-}
-
-
-function siblingOf(r){return DATA.find(x=>x.outcome===r.outcome&&x.metric===r.metric&&x.tract_type===r.tract_type&&x.hemisphere!==r.hemisphere)}
-function miniProfile(r,label,overlap){
- const W=560,H=64,pad=18,n=100;const ts=r?r.tvals.map(x=>x==null?0:x):new Array(100).fill(0);
- const mx=Math.max(3,...ts.map(Math.abs));const bw=(W-2*pad)/n;let bars='';
- for(let i=0;i<n;i++){const t=ts[i];const sig=r&&r.pvals[i]!=null&&r.pvals[i]<0.05;const ov=overlap.includes(i);
-  const h=Math.abs(t)/mx*(H/2-6);const y=t>=0?(H/2-h):(H/2);
-  const col=ov&&sig?'#22c55e':(sig?(t>=0?'#f4664a':'#3b82f6'):'#39404f');
-  bars+=`<rect x="${pad+i*bw}" y="${y}" width="${Math.max(bw-0.4,0.6)}" height="${h}" fill="${col}"><title>node ${i}: t=${t}</title></rect>`;}
- let shade='';if(r)r.clusters.forEach(c=>{if(c.passes)shade+=`<rect x="${pad+c.start*bw}" y="3" width="${(c.end-c.start+1)*bw}" height="${H-6}" fill="rgba(34,197,94,.08)" stroke="rgba(34,197,94,.35)"/>`;});
- return `<div style="display:flex;align-items:center;gap:8px"><div style="width:34px;font-size:11px;color:var(--mut);text-align:right">${label}</div>
-  <svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px">${shade}<line x1="${pad}" y1="${H/2}" x2="${W-pad}" y2="${H/2}" stroke="#4a5163"/>${bars}</svg></div>`;
-}
-function dualLatViz(r){
- const sib=siblingOf(r);const ov=r.laterality.overlap_nodes||[];
- const Lr=r.hemisphere==='L'?r:sib, Rr=r.hemisphere==='R'?r:sib;
- return miniProfile(Lr,'L',ov)+miniProfile(Rr,'R',ov)+
-  `<div style="font-size:10px;color:var(--mut);text-align:right;padding-right:2px">node 0 (VTA) ————— node 99 (HPC)</div>`;
-}
-
-let openId=null;
-function render(){
- let rows=DATA.filter(passFilters);
- rows.sort((a,b)=>{let x=a[sortK],y=b[sortK];
-  if(sortK==='best_p'){x=x==null?9:x;y=y==null?9:y}
-  if(typeof x==='string')return sortDir*x.localeCompare(y);
-  return sortDir*((x>y)-(x<y));});
+document.querySelectorAll('#tbl th').forEach(th=>th.onclick=()=>{{const k=th.dataset.k;if(sortK===k)sortDir*=-1;else{{sortK=k;sortDir=1}}render()}});
+function pass(r){{
+ const sh=f_show.value,c=f_cond.value,t=f_tract.value,m=f_metric.value,f=f_family.value,q=f_search.value.toLowerCase();
+ if(sh==='rep'&&!r.reported)return false; if(sh==='sig'&&!r.passed)return false;
+ if(c&&r.condition!==c)return false; if(t&&r.tract_label!==t)return false; if(m&&r.metric!==m)return false; if(f&&r.family!==f)return false;
+ if(q&&!(r.outcome_label+' '+r.tract_label+' '+r.metric+' '+r.family+' '+r.outcome).toLowerCase().includes(q))return false;
+ return true;}}
+['f_show','f_cond','f_tract','f_metric','f_family','f_search'].forEach(id=>document.getElementById(id).oninput=render);
+function fmtP(p){{return p==null?'—':(p===0?'&lt;.0002':String(p).replace(/^0\\./,'.'))}}
+function dirBadge(d){{return d==='Positive'?'<span class="badge b-pos">positive</span>':'<span class="badge b-neg">negative</span>'}}
+function viz(r){{
+ const W=600,H=96,pad=18,n=100,ts=r.tvals.map(x=>x==null?0:x),mx=Math.max(3,...ts.map(Math.abs)),bw=(W-2*pad)/n;
+ let shade='';r.clusters.forEach(c=>{{if(c.passes)shade+=`<rect x="${{pad+c.start*bw}}" y="4" width="${{(c.end-c.start+1)*bw}}" height="${{H-8}}" fill="rgba(58,106,95,.13)" stroke="rgba(58,106,95,.45)"/>`}});
+ let bars='';for(let i=0;i<n;i++){{const t=ts[i],sig=r.pvals[i]!=null&&r.pvals[i]<0.05,h=Math.abs(t)/mx*(H/2-8),y=t>=0?(H/2-h):(H/2);
+  const col=sig?(t>=0?'#3a6a5f':'#a8553f'):'#d9d4c9';bars+=`<rect x="${{pad+i*bw}}" y="${{y}}" width="${{Math.max(bw-0.4,0.6)}}" height="${{h}}" fill="${{col}}"><title>node ${{i}}: t = ${{t}}</title></rect>`}}
+ return `<svg viewBox="0 0 ${{W}} ${{H}}" width="100%" style="max-width:${{W}}px">${{shade}}<line x1="${{pad}}" y1="${{H/2}}" x2="${{W-pad}}" y2="${{H/2}}" stroke="#b8b2a6"/>${{bars}}
+  <text x="${{pad}}" y="${{H-2}}" fill="#767066" font-size="9">VTA (node 0)</text><text x="${{W-pad}}" y="${{H-2}}" fill="#767066" font-size="9" text-anchor="end">hippocampus (node 99)</text></svg>`}}
+function detail(r){{
+ const cl=r.clusters.length?'<table class="dtable" style="width:auto"><thead><tr><th>Nodes</th><th>Size</th><th>Direction</th><th>Mean t</th><th>Cluster p</th><th>FWE</th></tr></thead><tbody>'+
+  r.clusters.map(c=>`<tr><td>${{c.start}}–${{c.end}}</td><td>${{c.size}}</td><td>${{dirBadge(c.dir)}}</td><td>${{c.mean_t}}</td><td>${{fmtP(c.p)}}</td><td>${{c.passes?'<span class="badge b-sig">yes</span>':'<span class="badge b-ns">no</span>'}}</td></tr>`).join('')+'</tbody></table>':'<span class="tag">No contiguous clusters formed.</span>';
+ return `<td colspan="10"><div class="dbox"><div class="dgrid"><div>
+  <h4>${{r.outcome_label}} · ${{r.tract_label}} · ${{r.metric}}</h4>
+  <div class="kv2"><div class="k">Family</div><div>${{r.family}}</div><div class="k">Condition</div><div>${{r.condition}}</div>
+  <div class="k">n</div><div>${{r.N}} <span class="tag">(${{r.dropped}} dropped)</span></div><div class="k">Permutations</div><div>${{r.n_perms}}, Freedman–Lane</div>
+  <div class="k">Nodes with p &lt; .05</div><div>${{r.n_sig_nodes}} / 100</div><div class="k">Largest cluster</div><div>${{r.obs_max_cluster}} nodes</div>
+  <div class="k">Extent threshold</div><div>${{r.extent_threshold}} nodes (95th percentile of null max)</div>
+  <div class="k">Verdict</div><div>${{r.passed?'<span class="badge b-sig">FWE-significant</span> cluster p = '+fmtP(r.best_p):'<span class="badge b-ns">not significant</span>'}}</div>
+  <div class="k">Covariates</div><div class="tag">${{r.covariates}}</div></div>
+  <h4 style="margin-top:14px">Clusters</h4>${{cl}}
+  <h4 style="margin-top:12px">Command</h4><div class="tag mono">Rscript permutation_one.R &lt;csv&gt; ${{r.outcome}} ${{r.metric}}_ &lt;out&gt; ${{r.id}}</div>
+  </div><div><h4>t along the tract <span class="tag">(one regression per node; green positive, brown negative, shaded = FWE cluster)</span></h4><div class="viz">${{viz(r)}}</div>
+  <h4 style="margin-top:12px">Nodes with p &lt; .05</h4><div class="tag" style="line-height:1.6">${{r.sig_node_list.length?r.sig_node_list.join(', '):'none'}}</div></div></div></div></td>`}}
+function render(){{
+ let rows=DATA.filter(pass);
+ rows.sort((a,b)=>{{let x=a[sortK],y=b[sortK];if(sortK==='best_p'){{x=x==null?9:x;y=y==null?9:y}}if(typeof x==='string')return sortDir*x.localeCompare(y);return sortDir*((x>y)-(x<y))}});
  const tb=document.getElementById('tbody');tb.innerHTML='';
- rows.forEach(r=>{
-  const tr=document.createElement('tr');tr.className='row'+(r.passed?' sig':'');
-  const dir=r.clusters.find(c=>c.passes);
-  tr.innerHTML=`<td><b>${r.outcome_label}</b></td><td>${r.family}</td><td>${r.condition}</td>
-   <td>${r.tract_label}</td><td class="hemi ${r.hemisphere==='L'?'':''}">${r.hemisphere}</td><td>${r.tract_type}</td>
-   <td>${r.metric}</td><td>${r.N}</td><td>${r.n_sig_nodes}</td><td>${r.obs_max_cluster}</td><td>${r.extent_threshold}</td>
-   <td>${r.best_p!=null?fmtP(r.best_p)+' '+(dir?dirBadge(dir.dir):''):'<span class="tag">—</span>'}</td>
-   <td>${r.passed?'<span class="badge b-sig">✓</span>':'<span class="badge b-ns">·</span>'}</td>`;
-  tr.onclick=()=>{
-   const nx=tr.nextSibling;
-   if(nx&&nx.classList&&nx.classList.contains('detail-row')){nx.remove();openId=null;return}
-   document.querySelectorAll('.detail-row').forEach(e=>e.remove());
-   const dr=document.createElement('tr');dr.className='detail-row';dr.innerHTML=detail(r);
-   tr.after(dr);openId=r.id;
-  };
-  tb.appendChild(tr);
- });
- document.getElementById('count').textContent=`${rows.length} of ${DATA.length} analyses · ${rows.filter(r=>r.passed).length} FWE-significant`;
-}
+ rows.forEach(r=>{{const tr=document.createElement('tr');tr.className='row'+(r.reported?' rep':'');const d=r.clusters.find(c=>c.passes);
+  tr.innerHTML=`<td>${{r.outcome_label}}</td><td>${{r.condition==='SOCIAL'?'Social':'Monetary'}}</td><td>${{r.tract_label}}</td><td>${{r.metric}}</td><td>${{r.N}}</td><td>${{r.n_sig_nodes}}</td><td>${{r.obs_max_cluster}}</td><td>${{r.extent_threshold}}</td>
+   <td>${{r.best_p!=null?'<span class="sig">'+fmtP(r.best_p)+'</span> '+dirBadge(d.dir):'<span class="tag">—</span>'}}</td><td>${{r.passed?'<span class="badge b-sig">yes</span>':'<span class="badge b-ns">no</span>'}}</td>`;
+  tr.onclick=()=>{{const nx=tr.nextSibling;if(nx&&nx.classList&&nx.classList.contains('detail-row')){{nx.remove();return}}document.querySelectorAll('.detail-row').forEach(e=>e.remove());const dr=document.createElement('tr');dr.className='detail-row';dr.innerHTML=detail(r);tr.after(dr)}};
+  tb.appendChild(tr)}});
+ document.getElementById('count').textContent=`${{rows.length}} of ${{DATA.length}} · ${{rows.filter(r=>r.passed).length}} FWE-significant`}}
 render();
 </script></body></html>'''
-
-html=html.replace('__TRACTAVG__',TRACTAVG).replace('__DATA__',data_js).replace('__META__',meta_js).replace('__SCRIPTS__',json.dumps(SCRIPTS))
-open(f'{OUT}/results_explorer.html','w').write(html)
-print("wrote results_explorer.html",len(html),"bytes")
+HTML = HTML.replace('__DATA__', json.dumps(DATA))
+open(f'{OUT}/results_explorer.html', 'w').write(HTML)
+print(f'wrote results_explorer.html ({len(HTML)//1024} KB): {n_all} analyses, {n_rep} reported, {n_sig} significant')

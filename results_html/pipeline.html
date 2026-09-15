@@ -423,7 +423,7 @@ done
 
 echo &quot;=== All subjects finished (sequential run) ===&quot;
 
-</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Three cleanups on the raw diffusion data: remove thermal noise (MP-PCA), remove Gibbs ringing, and drop the unstable b=250 shell (Olson-lab convention).</p><div class="lead-lbl">Result</div><p class="res">Shells kept: b = 0, 1000, 2000, 3250, 5000.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">eddy --repol</span><span class="pkg">FSL</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Three cleanups on the raw diffusion data: remove thermal noise (MP-PCA), remove Gibbs ringing, and drop the unstable b=250 shell.</p><div class="lead-lbl">Result</div><p class="res">Shells kept: b = 0, 1000, 2000, 3250, 5000.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">eddy --repol</span><span class="pkg">FSL</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
 
 <span class="c"># Base directories</span>
 nifti_base=&quot;/data/projects/STUDIES/IMPACT/DTI/NIFTI&quot;
@@ -1127,7 +1127,7 @@ process_subj() {
         -mask &quot;$d/mask.mif&quot; \
         -force
 
-<span class="c">    # Tissue concatenation for visualization (matches Ranesh&#x27;s pipeline)</span>
+<span class="c">    # Tissue concatenation for visualization (matches the reference pipeline)</span>
     mrconvert -coord 3 0 &quot;$d/wm_fod.mif&quot; - | \
         mrcat &quot;$d/csf_fod.mif&quot; &quot;$d/gm_fod.mif&quot; - &quot;$d/vf_fod.mif&quot; -force
 
@@ -1315,14 +1315,14 @@ for subj in $subjects; do
     while [ &quot;$(jobs -r | wc -l)&quot; -ge 15 ]; do sleep 1; done
 done
 wait
-echo &quot;=== All ROI warps finished ===&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Push all six ROIs (VTA, hippocampus, tract atlas, both hemispheres) from MNI to T1 to diffusion, chaining the SyN warp then the str2diff matrix. Nearest-neighbor interpolation (binary masks), re-binarized after. Output per subject in CSD/&lt;subj&gt;/rois/, visually QC'd on the diffusion image.</p><div class="lead-lbl">Result</div><p class="res">All ROIs land in plausible anatomical positions on the diffusion image.</p><figure class="fig"><img src="../images/roi_qc_wholebrain_left_VTA.png" alt="Left VTA seed (Pauli 25%) warped to diffusion space, s1000." loading="lazy"><figcaption>Left VTA seed (Pauli 25%) warped to diffusion space, s1000.</figcaption></figure><figure class="fig"><img src="../images/roi_qc_zoomed_left_HPC.png" alt="Left hippocampus target (Harvard-Oxford 50%), zoomed." loading="lazy"><figcaption>Left hippocampus target (Harvard-Oxford 50%), zoomed.</figcaption></figure><figure class="fig"><img src="../images/roi_qc_zoomed_left_tract_atlas.png" alt="Left VTA-HPC tract atlas (Ranesh&#x27;s HCP group mean) in diffusion space." loading="lazy"><figcaption>Left VTA-HPC tract atlas (Ranesh's HCP group mean) in diffusion space.</figcaption></figure></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">fslmaths: exclusion mask</span><span class="pkg">FSL</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+echo &quot;=== All ROI warps finished ===&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Push all six ROIs (VTA, hippocampus, tract atlas, both hemispheres) from MNI to T1 to diffusion, chaining the SyN warp then the str2diff matrix. Nearest-neighbor interpolation (binary masks), re-binarized after. Output per subject in CSD/&lt;subj&gt;/rois/, visually QC'd on the diffusion image.</p><div class="lead-lbl">Result</div><p class="res">All ROIs land in plausible anatomical positions on the diffusion image.</p><figure class="fig"><img src="../images/roi_qc_wholebrain_left_VTA.png" alt="Left VTA seed (Pauli 25%) warped to diffusion space, s1000." loading="lazy"><figcaption>Left VTA seed (Pauli 25%) warped to diffusion space, s1000.</figcaption></figure><figure class="fig"><img src="../images/roi_qc_zoomed_left_HPC.png" alt="Left hippocampus target (Harvard-Oxford 50%), zoomed." loading="lazy"><figcaption>Left hippocampus target (Harvard-Oxford 50%), zoomed.</figcaption></figure><figure class="fig"><img src="../images/roi_qc_zoomed_left_tract_atlas.png" alt="Left VTA-HPC tract atlas (HCP group mean) in diffusion space." loading="lazy"><figcaption>Left VTA-HPC tract atlas (HCP group mean) in diffusion space.</figcaption></figure></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">fslmaths: exclusion mask</span><span class="pkg">FSL</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
 <span class="c"># ============================================================</span>
 <span class="c"># Step 22: Build Atlas-Based Exclusion Masks</span>
 <span class="c"># ============================================================</span>
-<span class="c"># Uses Ranesh&#x27;s GroupMean_thr50 tract atlas to create a single</span>
+<span class="c"># Uses the reference GroupMean_thr50 tract atlas to create a single</span>
 <span class="c"># exclusion mask per hemisphere, replacing 13 individual exclusion ROIs.</span>
 <span class="c">#</span>
-<span class="c"># Logic (per Ranesh):</span>
+<span class="c"># Logic:</span>
 <span class="c">#   1. Dilate tract atlas by 2 voxels (fslmaths -dilM -dilM)</span>
 <span class="c">#   2. Add VTA seed + HPC target to dilated atlas</span>
 <span class="c">#   3. Binarize = inclusion zone (where streamlines are allowed)</span>
@@ -1397,13 +1397,13 @@ for subj in $(ls -1 &quot;$nifti_base&quot;); do
 done
 wait
 
-echo &quot;=== Step 22 Complete: $(date) ===&quot; | tee -a &quot;$log_file&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Ranesh's original pipeline used 13 separate anatomical exclusion ROIs. His approved shortcut: take his group tract atlas, dilate it 2 voxels into a corridor, add the VTA and hippocampus, then invert, so allowed = the corridor and excluded = everything else. One mask instead of thirteen. This is also what lets us drop the FOD cutoff so low in the next step.</p><div class="lead-lbl">Result</div><p class="res">57/57 pass all 7 audit checks. Inclusion corridor 1,526 to 1,934 voxels (mean ~1,720), consistent across subjects. VTA and HPC fully contained.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">tckgen: FOD-cutoff test</span><span class="pkg">MRtrix3</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+echo &quot;=== Step 22 Complete: $(date) ===&quot; | tee -a &quot;$log_file&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>The reference pipeline used 13 separate anatomical exclusion ROIs. His approved shortcut: take his group tract atlas, dilate it 2 voxels into a corridor, add the VTA and hippocampus, then invert, so allowed = the corridor and excluded = everything else. One mask instead of thirteen. This is also what lets us drop the FOD cutoff so low in the next step.</p><div class="lead-lbl">Result</div><p class="res">57/57 pass all 7 audit checks. Inclusion corridor 1,526 to 1,934 voxels (mean ~1,720), consistent across subjects. VTA and HPC fully contained.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">tckgen: FOD-cutoff test</span><span class="pkg">MRtrix3</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
 <span class="c"># ============================================================</span>
 <span class="c"># Step 23: Test Tractography on 5 Subjects (Parameter Tuning)</span>
 <span class="c"># ============================================================</span>
 <span class="c"># Tests tckgen with 3 FOD cutoff values (0.1, 0.08, 0.06) on</span>
 <span class="c"># 5 subjects to find optimal parameters for 3T IMPACT data.</span>
-<span class="c"># Ranesh used cutoff=0.06 at 7T; predicted 0.08 for 3T.</span>
+<span class="c"># Reference pipeline used cutoff=0.06 at 7T; 0.08 predicted for 3T.</span>
 <span class="c">#</span>
 <span class="c"># Input:  CSD/&lt;subj&gt;/wm_fod_norm.mif (normalized WM FODs)</span>
 <span class="c">#         CSD/&lt;subj&gt;/rois/left_VTA_diff.nii.gz (seed)</span>
@@ -1414,18 +1414,18 @@ echo &quot;=== Step 22 Complete: $(date) ===&quot; | tee -a &quot;$log_file&quot
 <span class="c"># Output: CSD/&lt;subj&gt;/tckgen/l_vta_l_hipp/l_vta_l_hipp_&lt;cutoff&gt;.tck</span>
 <span class="c">#         CSD/&lt;subj&gt;/tckgen/r_vta_r_hipp/r_vta_r_hipp_&lt;cutoff&gt;.tck</span>
 <span class="c">#</span>
-<span class="c"># Parameters matching Ranesh&#x27;s pipeline (adjusted for 3T):</span>
-<span class="c">#   -seed_unidirectional (same as Ranesh)</span>
-<span class="c">#   -select 1000 (Ranesh: 2500, reduced for test)</span>
-<span class="c">#   -seeds 5000000 (Ranesh: 25M, reduced for test)</span>
-<span class="c">#   -minlength 35 (Ranesh: 35mm at 7T)</span>
-<span class="c">#   -maxlength 65 (Ranesh: 65mm at 7T)</span>
-<span class="c">#   -stop (same as Ranesh)</span>
-<span class="c">#   -cutoff varies: 0.1, 0.08, 0.06 (Ranesh: fixed 0.06 at 7T)</span>
-<span class="c">#   -nthreads 8 (Ranesh: 24, reduced for shared cluster)</span>
+<span class="c"># Parameters matching the reference pipeline (adjusted for 3T):</span>
+<span class="c">#   -seed_unidirectional (same as reference)</span>
+<span class="c">#   -select 1000 (reference: 2500, reduced for test)</span>
+<span class="c">#   -seeds 5000000 (reference: 25M, reduced for test)</span>
+<span class="c">#   -minlength 35 (reference: 35mm at 7T)</span>
+<span class="c">#   -maxlength 65 (reference: 65mm at 7T)</span>
+<span class="c">#   -stop (same as reference)</span>
+<span class="c">#   -cutoff varies: 0.1, 0.08, 0.06 (reference: fixed 0.06 at 7T)</span>
+<span class="c">#   -nthreads 8 (reference: 24, reduced for shared cluster)</span>
 <span class="c">#</span>
 <span class="c"># NOT using -fslgrad (gradients already embedded in dwi.mif from Step 15)</span>
-<span class="c"># NOT using ACT, backtrack, angle, step_size (Ranesh didn&#x27;t use these)</span>
+<span class="c"># NOT using ACT, backtrack, angle, step_size (unused in the reference pipeline)</span>
 <span class="c"># ============================================================</span>
 
 export PATH=/data/tools/mrtrix3/bin:$PATH
@@ -1433,7 +1433,7 @@ export PATH=/data/tools/mrtrix3/bin:$PATH
 csd_base=&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD&quot;
 log_file=&quot;/data/projects/STUDIES/IMPACT/DTI/scripts/step23_test.log&quot;
 
-<span class="c"># 5 test subjects (from Ranesh&#x27;s suggestion)</span>
+<span class="c"># 5 test subjects (from the reference suggestion)</span>
 test_subjects=&quot;s169 s4222 s4418 s606 s1000&quot;
 
 echo &quot;=== Step 23: Test Tractography ===&quot; &gt; &quot;$log_file&quot;
@@ -1569,15 +1569,15 @@ for subj in $test_subjects; do
             fi
         done
     done
-done</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>The one tuned parameter: the FOD amplitude cutoff (when tracking stops). Ranesh used 0.06 at 7T; 3T is noisier, so we tested 0.1 / 0.08 / 0.06 / 0.01 on 5 pilot subjects, both hemispheres. Because the exclusion corridor already constrains tracking, the usual downside of a low cutoff (spurious fibers) doesn't apply, so we could go lower than expected.</p><p>Runs hitting the 1000 target: <b>0.1</b> 2/10 (too strict for 3T); <b>0.08</b> ~5/10 (inconsistent, s606 L = 309); <b>0.06</b> 10/10; <b>0.01</b> 10/10 and about 5x more seed-efficient. Paths were virtually identical to 0.06 (same arc, length ~44 vs ~47 mm). The 0.01 TDI is slightly thicker, which the cleaning step then tightens below the 0.06 bundle anyway.</p><div class="lead-lbl">Result</div><p class="res">Cutoff 0.01 chosen for the full run. Ranesh confirmed it is robust with the atlas-based exclusion mask.</p><figure class="fig"><img src="../images/cutoff_compare_s169_l.png" alt="TDI at 0.06 (left) vs 0.01 (right), s169 left tract. Same VTA-HPC arc." loading="lazy"><figcaption>TDI at 0.06 (left) vs 0.01 (right), s169 left tract. Same VTA-HPC arc.</figcaption></figure><figure class="fig"><img src="../images/cutoff_stats_comparison.png" alt="Streamline counts and lengths across the 5 test subjects, four cutoffs." loading="lazy"><figcaption>Streamline counts and lengths across the 5 test subjects, four cutoffs.</figcaption></figure></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">tckgen: full run (all 57)</span><span class="pkg">MRtrix3</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+done</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>The one tuned parameter: the FOD amplitude cutoff (when tracking stops). The reference pipeline used 0.06 at 7T; 3T is noisier, so we tested 0.1 / 0.08 / 0.06 / 0.01 on 5 pilot subjects, both hemispheres. Because the exclusion corridor already constrains tracking, the usual downside of a low cutoff (spurious fibers) doesn't apply, so we could go lower than expected.</p><p>Runs hitting the 1000 target: <b>0.1</b> 2/10 (too strict for 3T); <b>0.08</b> ~5/10 (inconsistent, s606 L = 309); <b>0.06</b> 10/10; <b>0.01</b> 10/10 and about 5x more seed-efficient. Paths were virtually identical to 0.06 (same arc, length ~44 vs ~47 mm). The 0.01 TDI is slightly thicker, which the cleaning step then tightens below the 0.06 bundle anyway.</p><div class="lead-lbl">Result</div><p class="res">Cutoff 0.01 chosen for the full run. Independently confirmed robust with the atlas-based exclusion mask.</p><figure class="fig"><img src="../images/cutoff_compare_s169_l.png" alt="TDI at 0.06 (left) vs 0.01 (right), s169 left tract. Same VTA-HPC arc." loading="lazy"><figcaption>TDI at 0.06 (left) vs 0.01 (right), s169 left tract. Same VTA-HPC arc.</figcaption></figure><figure class="fig"><img src="../images/cutoff_stats_comparison.png" alt="Streamline counts and lengths across the 5 test subjects, four cutoffs." loading="lazy"><figcaption>Streamline counts and lengths across the 5 test subjects, four cutoffs.</figcaption></figure></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">tckgen: full run (all 57)</span><span class="pkg">MRtrix3</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
 <span class="c"># ============================================================</span>
 <span class="c"># Step 24: Full Tractography — All 57 Subjects (cutoff 0.01)</span>
 <span class="c"># ============================================================</span>
 <span class="c"># Runs tckgen on all subjects with parameters determined in Step 23:</span>
-<span class="c">#   - cutoff 0.01 (confirmed by Ranesh + pilot testing)</span>
-<span class="c">#   - select 2500 streamlines (Ranesh&#x27;s target)</span>
-<span class="c">#   - seeds 25,000,000 (Ranesh&#x27;s seed limit)</span>
-<span class="c">#   - minlength 35mm, maxlength 65mm (Ranesh&#x27;s values)</span>
+<span class="c">#   - cutoff 0.01 (pilot testing + independent confirmation)</span>
+<span class="c">#   - select 2500 streamlines (the reference target)</span>
+<span class="c">#   - seeds 25,000,000 (the reference seed limit)</span>
+<span class="c">#   - minlength 35mm, maxlength 65mm (the reference values)</span>
 <span class="c">#   - Atlas-based exclusion masks from Step 22</span>
 <span class="c">#</span>
 <span class="c"># Input:  CSD/&lt;subj&gt;/wm_fod_norm.mif</span>
@@ -1680,14 +1680,14 @@ for subj in $(ls -1 &quot;$nifti_base&quot;); do
         fi
     done
 done
-echo &quot;STEP24_ALL_DONE&quot; &gt;&gt; &quot;$log_file&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Same command at production budget: 2,500 streamlines from up to 25M seed attempts, cutoff 0.01. Later repeated with a second (anterior) VTA-HPC atlas Ranesh provided, giving four tracts: posterior L/R and anterior L/R.</p><div class="lead-lbl">Result</div><p class="res">114/114 posterior runs hit 2,500 streamlines. Seed usage 511K to 2.03M (avg ~1.1M, about 4.4% of the cap), no subject near the budget. Anterior set: all 114 also hit 2,500.</p></div></details></div></div><div class="subhead">Cleaning</div><div class="step"><div class="stephead"><span class="cmd">clean_bundle (Mahalanobis)</span><span class="pkg">pyAFQ</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/usr/bin/env python3</span>
+echo &quot;STEP24_ALL_DONE&quot; &gt;&gt; &quot;$log_file&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Same command at production budget: 2,500 streamlines from up to 25M seed attempts, cutoff 0.01. Later repeated with a second (anterior) VTA-HPC atlas, giving four tracts: posterior L/R and anterior L/R.</p><div class="lead-lbl">Result</div><p class="res">114/114 posterior runs hit 2,500 streamlines. Seed usage 511K to 2.03M (avg ~1.1M, about 4.4% of the cap), no subject near the budget. Anterior set: all 114 also hit 2,500.</p></div></details></div></div><div class="subhead">Cleaning</div><div class="step"><div class="stephead"><span class="cmd">clean_bundle (Mahalanobis)</span><span class="pkg">pyAFQ</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/usr/bin/env python3</span>
 <span class="c"># ============================================================</span>
 <span class="c"># Step 25: Clean tracts using pyAFQ</span>
 <span class="c"># ============================================================</span>
-<span class="c"># Adapted from Ranesh&#x27;s cleaning script</span>
+<span class="c"># Adapted from the reference cleaning script</span>
 <span class="c"># (hcp_afq_tract_cleaning_hipp_accumbens.txt)</span>
 <span class="c">#</span>
-<span class="c"># Parameters (from Ranesh):</span>
+<span class="c"># Parameters:</span>
 <span class="c">#   n_points = 100</span>
 <span class="c">#   clean_rounds = 5</span>
 <span class="c">#   distance_threshold = 3 (Mahalanobis SD)</span>
@@ -1711,7 +1711,7 @@ csd_base = Path(&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD&quot;)
 nifti_base = Path(&quot;/data/projects/STUDIES/IMPACT/DTI/NIFTI&quot;)
 log_file = Path(&quot;/data/projects/STUDIES/IMPACT/DTI/scripts/step25_cleaning.log&quot;)
 
-<span class="c"># pyAFQ cleaning parameters (from Ranesh)</span>
+<span class="c"># pyAFQ cleaning parameters</span>
 n_points = 100
 clean_rounds = 5
 distance_threshold = 3      # 3 SD Mahalanobis distance
@@ -1810,7 +1810,7 @@ with open(log_file, &#x27;w&#x27;) as log:
 
     log.write(&quot;\nSTEP25_ALL_DONE\n&quot;)
 
-print(&quot;\n=== Step 25 Complete ===&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Prune anatomically implausible streamlines by Mahalanobis distance: anything more than 3 SD from the bundle's core shape, or 2 SD off in length, dropped over 5 rounds. Ported from Ranesh's cleaning script.</p><div class="lead-lbl">Result</div><p class="res">114/114 cleaned, retention 26.4% to 57.5% (avg ~39%), no bundle emptied. The cleaned 0.01 tract is tighter (length SD ~3.5-4.5 mm) than both the uncleaned 0.01 and the conservative 0.06 (~5-7 mm), which validates the permissive-cutoff plus cleaning approach.</p><figure class="fig"><img src="../images/cleaned_compare_s169_l.png" alt="s169 left: 0.06 conservative, 0.01 uncleaned, 0.01 cleaned. The cleaned 0.01 is the most focused." loading="lazy"><figcaption>s169 left: 0.06 conservative, 0.01 uncleaned, 0.01 cleaned. The cleaned 0.01 is the most focused.</figcaption></figure><figure class="fig"><img src="../images/cleaned_stats_comparison.png" alt="Length variability across test subjects; the cleaned 0.01 bars (green) are consistently lowest." loading="lazy"><figcaption>Length variability across test subjects; the cleaned 0.01 bars (green) are consistently lowest.</figcaption></figure></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">tckmap: visual QC</span><span class="pkg">MRtrix3 · Python</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/usr/bin/env python3</span>
+print(&quot;\n=== Step 25 Complete ===&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Prune anatomically implausible streamlines by Mahalanobis distance: anything more than 3 SD from the bundle's core shape, or 2 SD off in length, dropped over 5 rounds. Ported from the reference cleaning script.</p><div class="lead-lbl">Result</div><p class="res">114/114 cleaned, retention 26.4% to 57.5% (avg ~39%), no bundle emptied. The cleaned 0.01 tract is tighter (length SD ~3.5-4.5 mm) than both the uncleaned 0.01 and the conservative 0.06 (~5-7 mm), which validates the permissive-cutoff plus cleaning approach.</p><figure class="fig"><img src="../images/cleaned_compare_s169_l.png" alt="s169 left: 0.06 conservative, 0.01 uncleaned, 0.01 cleaned. The cleaned 0.01 is the most focused." loading="lazy"><figcaption>s169 left: 0.06 conservative, 0.01 uncleaned, 0.01 cleaned. The cleaned 0.01 is the most focused.</figcaption></figure><figure class="fig"><img src="../images/cleaned_stats_comparison.png" alt="Length variability across test subjects; the cleaned 0.01 bars (green) are consistently lowest." loading="lazy"><figcaption>Length variability across test subjects; the cleaned 0.01 bars (green) are consistently lowest.</figcaption></figure></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">tckmap: visual QC</span><span class="pkg">MRtrix3 · Python</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/usr/bin/env python3</span>
 <span class="c"># ============================================================</span>
 <span class="c"># Step 26: Visual QC — Cleaned Tract TDIs for All 57 Subjects</span>
 <span class="c"># ============================================================</span>
@@ -1957,7 +1957,7 @@ print(&quot;STEP26_ALL_DONE&quot;)</pre></div></details><details class="drawer">
 <span class="c"># ============================================================</span>
 <span class="c"># Step 27: Node-wise FA Extraction (AFQ-style tract profiling)</span>
 <span class="c"># ============================================================</span>
-<span class="c"># Adapted from Ranesh&#x27;s nodewise_noddi.py — exact same profiling</span>
+<span class="c"># Adapted from the reference nodewise_noddi.py — exact same profiling</span>
 <span class="c"># machinery (QuickBundles orientation + AFQ Gaussian-weighted</span>
 <span class="c"># profile), just applied to FA maps from DTIFIT instead of</span>
 <span class="c"># NODDI metrics. Processes both posterior and anterior tracts.</span>
@@ -1996,7 +1996,7 @@ nodewise.mkdir(parents=True, exist_ok=True)
 csv_dir = nodewise / &quot;csvs&quot;
 csv_dir.mkdir(parents=True, exist_ok=True)
 
-<span class="c"># Profile parameters (match Ranesh&#x27;s NODDI script)</span>
+<span class="c"># Profile parameters (match the reference NODDI script)</span>
 num_nodes = 100
 min_streamlines = 5
 
@@ -2004,7 +2004,7 @@ subjects = sorted([d.name for d in nifti_root.iterdir() if d.is_dir()])
 
 
 <span class="c"># =========================</span>
-<span class="c"># HELPERS (verbatim from Ranesh)</span>
+<span class="c"># HELPERS (verbatim from the reference implementation)</span>
 <span class="c"># =========================</span>
 
 def orient_to_centroid(streamlines, nb_points=num_nodes):
@@ -2085,13 +2085,13 @@ for tract in tracts:
                 print(f&quot;[{s}] [{tract}] SKIP due to error: {e}&quot;)
 
 print(f&quot;\nALL DONE.\nCSV directory: {csv_dir}&quot;)
-print(&quot;STEP27_ALL_DONE&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Sample FA at 100 nodes evenly spaced along the tract. Every streamline is oriented the same way (via a QuickBundles centroid, so node 1 is always the same end), resampled to 100 points, and Gaussian-weighted (core streamlines count more). Analyses use the middle nodes (~25-75); the ends are dropped for partial-volume contamination. Ported from Ranesh's nodewise_noddi.py.</p><div class="lead-lbl">Result</div><p class="res">228 FA profiles (4 tracts x 57 subjects), zero skips. Each tract CSV is 5,701 rows (57 x 100 + header).</p><figure class="fig"><img src="../images/step27_fa_profile_s1000_posterior_l.png" alt="FA along the posterior left tract, s1000: peaks in deep WM (~0.53), drops toward HPC (0.29)." loading="lazy"><figcaption>FA along the posterior left tract, s1000: peaks in deep WM (~0.53), drops toward HPC (0.29).</figcaption></figure><figure class="fig"><img src="../images/step27_fa_profile_s1000_anterior_l.png" alt="FA along the anterior left tract, s1000: similar start, different late-tract shape." loading="lazy"><figcaption>FA along the anterior left tract, s1000: similar start, different late-tract shape.</figcaption></figure></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">NODDI fit (modulated maps)</span><span class="pkg">AMICO</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre>amico.util.fsl2scheme(bvals, bvecs, bStep=200)   # round b to nearest 200
+print(&quot;STEP27_ALL_DONE&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Sample FA at 100 nodes evenly spaced along the tract. Every streamline is oriented the same way (via a QuickBundles centroid, so node 1 is always the same end), resampled to 100 points, and Gaussian-weighted (core streamlines count more). Analyses use the middle nodes (~25-75); the ends are dropped for partial-volume contamination. Ported from the reference nodewise_noddi.py.</p><div class="lead-lbl">Result</div><p class="res">228 FA profiles (4 tracts x 57 subjects), zero skips. Each tract CSV is 5,701 rows (57 x 100 + header).</p><figure class="fig"><img src="../images/step27_fa_profile_s1000_posterior_l.png" alt="FA along the posterior left tract, s1000: peaks in deep WM (~0.53), drops toward HPC (0.29)." loading="lazy"><figcaption>FA along the posterior left tract, s1000: peaks in deep WM (~0.53), drops toward HPC (0.29).</figcaption></figure><figure class="fig"><img src="../images/step27_fa_profile_s1000_anterior_l.png" alt="FA along the anterior left tract, s1000: similar start, different late-tract shape." loading="lazy"><figcaption>FA along the anterior left tract, s1000: similar start, different late-tract shape.</figcaption></figure></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">NODDI fit (modulated maps)</span><span class="pkg">AMICO</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre>amico.util.fsl2scheme(bvals, bvecs, bStep=200)   # round b to nearest 200
 ae = amico.Evaluation(study_dir, subject)
 ae.set_model(&#x27;NODDI&#x27;)
 ae.load_data(dwi, scheme, mask, b0_thr=100)
 ae.generate_kernels(regenerate=True)
 ae.fit()
-ae.save_results()   # -&gt; fit_NDI_modulated, fit_ODI_modulated, fit_FWF, fit_RMSE</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Fit NODDI on all shells with AMICO, giving three interpretable maps per voxel: NDI (neurite density), ODI (orientation dispersion), FWF (free-water fraction). We saved the modulated NDI/ODI (tissue-weighted partial-volume correction, per Parker et al. 2021), the version Ranesh used. FWF has no modulated version; the tissue-weighting is itself the correction. Config: bStep=200, b0_thr=100, doSaveModulatedMaps=True, doComputeRMSE=True.</p><div class="lead-lbl">Result</div><p class="res">57/57 pass, full set of NODDI outputs. 3 subjects hit a kernel-directory race on the parallel pass and were re-run serially.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">afq_profile: NDI · ODI · FWF</span><span class="pkg">dipy</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c"># identical machinery to the FA step; only the sampled map changes:</span>
+ae.save_results()   # -&gt; fit_NDI_modulated, fit_ODI_modulated, fit_FWF, fit_RMSE</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Fit NODDI on all shells with AMICO, giving three interpretable maps per voxel: NDI (neurite density), ODI (orientation dispersion), FWF (free-water fraction). We saved the modulated NDI/ODI (tissue-weighted partial-volume correction, per Parker et al. 2021), the version used in the reference pipeline. FWF has no modulated version; the tissue-weighting is itself the correction. Config: bStep=200, b0_thr=100, doSaveModulatedMaps=True, doComputeRMSE=True.</p><div class="lead-lbl">Result</div><p class="res">57/57 pass, full set of NODDI outputs. 3 subjects hit a kernel-directory race on the parallel pass and were re-run serially.</p></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">afq_profile: NDI · ODI · FWF</span><span class="pkg">dipy</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c"># identical machinery to the FA step; only the sampled map changes:</span>
 NDI = profile_metric(&#x27;fit_NDI_modulated.nii.gz&#x27;, sl_oriented)
 ODI = profile_metric(&#x27;fit_ODI_modulated.nii.gz&#x27;, sl_oriented)
 FWF = profile_metric(&#x27;fit_FWF.nii.gz&#x27;,           sl_oriented)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>The FA-profiling step again (identical orient plus Gaussian-weighted profiling, same helpers), applied to the three NODDI maps. This produces the main microstructure measurements the statistics use.</p><div class="lead-lbl">Result</div><p class="res">684 profiles (4 tracts x 57 subjects x 3 metrics), zero skips.</p><figure class="fig"><img src="../images/step30_NDI_profile_s1000_posterior_l.png" alt="NDI along the posterior left tract, s1000." loading="lazy"><figcaption>NDI along the posterior left tract, s1000.</figcaption></figure><figure class="fig"><img src="../images/step30_ODI_profile_s1000_posterior_l.png" alt="ODI along the same tract: higher at the endpoints, low in deep WM." loading="lazy"><figcaption>ODI along the same tract: higher at the endpoints, low in deep WM.</figcaption></figure><figure class="fig"><img src="../images/step30_FWF_profile_s1000_posterior_l.png" alt="FWF: low in deep WM, climbs near the HPC end (CSF proximity)." loading="lazy"><figcaption>FWF: low in deep WM, climbs near the HPC end (CSF proximity).</figcaption></figure></div></details></div></div><div class="step"><div class="stephead"><span class="cmd">fslstats -k HPC -M</span><span class="pkg">FSL</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre>fslstats fit_NDI_modulated.nii.gz -k left_HPC_diff.nii.gz -M   # mean NDI, left HPC

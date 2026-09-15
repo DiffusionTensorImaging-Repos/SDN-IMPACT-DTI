@@ -1,82 +1,122 @@
-import pandas as pd, numpy as np, json, glob, os
-from scipy.stats import pearsonr, ttest_1samp, ttest_rel, wilcoxon, norm
+#!/usr/bin/env python3
+"""
+Build results_html/results_data.json and results_html/models_data.json for the Results Explorer.
 
-R='/Users/dannyzweben/Desktop/SDN/DTI/data.check/permutation_results'
-OUT='/Users/dannyzweben/Desktop/SDN/DTI/SDN-IMPACT-DTI/results_html'
-os.makedirs(OUT,exist_ok=True)
+Node-wise rows come from two permutation-output directories with the same R schema
+(*_summary.csv, *_nodewise.csv, *_clusters.csv; Freedman-Lane, 5000 perms, cluster-extent FWE):
+  data.check/sweep_withcount/        NDI, both bilateral tracts, every memory measure that was run
+  data.check/bilateral_perm_results/ FA / ODI / FWF (and NDI) for d', FABias, HitRateBias, hit rate, FA rate
+The reported outcomes (log-linear d', misattribution, FABias; social and monetary) are flagged so the
+explorer can default to them. Model rows (whole tract, quartiles, metric comparison, hippocampal NDI,
+HVLT) come from data.check/final_models_summary.csv, written by scripts/final_models.py.
+"""
+import glob, json, os
+import pandas as pd
 
-TRACTS={'l_vta_l_hipp':('Posterior Left VTA→HPC','L','posterior'),
-        'r_vta_r_hipp':('Posterior Right VTA→HPC','R','posterior'),
-        'anterior_l_vta_l_hipp':('Anterior Left VTA→HPC','L','anterior'),
-        'anterior_r_vta_r_hipp':('Anterior Right VTA→HPC','R','anterior')}
-METRICS=['FA','NDI','ODI','FWF']  # FA + full NODDI family (NDI, ODI, FWF)
+BASE = '/Users/dannyzweben/Desktop/SDN/DTI'
+SWEEP = f'{BASE}/data.check/sweep_withcount'
+BILAT = f'{BASE}/data.check/bilateral_perm_results'
+MODELS = f'{BASE}/data.check/final_models_summary.csv'
+OUT = f'{BASE}/SDN-IMPACT-DTI/results_html'
 
-FAMILY={'SOCIAL_dprime':('Memory accuracy (d′)','SOCIAL'),
-        'MONETARY_dprime':('Memory accuracy (d′)','MONETARY'),
-        'SOCIAL_FABias':('Positivity bias — false memories','SOCIAL'),
-        'MONETARY_FABias':('Positivity bias — false memories','MONETARY'),
-        'SOCIAL_HitRateBias':('Positivity bias — correct memories','SOCIAL'),
-        'MONETARY_HitRateBias':('Positivity bias — correct memories','MONETARY')}
-OUTLABEL={'SOCIAL_dprime':"Social d′",'MONETARY_dprime':"Monetary d′",
-    'SOCIAL_FABias':"Social positivity bias (false mem)",'MONETARY_FABias':"Monetary positivity bias (false mem)",
-    'SOCIAL_HitRateBias':"Social positivity bias (hits)",'MONETARY_HitRateBias':"Monetary positivity bias (hits)"}
+TRACTS = {'vta_anthipp': ('VTA→anterior hippocampus', 'anterior'),
+          'vta_posthipp': ('VTA→posterior hippocampus', 'posterior')}
+METRICS = ['NDI', 'ODI', 'FWF', 'FA']
+# bilateral dir used different names for two component rates
+ALIAS = {'farate': 'fa', 'hitrate': 'hit'}
 
-results=[]
-for summ in sorted(glob.glob(f'{R}/*_summary.csv')):
-    base=os.path.basename(summ).replace('_summary.csv','')
-    # parse tract, metric, outcome
-    tract=None
-    for t in sorted(TRACTS,key=len,reverse=True):
-        if base.startswith(t+'__'):
-            tract=t; rest=base[len(t)+2:]; break
-    if tract is None: continue
-    metric=rest.split('__')[0]; outcome=rest[len(metric)+2:]
-    if metric not in METRICS: continue
-    if outcome not in FAMILY: continue
-    s=pd.read_csv(summ).iloc[0]
-    # clusters
-    clusters=[]
-    cf=f'{R}/{base}_clusters.csv'
-    if os.path.exists(cf):
-        cdf=pd.read_csv(cf)
-        for _,c in cdf.iterrows():
-            clusters.append(dict(size=int(c['Size']),start=int(c['StartNode']),end=int(c['EndNode']),
-                p=round(float(c['ClusterPValue']),4),dir=c['Direction'],
-                mean_t=round(float(c['MeanTValue']),3),max_abs_t=round(float(c['MaxAbsTValue']),3),
-                max_abs_t_node=int(c['MaxAbsTNode']),passes=bool(c['PassExtentThreshold'])))
-    # nodewise
-    nw=pd.read_csv(f'{R}/{base}_nodewise.csv')
-    tvals=[round(float(x),3) if pd.notna(x) else None for x in nw['t_value']]
-    pvals=[round(float(x),4) if pd.notna(x) else None for x in nw['p_value']]
-    sig_nodes=[int(n) for n,p in zip(nw['Node'],nw['p_value']) if pd.notna(p) and p<0.05]
-    passed=any(c['passes'] for c in clusters)
-    best_p=min([c['p'] for c in clusters if c['passes']],default=None)
-    tl,hemi,ttype=TRACTS[tract]
-    fam,cond=FAMILY[outcome]
-    results.append(dict(id=base,outcome=outcome,outcome_label=OUTLABEL[outcome],family=fam,condition=cond,
-        tract=tract,tract_label=tl,hemisphere=hemi,tract_type=ttype,metric=metric,
-        N=int(s['N_subjects']),dropped=int(s['N_dropped']),covariates=s['Covariates'],
-        n_sig_nodes=int(s['NumNodewiseSignificant']),obs_max_cluster=int(s['ObservedMaxClusterSize']),
-        extent_threshold=int(s['ExtentThresholdNodes']),n_passing=int(s['NumClustersPassingExtent']),
-        n_perms=int(s['NumPermutations']),passed=passed,best_p=best_p,
-        clusters=clusters,sig_node_list=sig_nodes,tvals=tvals,pvals=pvals))
+REPORTED = {'dprime_loglinear', 'fa_adjCriterion', 'FABias'}
+LABEL = {  # measure -> (label, family)
+    'dprime_loglinear': ("d′ (log-linear)", 'Reported: accuracy'),
+    'fa_adjCriterion':  ('Misattribution (FA rate | criterion)', 'Reported: misattribution'),
+    'FABias':           ('Positive false-alarm bias', 'Reported: positivity bias'),
+    'HitRateBias':      ('Positive hit-rate bias', 'Positivity bias'),
+    'hit_pos_minus_neg': ('Hit rate, positive minus negative', 'Positivity bias'),
+    'dprime':           ("d′ (uncorrected)", 'Accuracy, other estimators'),
+    'dprime_snodgrass': ("d′ (Snodgrass-Corwin)", 'Accuracy, other estimators'),
+    'pairsep_dprime':   ("Pair-separation d′", 'Accuracy, other estimators'),
+    'pr':               ('Pr (hit − FA)', 'Accuracy, other estimators'),
+    'Aprime':           ("A′ (nonparametric)", 'Accuracy, other estimators'),
+    'val_dprime':       ("Valence d′", 'Accuracy, other estimators'),
+    'hit':              ('Hit rate', 'Recognition components'),
+    'fa':               ('False-alarm rate', 'Recognition components'),
+    'criterion':        ('Response criterion c', 'Recognition components'),
+    'prop_remember':    ('Proportion "remember"', 'Recognition components'),
+    'strict_hit':       ('Strict hit (right item and valence)', 'Recognition components'),
+    'n_fa':             ('Number of false alarms', 'Recognition components'),
+    'fa_ll':            ('False-alarm rate (log-linear)', 'Recognition components'),
+    'hit_ll':           ('Hit rate (log-linear)', 'Recognition components'),
+    'fa_source_conf':   ('False alarms: source confusion', 'False-alarm subtypes'),
+    'fa_fabrication':   ('False alarms: fabrication', 'False-alarm subtypes'),
+}
+FALLBACK_FAMILY = [('valacc', 'Valence accuracy'), ('gist', 'Gist and precision'), ('precision', 'Gist and precision'),
+                   ('rt', 'Reaction time'), ('motivated', 'Valence accuracy'), ('pred', 'Prediction trials'),
+                   ('hit_', 'Hit rate by valence')]
 
-# laterality per (outcome, metric, tract_type): L vs R within the same tract type
-lat={}
-for r in results:
-    key=(r['outcome'],r['metric'],r['tract_type'])
-    lat.setdefault(key,{'L':0,'R':0,'L_nodes':[],'R_nodes':[]})
-    lat[key][r['hemisphere']]=r['n_sig_nodes']
-    lat[key][r['hemisphere']+'_nodes']=r['sig_node_list']
-for r in results:
-    L=lat[(r['outcome'],r['metric'],r['tract_type'])]
-    tot=L['L']+L['R']
-    overlap=sorted(set(L['L_nodes'])&set(L['R_nodes']))
-    r['laterality']={'L_sig':L['L'],'R_sig':L['R'],
-        'pct_left':round(100*L['L']/tot,0) if tot else None,
-        'pct_right':round(100*L['R']/tot,0) if tot else None,
-        'L_nodes':L['L_nodes'],'R_nodes':L['R_nodes'],'overlap_nodes':overlap}
 
-json.dump(results,open(f'{OUT}/results_data.json','w'))
-print(f"Wrote {len(results)} results")
-print(f"Passing FWE: {sum(r['passed'] for r in results)}")
+def label_for(measure):
+    if measure in LABEL:
+        return LABEL[measure]
+    fam = next((f for k, f in FALLBACK_FAMILY if measure.startswith(k) or k in measure), 'Other measures')
+    return (measure.replace('_', ' '), fam)
+
+
+def parse(base):
+    """'vta_posthipp__NDI__SOCIAL_FABias' -> (tract, metric, condition, measure)"""
+    tract, metric, outcome = base.split('__', 2)
+    cond, measure = outcome.split('_', 1)
+    return tract, metric, cond, ALIAS.get(measure, measure)
+
+
+def load_one(d, base):
+    s = pd.read_csv(f'{d}/{base}_summary.csv').iloc[0]
+    clusters = []
+    cf = f'{d}/{base}_clusters.csv'
+    if os.path.exists(cf) and os.path.getsize(cf) > 0:
+        cdf = pd.read_csv(cf)
+        for _, c in cdf.iterrows():
+            clusters.append(dict(size=int(c['Size']), start=int(c['StartNode']), end=int(c['EndNode']),
+                                 p=round(float(c['ClusterPValue']), 4), dir=c['Direction'],
+                                 mean_t=round(float(c['MeanTValue']), 3), passes=bool(c['PassExtentThreshold'])))
+    nw = pd.read_csv(f'{d}/{base}_nodewise.csv')
+    tvals = [round(float(x), 3) if pd.notna(x) else None for x in nw['t_value']]
+    pvals = [round(float(x), 4) if pd.notna(x) else None for x in nw['p_value']]
+    sig = [int(n) for n, p in zip(nw['Node'], nw['p_value']) if pd.notna(p) and p < 0.05]
+    tract, metric, cond, measure = parse(base)
+    tl, ttype = TRACTS[tract]
+    lab, fam = label_for(measure)
+    passed = any(c['passes'] for c in clusters)
+    return dict(id=f'{tract}__{metric}__{cond}_{measure}', tract=tract, tract_label=tl, tract_type=ttype,
+                metric=metric, condition=cond, measure=measure, outcome=f'{cond}_{measure}',
+                outcome_label=lab, family=fam, reported=(measure in REPORTED and metric == 'NDI'),
+                N=int(s['N_subjects']), dropped=int(s['N_dropped']), n_perms=int(s['NumPermutations']),
+                n_sig_nodes=int(s['NumNodewiseSignificant']), obs_max_cluster=int(s['ObservedMaxClusterSize']),
+                extent_threshold=int(s['ExtentThresholdNodes']), n_passing=int(s['NumClustersPassingExtent']),
+                passed=passed, best_p=min([c['p'] for c in clusters if c['passes']], default=None),
+                clusters=clusters, sig_node_list=sig, tvals=tvals, pvals=pvals,
+                covariates='ICV, tract length, streamline count, absolute motion, maternal age')
+
+
+rows, seen = [], set()
+for d in (SWEEP, BILAT):                       # sweep first so NDI rows come from the settled runs
+    for summ in sorted(glob.glob(f'{d}/*_summary.csv')):
+        base = os.path.basename(summ)[:-len('_summary.csv')]
+        tract, metric, cond, measure = parse(base)
+        if tract not in TRACTS or metric not in METRICS:
+            continue
+        key = (tract, metric, cond, measure)
+        if key in seen:
+            continue
+        seen.add(key)
+        rows.append(load_one(d, base))
+
+rows.sort(key=lambda r: (not r['reported'], r['family'], r['condition'], r['measure'], r['metric'], r['tract']))
+json.dump(rows, open(f'{OUT}/results_data.json', 'w'))
+
+m = pd.read_csv(MODELS)
+json.dump(m.where(pd.notna(m), None).to_dict('records'), open(f'{OUT}/models_data.json', 'w'))
+
+print(f'results_data.json: {len(rows)} node-wise analyses '
+      f'({sum(r["reported"] for r in rows)} reported, {sum(r["passed"] for r in rows)} FWE-significant)')
+print('  by metric:', {k: sum(r['metric'] == k for r in rows) for k in METRICS})
+print(f'models_data.json: {len(m)} model rows')

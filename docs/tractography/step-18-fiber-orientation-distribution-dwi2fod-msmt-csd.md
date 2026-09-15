@@ -11,7 +11,7 @@ This is the core modeling step — the MRtrix equivalent of what BedpostX did ba
 
 The key details:
 - We use `dwi2fod msmt_csd` — the multi-shell multi-tissue variant, which takes advantage of all our b-value shells (b=0, 1000, 2000, 3250, 5000) to better separate tissue types.
-- We use the **group-averaged response functions** from Step 17 (not per-subject), matching Ranesh's pipeline and MRtrix recommendations.
+- We use the **group-averaged response functions** from Step 17 (not per-subject), matching the reference pipeline and MRtrix recommendations.
 - Each subject gets three FOD images: `wm_fod.mif` (white matter — this is the one that matters for tractography), `gm_fod.mif`, and `csf_fod.mif`.
 
 **Input (per subject):**

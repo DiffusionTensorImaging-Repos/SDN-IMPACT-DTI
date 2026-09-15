@@ -7,29 +7,29 @@ nav_order: 23
 
 # Step 23 — Test Tractography (Parameter Tuning)
 
-Before running tractography on all 57 subjects, we test on 5 subjects with multiple FOD cutoff values to find optimal parameters for our 3T IMPACT data. Ranesh's pipeline was optimized for 7T HCP data — the key difference is that lower magnetic field strength produces noisier FOD estimates, so the FOD amplitude cutoff (which determines when tracking stops) may need to be higher at 3T to avoid following noise.
+Before running tractography on all 57 subjects, we test on 5 subjects with multiple FOD cutoff values to find optimal parameters for our 3T IMPACT data. The reference pipeline was optimized for 7T HCP data — the key difference is that lower magnetic field strength produces noisier FOD estimates, so the FOD amplitude cutoff (which determines when tracking stops) may need to be higher at 3T to avoid following noise.
 
-Ranesh's exact advice: "Start at 0.1, try 0.08, maybe 0.06. At 3T, 0.08 might work." He also noted that minlength/maxlength (35-65mm at 7T) may need adjustment at 3T.
+Recommended starting points: cutoff 0.1, then 0.08, then 0.06, with 0.08 expected to work at 3T. The minlength/maxlength bounds (35-65 mm at 7T) may also need adjustment at 3T.
 
-**Ranesh's 7T parameters vs. our 3T test values:**
+**Reference 7T parameters vs. our 3T test values:**
 
-| Parameter | Ranesh (HCP 7T) | Our test (IMPACT 3T) | Rationale |
+| Parameter | Reference (HCP 7T) | Our test (IMPACT 3T) | Rationale |
 |-----------|-----------------|---------------------|-----------|
 | FOD cutoff (`-cutoff`) | 0.06 | **0.1, 0.08, 0.06** | 3T may need higher cutoff — test all three |
 | Streamline target (`-select`) | 2500 | **1000** | Reduced for faster testing (will increase in Step 24) |
 | Seeding attempts (`-seeds`) | 25,000,000 | **5,000,000** | Reduced for faster testing (will increase in Step 24) |
-| Min track length (`-minlength`) | 35 mm | **35 mm** | Start with Ranesh's value |
-| Max track length (`-maxlength`) | 65 mm | **65 mm** | Start with Ranesh's value |
-| Seed direction (`-seed_unidirectional`) | yes | **yes** | Match Ranesh |
+| Min track length (`-minlength`) | 35 mm | **35 mm** | Start with reference value |
+| Max track length (`-maxlength`) | 65 mm | **65 mm** | Start with reference value |
+| Seed direction (`-seed_unidirectional`) | yes | **yes** | Match reference |
 | Stop flag (`-stop`) | yes | **yes** | Stop when select count reached |
 | Threads (`-nthreads`) | 24 | **8** | Shared cluster |
-| Exclusion strategy | 13 individual ROIs | **1 atlas-based mask** | Ranesh's recommended shortcut (Step 22) |
+| Exclusion strategy | 13 individual ROIs | **1 atlas-based mask** | Atlas shortcut (Step 22) |
 
-**Flags NOT used** (Ranesh didn't use these either): ACT, backtrack, crop_at_gmwmif, angle, step_size (MRtrix defaults).
+**Flags NOT used** (also unused in the reference pipeline): ACT, backtrack, crop_at_gmwmif, angle, step_size (MRtrix defaults).
 
 **NOT using `-fslgrad`** because gradients are already embedded in dwi.mif from Step 15 (mrconvert with `-fslgrad`).
 
-**Test subjects** (from Ranesh's suggestion): s169, s4222, s4418, s606, s1000
+**Test subjects**: s169, s4222, s4418, s606, s1000
 
 **Total runs:** 5 subjects × 3 cutoffs × 2 hemispheres = **30 tckgen runs**
 
@@ -76,7 +76,7 @@ nano /data/projects/STUDIES/IMPACT/DTI/scripts/run_step23_test_tractography.sh
 # ============================================================
 # Tests tckgen with 3 FOD cutoff values (0.1, 0.08, 0.06) on
 # 5 subjects to find optimal parameters for 3T IMPACT data.
-# Ranesh used cutoff=0.06 at 7T; predicted 0.08 for 3T.
+# Reference pipeline used cutoff=0.06 at 7T; 0.08 predicted for 3T.
 #
 # Input:  CSD/<subj>/wm_fod_norm.mif (normalized WM FODs)
 #         CSD/<subj>/rois/left_VTA_diff.nii.gz (seed)
@@ -87,18 +87,18 @@ nano /data/projects/STUDIES/IMPACT/DTI/scripts/run_step23_test_tractography.sh
 # Output: CSD/<subj>/tckgen/l_vta_l_hipp/l_vta_l_hipp_<cutoff>.tck
 #         CSD/<subj>/tckgen/r_vta_r_hipp/r_vta_r_hipp_<cutoff>.tck
 #
-# Parameters matching Ranesh's pipeline (adjusted for 3T):
-#   -seed_unidirectional (same as Ranesh)
-#   -select 1000 (Ranesh: 2500, reduced for test)
-#   -seeds 5000000 (Ranesh: 25M, reduced for test)
-#   -minlength 35 (Ranesh: 35mm at 7T)
-#   -maxlength 65 (Ranesh: 65mm at 7T)
-#   -stop (same as Ranesh)
-#   -cutoff varies: 0.1, 0.08, 0.06 (Ranesh: fixed 0.06 at 7T)
-#   -nthreads 8 (Ranesh: 24, reduced for shared cluster)
+# Parameters matching the reference pipeline (adjusted for 3T):
+#   -seed_unidirectional (same as reference)
+#   -select 1000 (reference: 2500, reduced for test)
+#   -seeds 5000000 (reference: 25M, reduced for test)
+#   -minlength 35 (reference: 35mm at 7T)
+#   -maxlength 65 (reference: 65mm at 7T)
+#   -stop (same as reference)
+#   -cutoff varies: 0.1, 0.08, 0.06 (reference: fixed 0.06 at 7T)
+#   -nthreads 8 (reference: 24, reduced for shared cluster)
 #
 # NOT using -fslgrad (gradients already embedded in dwi.mif from Step 15)
-# NOT using ACT, backtrack, angle, step_size (Ranesh didn't use these)
+# NOT using ACT, backtrack, angle, step_size (unused in the reference pipeline)
 # ============================================================
 
 export PATH=/data/tools/mrtrix3/bin:$PATH
@@ -106,7 +106,7 @@ export PATH=/data/tools/mrtrix3/bin:$PATH
 csd_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD"
 log_file="/data/projects/STUDIES/IMPACT/DTI/scripts/step23_test.log"
 
-# 5 test subjects (from Ranesh's suggestion)
+# 5 test subjects
 test_subjects="s169 s4222 s4418 s606 s1000"
 
 echo "=== Step 23: Test Tractography ===" > "$log_file"
@@ -337,7 +337,7 @@ Note the slightly thicker TDI at 0.01 — this reflects the broader spatial spre
 
 **Decision: Use cutoff 0.01 for full tractography (Step 24).**
 
-Ranesh confirmed this choice — he reported that with the atlas-based exclusion mask, dropping the FOD cutoff as low as 0.01 produces robust and clean streamlines. The mask constrains tracking to the anatomically plausible corridor, preventing the spurious streamlines that would normally result from a permissive cutoff. He also noted that the tracts may not even require pyAFQ cleaning afterward, though we will still run the cleaning step (Step 25) as a safeguard.
+This choice was independently confirmed: with the atlas-based exclusion mask, dropping the FOD cutoff as low as 0.01 produces robust and clean streamlines. The mask constrains tracking to the anatomically plausible corridor, preventing the spurious streamlines that would normally result from a permissive cutoff. The tracts may not even require pyAFQ cleaning afterward, though we still run the cleaning step (Step 25) as a safeguard.
 
 ---
 

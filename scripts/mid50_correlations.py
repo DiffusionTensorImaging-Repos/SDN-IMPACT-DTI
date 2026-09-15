@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Mid-50-nodes (25-74) average + L/R hemisphere correlations.
-Per Ranesh's request before the meeting.
+Pre-analysis check that the left and right tracts measure the same thing.
 """
 import pandas as pd
 import numpy as np
@@ -12,7 +12,7 @@ nd_dir = Path("/Users/dannyzweben/Desktop/SDN/DTI/data.check/step30_noddi")
 out_dir = Path("/Users/dannyzweben/Desktop/SDN/DTI/data.check/mid50_summary")
 out_dir.mkdir(exist_ok=True, parents=True)
 
-# Mid 50 nodes (Ranesh's request)
+# Mid 50 nodes (deep white matter, away from the gray-matter endpoints)
 mid_nodes = list(range(25, 75))  # nodes 25..74 inclusive
 
 # === Load and process per-tract averages ===

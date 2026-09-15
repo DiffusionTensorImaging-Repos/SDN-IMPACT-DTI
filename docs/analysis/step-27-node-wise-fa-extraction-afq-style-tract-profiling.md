@@ -9,9 +9,9 @@ nav_order: 27
 
 With the cleaned tracts from Step 25 and the DTIFIT FA maps from Step 11, we extract FA along each tract at 100 equidistant nodes using AFQ-style tract profiling. This produces a subject-by-node matrix of FA values that feeds into the node-wise statistical analysis (Step 28).
 
-**Adapted from Ranesh's `nodewise_noddi.py` script**, with identical profiling machinery (QuickBundles orientation, resampling, Gaussian-weighted AFQ profiling). The only change: instead of extracting NDI/ODI/FWF from NODDI maps, we extract FA from the DTIFIT output. This matches Ranesh's exact approach but applied to FA first; Step 30 will do the same for NODDI metrics.
+**Adapted from the reference `nodewise_noddi.py` script**, with identical profiling machinery (QuickBundles orientation, resampling, Gaussian-weighted AFQ profiling). The only change: instead of extracting NDI/ODI/FWF from NODDI maps, we extract FA from the DTIFIT output. This matches the reference approach exactly but applied to FA first; Step 30 will do the same for NODDI metrics.
 
-**Why 100 nodes:** Matches Ranesh's pipeline exactly. Nodes near the seed (0-4) and target (95-99) are typically excluded from final analyses due to partial-volume contamination from gray matter (VTA, hippocampus). Deep white matter sits around nodes 25-75.
+**Why 100 nodes:** Matches the reference pipeline exactly. Nodes near the seed (0-4) and target (95-99) are typically excluded from final analyses due to partial-volume contamination from gray matter (VTA, hippocampus). Deep white matter sits around nodes 25-75.
 
 **Why Gaussian-weighted AFQ profiling:** At each node, instead of taking the FA value at a single centroid voxel, `dipy.stats.analysis.afq_profile` weights each streamline by its Mahalanobis distance from the bundle centroid, then computes a weighted mean of FA across streamlines at that node. This reduces the influence of outlier streamlines and produces smoother, more reliable profiles.
 
@@ -36,13 +36,13 @@ derivatives/nodewise_fa/
 
 Each CSV has 5,701 rows (header + 57 subjects × 100 nodes) with columns: `Subject, Tract, Node, FA`.
 
-**Parameters (match Ranesh's NODDI script exactly):**
+**Parameters (match the reference NODDI script exactly):**
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
 | `num_nodes` | 100 | Nodes per streamline after resampling |
 | `min_streamlines` | 5 | Minimum streamlines required to process a subject |
-| `bbox_valid_check` | False | Allow streamlines outside image bounding box (matches Ranesh) |
+| `bbox_valid_check` | False | Allow streamlines outside image bounding box (matches reference) |
 
 **Running Step 27 in tmux:**
 
@@ -63,7 +63,7 @@ nano /data/projects/STUDIES/IMPACT/DTI/scripts/run_step27_fa_extraction.py
 # ============================================================
 # Step 27: Node-wise FA Extraction (AFQ-style tract profiling)
 # ============================================================
-# Adapted from Ranesh's nodewise_noddi.py — exact same profiling
+# Adapted from the reference nodewise_noddi.py — exact same profiling
 # machinery (QuickBundles orientation + AFQ Gaussian-weighted
 # profile), just applied to FA maps from DTIFIT instead of
 # NODDI metrics. Processes both posterior and anterior tracts.
@@ -102,7 +102,7 @@ nodewise.mkdir(parents=True, exist_ok=True)
 csv_dir = nodewise / "csvs"
 csv_dir.mkdir(parents=True, exist_ok=True)
 
-# Profile parameters (match Ranesh's NODDI script)
+# Profile parameters (match the reference NODDI script)
 num_nodes = 100
 min_streamlines = 5
 
@@ -110,7 +110,7 @@ subjects = sorted([d.name for d in nifti_root.iterdir() if d.is_dir()])
 
 
 # =========================
-# HELPERS (verbatim from Ranesh)
+# HELPERS (verbatim from the reference implementation)
 # =========================
 
 def orient_to_centroid(streamlines, nb_points=num_nodes):

@@ -15,17 +15,17 @@ For the IMPACT analysis — testing whether white matter microstructure *along s
 - Run **node-wise permutation testing** to identify which segments of the tract carry the effect
 - Apply **Mahalanobis-distance cleaning** (pyAFQ) to remove anatomically implausible streamlines
 
-MRtrix3's **dwi2fod** (Constrained Spherical Deconvolution) → **tckgen** pipeline produces these streamlines. This is the recommended approach for tract-specific microstructure analysis, as confirmed by Ranesh Mopuru (Olson Lab), Blake Elliott, and Linda Hoffman.
+MRtrix3's **dwi2fod** (Constrained Spherical Deconvolution) → **tckgen** pipeline produces these streamlines. This is the recommended approach for tract-specific microstructure analysis.
 
 **The good news:** BedpostX wasn't wasted. When we ran BedpostX in Step 9, we organized the eddy-corrected DWI data, rotated gradient tables, b-values, and brain mask into a clean `bedpostx_input/` directory — and that is exactly what MRtrix needs as input. So we go back to `BEDPOSTX/<subj>/bedpostx_input/` and feed those same files (`data.nii.gz`, `bvecs`, `bvals`, `nodif_brain_mask.nii.gz`) into the MRtrix CSD pipeline.
 
-**Pipeline adapted from**: Ranesh Mopuru's complete MRtrix tractography pipeline (originally developed for HCP 7T data in the Olson Lab at Temple). His scripts were adapted for our IMPACT 3T multi-shell data with the following key differences:
+**Pipeline adapted from**: an established MRtrix tractography pipeline originally developed for HCP 7T data. Its scripts were adapted for our IMPACT 3T multi-shell data with the following key differences:
 
-| | Ranesh (HCP 7T) | IMPACT (3T) |
+| | Reference (HCP 7T) | IMPACT (3T) |
 |---|---|---|
 | Skull stripping | mri_synthstrip | ANTs (already done, Step 2) |
 | Registration to diffusion space | Not needed (HCP data already T1-aligned) | FLIRT transforms from Step 12 |
-| Exclusion ROIs for tractography | 20+ individual hand-drawn exclusion masks | Ranesh's tract atlas (GroupMean_thr50) as single exclusion mask |
+| Exclusion ROIs for tractography | 20+ individual hand-drawn exclusion masks | Group-mean tract atlas (GroupMean_thr50) as single exclusion mask |
 | tckgen streamline count | 2500 | 1000 |
 | tckgen seeding attempts | 25 million | 5 million |
 | FOD cutoff | 0.06 | Start at 0.1, experiment with 0.08 and 0.06 |

@@ -7,19 +7,19 @@ nav_order: 24
 
 # Step 24 — Full Tractography (All 57 Subjects)
 
-With the optimal FOD cutoff determined in Step 23 (0.01), we now run tractography on all 57 subjects using Ranesh's full parameters. The only change from the pilot is scaling up the streamline target and seed limit to match Ranesh's production values.
+With the optimal FOD cutoff determined in Step 23 (0.01), we now run tractography on all 57 subjects using the full reference parameters. The only change from the pilot is scaling up the streamline target and seed limit to the production values.
 
 **Parameters (finalized):**
 
 | Parameter | Value | Source |
 |-----------|-------|--------|
-| FOD cutoff (`-cutoff`) | 0.01 | Pilot-tested (Step 23) + Ranesh confirmation |
-| Streamline target (`-select`) | 2500 | Ranesh's production value |
-| Seeding attempts (`-seeds`) | 25,000,000 | Ranesh's production value |
-| Min track length (`-minlength`) | 35 mm | Ranesh's value |
-| Max track length (`-maxlength`) | 65 mm | Ranesh's value |
-| Seed direction (`-seed_unidirectional`) | yes | Ranesh's value |
-| Stop flag (`-stop`) | yes | Ranesh's value |
+| FOD cutoff (`-cutoff`) | 0.01 | Pilot-tested (Step 23) + independent confirmation |
+| Streamline target (`-select`) | 2500 | Reference production value |
+| Seeding attempts (`-seeds`) | 25,000,000 | Reference production value |
+| Min track length (`-minlength`) | 35 mm | reference value |
+| Max track length (`-maxlength`) | 65 mm | reference value |
+| Seed direction (`-seed_unidirectional`) | yes | reference value |
+| Stop flag (`-stop`) | yes | reference value |
 | Threads (`-nthreads`) | 8 | Shared cluster |
 | Exclusion strategy | 1 atlas-based mask per hemisphere | Step 22 |
 
@@ -61,10 +61,10 @@ nano /data/projects/STUDIES/IMPACT/DTI/scripts/run_step24_full_tractography.sh
 # Step 24: Full Tractography — All 57 Subjects (cutoff 0.01)
 # ============================================================
 # Runs tckgen on all subjects with parameters determined in Step 23:
-#   - cutoff 0.01 (confirmed by Ranesh + pilot testing)
-#   - select 2500 streamlines (Ranesh's target)
-#   - seeds 25,000,000 (Ranesh's seed limit)
-#   - minlength 35mm, maxlength 65mm (Ranesh's values)
+#   - cutoff 0.01 (pilot testing + independent confirmation)
+#   - select 2500 streamlines (reference target)
+#   - seeds 25,000,000 (reference seed limit)
+#   - minlength 35mm, maxlength 65mm (reference values)
 #   - Atlas-based exclusion masks from Step 22
 #
 # Input:  CSD/<subj>/wm_fod_norm.mif
@@ -236,11 +236,11 @@ All 57 subjects completed successfully — **114/114 runs hit 2500 streamlines**
 - **Average seeds used:** ~1.1M (~4.4% of the 25M limit)
 - **Total tck files:** 114 (57 subjects × 2 hemispheres)
 
-The cutoff 0.01 + atlas-based exclusion mask combination proved highly efficient at 3T, consistent with Ranesh's experience at 7T. No subject came close to exhausting the seed budget.
+The cutoff 0.01 + atlas-based exclusion mask combination proved highly efficient at 3T, consistent with the reference pipeline's behavior at 7T. No subject came close to exhausting the seed budget.
 
 **Step 24 Audit Result:** 114/114 pass (all ≥ 2500 streamlines). 0 failures.
 
-> **Anterior VTA→HPC tract:** The same tractography was later repeated for the anterior VTA→HPC atlas that Ranesh provided after we completed the posterior pipeline. Same parameters, same script (adapted for anterior atlas files), all 114 runs hit 2500 streamlines. See [Anterior Tract Addendum](#anterior-vtahpc-tract-addendum) for full details.
+> **Anterior VTA→HPC tract:** The same tractography was later repeated for the anterior VTA→HPC atlas, which became available after we completed the posterior pipeline. Same parameters, same script (adapted for anterior atlas files), all 114 runs hit 2500 streamlines. See [Anterior Tract Addendum](#anterior-vtahpc-tract-addendum) for full details.
 
 ---
 

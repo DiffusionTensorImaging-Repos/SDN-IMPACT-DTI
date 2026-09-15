@@ -11,7 +11,7 @@ Before tractography, we normalize the FOD intensities across tissue types and su
 
 The normalized WM FOD (`wm_fod_norm.mif`) is what feeds into tractography in Steps 23–24.
 
-This step also creates **tissue-concatenated images** (`vf_fod.mif`, `vf_fod_norm.mif`) for visualization and quality checking — matching Ranesh's pipeline. These combine the first spherical harmonic component (l=0) of the WM FOD with the GM and CSF FODs into a single RGB-like image where you can see all three tissue compartments at once in mrview.
+This step also creates **tissue-concatenated images** (`vf_fod.mif`, `vf_fod_norm.mif`) for visualization and quality checking — matching the reference pipeline. These combine the first spherical harmonic component (l=0) of the WM FOD with the GM and CSF FODs into a single RGB-like image where you can see all three tissue compartments at once in mrview.
 
 **Input (per subject — from Step 18):**
 - `/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/<subj>/wm_fod.mif`
@@ -91,7 +91,7 @@ process_subj() {
         -mask "$d/mask.mif" \
         -force
 
-    # Tissue concatenation for visualization (matches Ranesh's pipeline)
+    # Tissue concatenation for visualization (matches the reference pipeline)
     mrconvert -coord 3 0 "$d/wm_fod.mif" - | \
         mrcat "$d/csf_fod.mif" "$d/gm_fod.mif" - "$d/vf_fod.mif" -force
 

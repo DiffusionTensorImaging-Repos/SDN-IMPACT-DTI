@@ -9,11 +9,11 @@ nav_order: 27
 
 ### Background
 
-After we completed the full pipeline for the posterior VTA→HPC tract, Ranesh and Blake informed us they had identified a second VTA→HPC tract — an **anterior** projection that is "more aligned with how we think of the VTA-hipp projections" than the posterior tract we ran. Ranesh's exact words:
+After we completed the full pipeline for the posterior VTA→HPC tract, a second VTA→HPC tract was identified — an **anterior** projection more aligned with how VTA-hippocampal projections are usually conceived than the posterior tract we ran. The rationale for keeping both:
 
-> "The one you have right now is what we are calling the posterior VTA-hipp tract, we found an anterior one that is more aligned with how we think of the VTA-hipp projections. I think you should still run this posterior one, since they travel the same path for the first 75-80 ish nodes, so if you see an effect in the posterior tract, it will extend to the anterior tract."
+> The two tracts travel the same path for roughly the first 75-80 nodes, so an effect in the posterior tract should extend to the anterior tract. The posterior tract was therefore retained alongside the anterior one.
 
-Ranesh sent us two new tract atlas files (left and right anterior VTA→HPC, both thresholded at 50% from his group mean at HCP 7T) and confirmed that **the exact same pipeline (Steps 21-26) applies**, just swapping in the anterior atlas files for the posterior ones at Step 22.
+Two new tract atlas files were added (left and right anterior VTA→HPC, both thresholded at 50% from the HCP 7T group mean). **The exact same pipeline (Steps 21-26) applies**, just swapping in the anterior atlas files for the posterior ones at Step 22.
 
 ### Files Added
 
@@ -31,7 +31,7 @@ Ran the same Steps 21, 22, 24, and 25 pipeline using the anterior atlas files �
 - **Step 21a:** Warped anterior atlas MNI → T1 (ANTs) → Diffusion (FLIRT). Output: `anterior_<l/r>_tract_atlas_diff.nii.gz`
 - **Step 22a:** Built anterior exclusion masks (dilated corridor + VTA + HPC, then inverted). Output: `anterior_exclusion_mask_<l/r>.nii.gz`
 - **Step 24a:** Ran tckgen on all 57 subjects (seed: VTA, include: HPC, exclude: anterior mask, cutoff 0.01, select 2500, seeds 25M). Output: `tckgen/anterior_<l/r>_vta_<l/r>_hipp/anterior_<l/r>_vta_<l/r>_hipp_0.01.tck`
-- **Step 25a:** Ran pyAFQ `clean_bundle` with Ranesh's parameters. Output: `..._0.01_cleaned.tck`
+- **Step 25a:** Ran pyAFQ `clean_bundle` with the reference parameters. Output: `..._0.01_cleaned.tck`
 
 **Result: 114/114 pass** — every subject hit 2500 streamlines and produced a clean bundle. Seeds used ranged from ~1.5M to ~11M (slightly higher than posterior ~1.1M average, reflecting the smaller anterior projection — but all well under the 25M cap).
 
@@ -112,10 +112,10 @@ fsleyes /data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/s1000/qc/mean_b0.nii.g
 
 All downstream steps (27–31) will be run on **both** the posterior and anterior tracts:
 - **Step 27** (Node-wise FA extraction): 100 nodes × 2 hemispheres × 2 tracts (posterior/anterior) = 4 FA profiles per subject
-- **Step 28** (Permutation testing): Same for both tracts — will enable the anterior vs posterior dissociability analysis Ranesh mentioned
+- **Step 28** (Permutation testing): Same for both tracts — enables the anterior vs posterior comparison
 - **Steps 29–31** (NODDI): NDI/ODI extraction and testing on both tract sets
 
-Ranesh noted that the core bundles are similar for the first ~60 nodes, so effects in the posterior tract should extend to the anterior tract. Differences in the later nodes (especially nodes 60+) may reveal tract-specific functional roles — this is the kind of analysis he and Blake are actively working on.
+The core bundles are similar for the first ~60 nodes, so effects in the posterior tract should extend to the anterior tract. Differences in the later nodes (especially nodes 60+) could in principle reveal tract-specific roles. In this sample they do not: the two subregions show no interaction with memory and the pathway is analyzed as one.
 
 ---
 

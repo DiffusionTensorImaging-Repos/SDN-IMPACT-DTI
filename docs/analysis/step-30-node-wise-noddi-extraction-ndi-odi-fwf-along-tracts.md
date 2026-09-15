@@ -7,9 +7,9 @@ nav_order: 30
 
 # Step 30 — Node-wise NODDI Extraction (NDI, ODI, FWF along tracts)
 
-With the NODDI maps from Step 29 and the cleaned tracts from Step 25, we extract NDI, ODI, and FWF along each tract at 100 equidistant nodes. This is a direct port of Ranesh's `nodewise_noddi.py` script to our IMPACT paths — identical profiling approach (QuickBundles orientation + AFQ Gaussian-weighted profiling), just using our cleaned tract files instead of Ranesh's HCP tracts.
+With the NODDI maps from Step 29 and the cleaned tracts from Step 25, we extract NDI, ODI, and FWF along each tract at 100 equidistant nodes. This is a direct port of the reference `nodewise_noddi.py` script to our IMPACT paths — identical profiling approach (QuickBundles orientation + AFQ Gaussian-weighted profiling), just using our cleaned tract files instead of the HCP tracts.
 
-**Extraction follows Ranesh's exact approach (modulated NDI + ODI, regular FWF):**
+**Extraction follows the reference approach exactly (modulated NDI + ODI, regular FWF):**
 - **NDI** from `fit_NDI_modulated.nii.gz` (partial-volume corrected)
 - **ODI** from `fit_ODI_modulated.nii.gz` (partial-volume corrected)
 - **FWF** from `fit_FWF.nii.gz` (no modulated version needed — tissue weighting is the PVE correction)
@@ -46,7 +46,7 @@ ssh -XY tur50045@cla19097.tu.temple.edu
 tmux new -s step30
 ```
 
-2. Create the script `run_step30_noddi_extraction.py` — it's a direct port of Ranesh's `nodewise_noddi.py` with identical helpers (`orient_to_centroid`, `profile_metric`) and identical output schema (Subject, Tract, Node, NDI, ODI, FWF). The only differences from Ranesh's script: subject list is derived from the NIFTI directory, tract list is ours (posterior + anterior VTA-HPC), and paths point to our IMPACT directories.
+2. Create the script `run_step30_noddi_extraction.py` — it's a direct port of the reference `nodewise_noddi.py` with identical helpers (`orient_to_centroid`, `profile_metric`) and identical output schema (Subject, Tract, Node, NDI, ODI, FWF). The only differences from the reference script: subject list is derived from the NIFTI directory, tract list is ours (posterior + anterior VTA-HPC), and paths point to our IMPACT directories.
 
 3. Run the script inside tmux:
 ```bash

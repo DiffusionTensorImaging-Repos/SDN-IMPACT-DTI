@@ -1,4 +1,4 @@
-## Olson Lab Scripts
+## Reference pipeline scripts (HCP 7T)
 
 
 

@@ -9,7 +9,7 @@ nav_order: 25
 
 After tractography, we clean each tract bundle using pyAFQ's `clean_bundle` function, which removes anatomically implausible streamlines using Mahalanobis distance. This is a standard post-tractography step — even with the atlas-based exclusion mask constraining tracking (Step 22), some streamlines will take unusual paths through the corridor. Mahalanobis cleaning identifies and removes these outliers by comparing each streamline's shape to the bundle's average shape across multiple iterations.
 
-Ranesh used this exact approach on his HCP 7T data and provided the specific parameters. He noted that with the atlas mask keeping tracts clean at cutoff 0.01, the cleaning step may not need to remove many streamlines — but we run it as a safeguard to ensure the cleanest possible bundles for FA extraction.
+The reference pipeline used this exact approach on HCP 7T data with the parameters below. With the atlas mask keeping tracts clean at cutoff 0.01, the cleaning step may not need to remove many streamlines — but we run it as a safeguard to ensure the cleanest possible bundles for FA extraction.
 
 **Dependencies (installed on cluster):**
 
@@ -19,7 +19,7 @@ pip3 install --user pyAFQ dipy
 ```
 Note: The cluster's system `zipp` package (1.0.0) was too old for pyAFQ — `pip3 install --user --upgrade zipp` resolved the version conflict.
 
-**Cleaning parameters (from Ranesh):**
+**Cleaning parameters:**
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
@@ -67,10 +67,10 @@ nano /data/projects/STUDIES/IMPACT/DTI/scripts/run_step25_cleaning.py
 # ============================================================
 # Step 25: Clean tracts using pyAFQ
 # ============================================================
-# Adapted from Ranesh's cleaning script
+# Adapted from the reference cleaning script
 # (hcp_afq_tract_cleaning_hipp_accumbens.txt)
 #
-# Parameters (from Ranesh):
+# Parameters:
 #   n_points = 100
 #   clean_rounds = 5
 #   distance_threshold = 3 (Mahalanobis SD)
@@ -94,7 +94,7 @@ csd_base = Path("/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD")
 nifti_base = Path("/data/projects/STUDIES/IMPACT/DTI/NIFTI")
 log_file = Path("/data/projects/STUDIES/IMPACT/DTI/scripts/step25_cleaning.log")
 
-# pyAFQ cleaning parameters (from Ranesh)
+# pyAFQ cleaning parameters
 n_points = 100
 clean_rounds = 5
 distance_threshold = 3      # 3 SD Mahalanobis distance
@@ -286,7 +286,7 @@ Left: 0.06 conservative (1000 streamlines). Middle: 0.01 uncleaned (2500 streaml
 
 The green bars (0.01 cleaned) are consistently the lowest — meaning the tightest, most consistent bundles. The cleaning removed outlier streamlines that were making 0.01 appear messier, producing bundles with ~3.5-4.5mm std dev compared to ~5-7mm for both uncleaned options.
 
-**Summary:** The 0.01 cutoff + pyAFQ cleaning produces tracts that are more efficient to generate AND tighter than the conservative 0.06 cutoff alone. This validates Ranesh's recommendation to use a permissive cutoff with the atlas-based exclusion mask and rely on Mahalanobis cleaning to refine the bundles.
+**Summary:** The 0.01 cutoff + pyAFQ cleaning produces tracts that are more efficient to generate AND tighter than the conservative 0.06 cutoff alone. This validates the strategy of using a permissive cutoff with the atlas-based exclusion mask and rely on Mahalanobis cleaning to refine the bundles.
 
 ---
 

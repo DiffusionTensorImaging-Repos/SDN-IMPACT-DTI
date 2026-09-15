@@ -7,11 +7,11 @@ nav_order: 22
 
 # Step 22 — Atlas-Based Exclusion Masks
 
-Ranesh's original pipeline used 13 individual exclusion ROIs (ventral pallidum, accumbens L/R, striatum, thalamus, cortex/cerebellum, brainstem, amygdala, red nucleus, fornix, optic tract, optic nerve, opposite hemisphere) to constrain tractography. Each had to be warped, tidied (overlaps subtracted), and passed as separate `-exclude` flags to tckgen.
+The reference pipeline used 13 individual exclusion ROIs (ventral pallidum, accumbens L/R, striatum, thalamus, cortex/cerebellum, brainstem, amygdala, red nucleus, fornix, optic tract, optic nerve, opposite hemisphere) to constrain tractography. Each had to be warped, tidied (overlaps subtracted), and passed as separate `-exclude` flags to tckgen.
 
-Instead, we use the **atlas shortcut** that Ranesh recommended: his GroupMean_thr50 tract atlas (built from ~170 HCP 7T subjects using those 13 exclusion ROIs) already encodes "where VTA→HPC streamlines should plausibly go." We dilate this atlas by 2 voxels, add the VTA seed and HPC target ROIs, binarize the result into an "inclusion zone," and invert everything outside it into a single exclusion mask.
+Instead, we use an **atlas shortcut**: the GroupMean_thr50 tract atlas (built from ~170 HCP 7T subjects using those 13 exclusion ROIs) already encodes "where VTA→HPC streamlines should plausibly go." We dilate this atlas by 2 voxels, add the VTA seed and HPC target ROIs, binarize the result into an "inclusion zone," and invert everything outside it into a single exclusion mask.
 
-From Ranesh's meeting notes: "By dilating the atlas by like two-ish voxels, you're generating like this box where your streamlines should plausibly go through... you exclude everything outside of this box... add the VTA and the hippocampus to this atlas mask, and then you invert everything else."
+The logic: dilating the atlas by about two voxels defines a corridor where streamlines should plausibly travel, and everything outside that corridor is excluded. The VTA and hippocampus are added to the atlas mask before inverting.
 
 **Logic (per hemisphere):**
 1. Dilate tract atlas by 2 voxels (`fslmaths -dilM -dilM`)
@@ -59,10 +59,10 @@ nano run_step22_exclusion_masks.sh
 # ============================================================
 # Step 22: Build Atlas-Based Exclusion Masks
 # ============================================================
-# Uses Ranesh's GroupMean_thr50 tract atlas to create a single
+# Uses the GroupMean_thr50 tract atlas to create a single
 # exclusion mask per hemisphere, replacing 13 individual exclusion ROIs.
 #
-# Logic (per Ranesh):
+# Logic:
 #   1. Dilate tract atlas by 2 voxels (fslmaths -dilM -dilM)
 #   2. Add VTA seed + HPC target to dilated atlas
 #   3. Binarize = inclusion zone (where streamlines are allowed)
@@ -192,7 +192,7 @@ All 57 subjects pass all 7 automated audits and visual inspection. Exclusion mas
 
 > **Anterior VTA→HPC tract:** Anterior exclusion masks were later built using the same dilated-corridor approach with the anterior tract atlas. Inclusion zone sizes (~1,400 voxels per hemisphere) are comparable to the posterior tract. All 114 anterior masks passed QC. See [Anterior Tract Addendum](#anterior-vtahpc-tract-addendum).
 
-**NOTE**: Ranesh recommended experimenting with 1 vs 2 voxel dilation. We start with 2 voxels. If Step 23 test tractography produces tracts that look too loose/dispersed, we can re-run with 1 voxel dilation.
+**NOTE**: 1 vs 2 voxel dilation is worth testing. We start with 2 voxels. If Step 23 test tractography produces tracts that look too loose/dispersed, we can re-run with 1 voxel dilation.
 
 ---
 

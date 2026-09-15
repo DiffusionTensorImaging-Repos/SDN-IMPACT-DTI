@@ -9,7 +9,7 @@ LOG="/data/scratch/dti_perm/perm_v2.log"
 mkdir -p "$OUT"
 
 export R_PERM_CORES=1
-export R_PERM_N=5000     # Ranesh's standard
+export R_PERM_N=5000     # standard permutation count
 
 JOBS=$(mktemp)
 for outcome in SOCIAL_TrueMemRate SOCIAL_FalseMemRate MONETARY_TrueMemRate MONETARY_FalseMemRate; do

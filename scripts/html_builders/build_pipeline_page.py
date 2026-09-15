@@ -17,6 +17,10 @@ LINES = README.read_text().splitlines()  # md line N == LINES[N-1]
 
 
 def slice_fence(o, c):
+    # NOTE (2026-09): these (o, c) ReadMe line ranges predate the Section C rewrite and no longer
+    # line up with the current ReadMe.md, so regenerating from this builder does not reproduce the
+    # committed results_html/pipeline.html. Re-derive every range before running this again; until
+    # then the committed page is authoritative.
     return "\n".join(LINES[o:c - 1])
 
 
@@ -106,7 +110,7 @@ PRE.append(step(
     (1099, 1150)))
 PRE.append(step(
     "dwidenoise · mrdegibbs · dwiextract", "MRtrix3",
-    "<p>Three cleanups on the raw diffusion data: remove thermal noise (MP-PCA), remove Gibbs ringing, and drop the unstable b=250 shell (Olson-lab convention).</p>",
+    "<p>Three cleanups on the raw diffusion data: remove thermal noise (MP-PCA), remove Gibbs ringing, and drop the unstable b=250 shell.</p>",
     (1255, 1314),
     "Shells kept: b = 0, 1000, 2000, 3250, 5000."))
 PRE.append(step(
@@ -177,29 +181,29 @@ TRACT.append(step(
     "All ROIs land in plausible anatomical positions on the diffusion image.",
     [("roi_qc_wholebrain_left_VTA.png", "Left VTA seed (Pauli 25%) warped to diffusion space, s1000."),
      ("roi_qc_zoomed_left_HPC.png", "Left hippocampus target (Harvard-Oxford 50%), zoomed."),
-     ("roi_qc_zoomed_left_tract_atlas.png", "Left VTA-HPC tract atlas (Ranesh's HCP group mean) in diffusion space.")]))
+     ("roi_qc_zoomed_left_tract_atlas.png", "Left VTA-HPC tract atlas (HCP group mean) in diffusion space.")]))
 TRACT.append(step(
     "fslmaths: exclusion mask", "FSL",
-    "<p>Ranesh's original pipeline used 13 separate anatomical exclusion ROIs. His approved shortcut: take his group tract atlas, dilate it 2 voxels into a corridor, add the VTA and hippocampus, then invert, so allowed = the corridor and excluded = everything else. One mask instead of thirteen. This is also what lets us drop the FOD cutoff so low in the next step.</p>",
+    "<p>The reference pipeline used 13 separate anatomical exclusion ROIs. Our shortcut: take the group tract atlas, dilate it 2 voxels into a corridor, add the VTA and hippocampus, then invert, so allowed = the corridor and excluded = everything else. One mask instead of thirteen. This is also what lets us drop the FOD cutoff so low in the next step.</p>",
     (4007, 4091),
     "57/57 pass all 7 audit checks. Inclusion corridor 1,526 to 1,934 voxels (mean ~1,720), consistent across subjects. VTA and HPC fully contained."))
 TRACT.append(step(
     "tckgen: FOD-cutoff test", "MRtrix3",
-    "<p>The one tuned parameter: the FOD amplitude cutoff (when tracking stops). Ranesh used 0.06 at 7T; 3T is noisier, so we tested 0.1 / 0.08 / 0.06 / 0.01 on 5 pilot subjects, both hemispheres. Because the exclusion corridor already constrains tracking, the usual downside of a low cutoff (spurious fibers) doesn't apply, so we could go lower than expected.</p>"
+    "<p>The one tuned parameter: the FOD amplitude cutoff (when tracking stops). The reference pipeline used 0.06 at 7T; 3T is noisier, so we tested 0.1 / 0.08 / 0.06 / 0.01 on 5 pilot subjects, both hemispheres. Because the exclusion corridor already constrains tracking, the usual downside of a low cutoff (spurious fibers) doesn't apply, so we could go lower than expected.</p>"
     "<p>Runs hitting the 1000 target: <b>0.1</b> 2/10 (too strict for 3T); <b>0.08</b> ~5/10 (inconsistent, s606 L = 309); <b>0.06</b> 10/10; <b>0.01</b> 10/10 and about 5x more seed-efficient. Paths were virtually identical to 0.06 (same arc, length ~44 vs ~47 mm). The 0.01 TDI is slightly thicker, which the cleaning step then tightens below the 0.06 bundle anyway.</p>",
     (4213, 4387),
-    "Cutoff 0.01 chosen for the full run. Ranesh confirmed it is robust with the atlas-based exclusion mask.",
+    "Cutoff 0.01 chosen for the full run. Independently confirmed robust with the atlas-based exclusion mask.",
     [("cutoff_compare_s169_l.png", "TDI at 0.06 (left) vs 0.01 (right), s169 left tract. Same VTA-HPC arc."),
      ("cutoff_stats_comparison.png", "Streamline counts and lengths across the 5 test subjects, four cutoffs.")]))
 TRACT.append(step(
     "tckgen: full run (all 57)", "MRtrix3",
-    "<p>Same command at production budget: 2,500 streamlines from up to 25M seed attempts, cutoff 0.01. Later repeated with a second (anterior) VTA-HPC atlas Ranesh provided, giving four tracts: posterior L/R and anterior L/R.</p>",
+    "<p>Same command at production budget: 2,500 streamlines from up to 25M seed attempts, cutoff 0.01. Later repeated with a second (anterior) VTA-HPC atlas, giving four tracts: posterior L/R and anterior L/R.</p>",
     (4535, 4648),
     "114/114 posterior runs hit 2,500 streamlines. Seed usage 511K to 2.03M (avg ~1.1M, about 4.4% of the cap), no subject near the budget. Anterior set: all 114 also hit 2,500."))
 TRACT.append(sub("Cleaning"))
 TRACT.append(step(
     "clean_bundle (Mahalanobis)", "pyAFQ",
-    "<p>Prune anatomically implausible streamlines by Mahalanobis distance: anything more than 3 SD from the bundle's core shape, or 2 SD off in length, dropped over 5 rounds. Ported from Ranesh's cleaning script.</p>",
+    "<p>Prune anatomically implausible streamlines by Mahalanobis distance: anything more than 3 SD from the bundle's core shape, or 2 SD off in length, dropped over 5 rounds. Ported from the reference cleaning script.</p>",
     (4781, 4913),
     "114/114 cleaned, retention 26.4% to 57.5% (avg ~39%), no bundle emptied. The cleaned 0.01 tract is tighter (length SD ~3.5-4.5 mm) than both the uncleaned 0.01 and the conservative 0.06 (~5-7 mm), which validates the permissive-cutoff plus cleaning approach.",
     [("cleaned_compare_s169_l.png", "s169 left: 0.06 conservative, 0.01 uncleaned, 0.01 cleaned. The cleaned 0.01 is the most focused."),
@@ -215,14 +219,14 @@ TRACT.append(step(
 # ==================================================== MICROSTRUCTURE
 MICRO = [step(
     "afq_profile: FA", "dipy",
-    "<p>Sample FA at 100 nodes evenly spaced along the tract. Every streamline is oriented the same way (via a QuickBundles centroid, so node 1 is always the same end), resampled to 100 points, and Gaussian-weighted (core streamlines count more). Analyses use the middle nodes (~25-75); the ends are dropped for partial-volume contamination. Ported from Ranesh's nodewise_noddi.py.</p>",
+    "<p>Sample FA at 100 nodes evenly spaced along the tract. Every streamline is oriented the same way (via a QuickBundles centroid, so node 1 is always the same end), resampled to 100 points, and Gaussian-weighted (core streamlines count more). Analyses use the middle nodes (~25-75); the ends are dropped for partial-volume contamination. Ported from the reference nodewise_noddi.py.</p>",
     (5476, 5610),
     "228 FA profiles (4 tracts x 57 subjects), zero skips. Each tract CSV is 5,701 rows (57 x 100 + header).",
     [("step27_fa_profile_s1000_posterior_l.png", "FA along the posterior left tract, s1000: peaks in deep WM (~0.53), drops toward HPC (0.29)."),
      ("step27_fa_profile_s1000_anterior_l.png", "FA along the anterior left tract, s1000: similar start, different late-tract shape.")])]
 MICRO.append(step(
     "NODDI fit (modulated maps)", "AMICO",
-    "<p>Fit NODDI on all shells with AMICO, giving three interpretable maps per voxel: NDI (neurite density), ODI (orientation dispersion), FWF (free-water fraction). We saved the modulated NDI/ODI (tissue-weighted partial-volume correction, per Parker et al. 2021), the version Ranesh used. FWF has no modulated version; the tissue-weighting is itself the correction. Config: bStep=200, b0_thr=100, doSaveModulatedMaps=True, doComputeRMSE=True.</p>",
+    "<p>Fit NODDI on all shells with AMICO, giving three interpretable maps per voxel: NDI (neurite density), ODI (orientation dispersion), FWF (free-water fraction). We saved the modulated NDI/ODI (tissue-weighted partial-volume correction, per Parker et al. 2021), the version used in the reference pipeline. FWF has no modulated version; the tissue-weighting is itself the correction. Config: bStep=200, b0_thr=100, doSaveModulatedMaps=True, doComputeRMSE=True.</p>",
     ("amico.util.fsl2scheme(bvals, bvecs, bStep=200)   # round b to nearest 200\n"
      "ae = amico.Evaluation(study_dir, subject)\n"
      "ae.set_model('NODDI')\n"

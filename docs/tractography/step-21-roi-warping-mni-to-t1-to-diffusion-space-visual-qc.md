@@ -203,7 +203,7 @@ tmux attach -t csd
 
 ### Step 21 Comprehensive Audit (9 Checks)
 
-Following Ranesh Mopuru's QC approach — where he excluded 3 subjects for problematic registration — we run a 9-part automated audit covering every aspect of the ROI warp. The full audit script is at `/data/projects/STUDIES/IMPACT/DTI/scripts/step20_21_full_audit.sh`.
+Following the reference QC approach — which excluded 3 subjects for problematic registration — we run a 9-part automated audit covering every aspect of the ROI warp. The full audit script is at `/data/projects/STUDIES/IMPACT/DTI/scripts/step20_21_full_audit.sh`.
 
 **Audit results (57/57 subjects):**
 
@@ -213,7 +213,7 @@ Following Ranesh Mopuru's QC approach — where he excluded 3 subjects for probl
 | 2 | Step 21 ROI file completeness (6 diff + 6 T1 intermediates) | 57/57 PASS |
 | 3 | Voxel counts + outlier detection (>2 SD from mean) | 0 empty ROIs |
 | 4 | ROI dimensions match diffusion reference | 57/57 PASS |
-| 5 | VTA-HPC overlap (must be zero, per Ranesh) | 0 subjects with overlap |
+| 5 | VTA-HPC overlap (must be zero) | 0 subjects with overlap |
 | 6 | Binariness (all values 0 or 1) | 57/57 PASS |
 | 7 | ROI laterality (left ROIs on left hemisphere) | 57/57 PASS |
 | 8 | T1 intermediate files present (verify 2-stage warp) | 57/57 PASS |
@@ -234,7 +234,7 @@ Following Ranesh Mopuru's QC approach — where he excluded 3 subjects for probl
 
 ### Visual QC: Verifying ROI Placement in Diffusion Space
 
-After warping, we visually confirm that ROIs landed in the correct anatomical locations. Following Ranesh's approach, visual QC was performed on **all 57 subjects** using three complementary methods.
+After warping, we visually confirm that ROIs landed in the correct anatomical locations. Visual QC was performed on **all 57 subjects** using three complementary methods.
 
 **What to look for:**
 - **VTA**: Should sit in the ventral midbrain, just anterior to the red nucleus, near the midline. It's tiny — only a few voxels. If it lands in the cerebral peduncle, pons, or outside the brainstem, the registration failed for that subject.
@@ -302,7 +302,7 @@ All QC scripts are stored at `/data/projects/STUDIES/IMPACT/DTI/scripts/`:
 
 All 57 subjects pass all 9 automated audits and visual inspection. No subjects excluded. ROIs consistently land in the correct anatomical locations across all subjects. Ready for Step 22.
 
-> **Anterior VTA→HPC tract:** The same MNI→T1→Diffusion warping procedure was later repeated for Ranesh's anterior tract atlas files. The VTA and HPC ROIs (seed/target) are shared — only the tract atlas file changes between the posterior and anterior pipelines. All 114 anterior atlas warps passed QC. See [Anterior Tract Addendum](#anterior-vtahpc-tract-addendum).
+> **Anterior VTA→HPC tract:** The same MNI→T1→Diffusion warping procedure was later repeated for the anterior tract atlas files. The VTA and HPC ROIs (seed/target) are shared — only the tract atlas file changes between the posterior and anterior pipelines. All 114 anterior atlas warps passed QC. See [Anterior Tract Addendum](#anterior-vtahpc-tract-addendum).
 
 ---
 

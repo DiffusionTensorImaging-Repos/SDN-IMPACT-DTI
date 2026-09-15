@@ -8,7 +8,7 @@ nav_order: 7
 # Step 7 — Gibbs Ringing Removal + b=250 Cleanup
 
 This step does two things:  reduces oscillation artifacts in diffusion MRI caused by Fourier sampling. Additionaly, we remove volumes with b=250 from the `.bvec` and `.bval` files. These volumes can cause instability in downstream tensor modeling.  
-   The Olson Lab (and others at Temple) have regularly excluded these volumes, and doing so will not interfere with analyses. (Many labs don't even ***collect*** b=250 for DTI anymore, so this is a safe bet.)
+   These volumes are regularly excluded in comparable pipelines, and doing so will not interfere with analyses. (Many labs don't even ***collect*** b=250 for DTI anymore, so this is a safe bet.)
 
 **! Required Software**:
 

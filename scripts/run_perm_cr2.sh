@@ -11,7 +11,7 @@ rm -rf "$OUT"
 mkdir -p "$OUT"
 
 export R_PERM_CORES=1     # each Rscript = 1 process, no foreach workers
-export R_PERM_N=5000      # Ranesh's standard
+export R_PERM_N=5000      # standard permutation count
 
 JOBS=$(mktemp)
 for outcome in SOCIAL_dprime MONETARY_dprime ctqsf_adult_totalmaltreatment_pnrscoring ctqsf_adult_totalabuse_pnrscoring ctqsf_adult_totalneglect_pnrscoring; do

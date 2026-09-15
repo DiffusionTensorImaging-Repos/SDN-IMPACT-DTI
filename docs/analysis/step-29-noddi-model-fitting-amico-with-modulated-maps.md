@@ -7,9 +7,9 @@ nav_order: 29
 
 # Step 29 — NODDI Model Fitting (AMICO with Modulated Maps)
 
-Ranesh emphasized NODDI — he found NDI revealed effects that FA missed in his HCP cohort ("NDI_modulated" specifically, nodes 25–75). We fit NODDI on all 57 subjects using the AMICO toolbox with his exact configuration.
+NODDI was prioritized because, in prior HCP work on this pathway, NDI revealed effects that FA missed ("NDI_modulated" specifically, nodes 25–75). We fit NODDI on all 57 subjects using the AMICO toolbox with the same configuration.
 
-**Why modulated maps (per Ranesh's email):** Standard NODDI output is contaminated by partial-volume effects (free-water signal mixing with tissue compartments). The `doSaveModulatedMaps=True` flag in AMICO produces `fit_NDI_modulated.nii.gz` and `fit_ODI_modulated.nii.gz`, which apply a tissue-weighted correction described in [Parker et al. 2021](https://doi.org/10.1016/j.neuroimage.2021.118749). FWF has no modulated version — the tissue-weighting *is* the partial-volume correction for NDI/ODI, so you use the regular `fit_FWF.nii.gz` if you want free-water content.
+**Why modulated maps:** Standard NODDI output is contaminated by partial-volume effects (free-water signal mixing with tissue compartments). The `doSaveModulatedMaps=True` flag in AMICO produces `fit_NDI_modulated.nii.gz` and `fit_ODI_modulated.nii.gz`, which apply a tissue-weighted correction described in [Parker et al. 2021](https://doi.org/10.1016/j.neuroimage.2021.118749). FWF has no modulated version — the tissue-weighting *is* the partial-volume correction for NDI/ODI, so you use the regular `fit_FWF.nii.gz` if you want free-water content.
 
 **Dependencies:**
 - AMICO (`pip3 install --user dmri-amico`) — version 2.1.1 installed on cluster.
@@ -35,7 +35,7 @@ derivatives/NODDI/sub-s1000/
 └── fit_RMSE.nii.gz              # quality: model-fit residual
 ```
 
-**Ranesh's parameters (reproduced exactly):**
+**Reference parameters (reproduced exactly):**
 
 | Parameter | Value | Notes |
 |-----------|-------|-------|
@@ -46,7 +46,7 @@ derivatives/NODDI/sub-s1000/
 | `BLAS_nthreads` | 1 | Prevents BLAS over-subscription |
 | `save_dir_avg` | True | Saves full per-voxel metrics |
 
-**Parallelization strategy:** Ranesh ran 48 threads per subject serially. Our cluster has 48 cores + 125 GB RAM, so we ran **4 subjects in parallel × 12 threads each** = all 48 cores saturated with better wall-time utilization. A single-subject fit takes ~36 seconds, so 57 subjects with 4-way parallelism completed in ~15 minutes total.
+**Parallelization strategy:** The reference pipeline ran 48 threads per subject serially. Our cluster has 48 cores + 125 GB RAM, so we ran **4 subjects in parallel × 12 threads each** = all 48 cores saturated with better wall-time utilization. A single-subject fit takes ~36 seconds, so 57 subjects with 4-way parallelism completed in ~15 minutes total.
 
 **Running Step 29 in tmux:**
 
@@ -61,7 +61,7 @@ tmux new -s step29
 nano /data/projects/STUDIES/IMPACT/DTI/scripts/run_step29_noddi.py
 ```
 
-3. Paste the Python script (adapted from Ranesh's `NODDI_fitting.py` with IMPACT paths — one-subject-per-invocation pattern).
+3. Paste the Python script (adapted from the reference `NODDI_fitting.py` with IMPACT paths — one-subject-per-invocation pattern).
 
 4. Create the parallel runner `run_step29_noddi_parallel.sh` that loops through all 57 subjects launching 4 at a time with `NODDI_NTHREADS=12`.
 

@@ -3,7 +3,7 @@
 ================================================================================
 Step 28-prep: Build analysis-ready CSVs for permutation testing
 ================================================================================
-Merges everything Ranesh's permutation R script needs:
+Merges everything the permutation R script needs:
   - Subject ID
   - 5 outcomes:
       * SOCIAL_dprime, MONETARY_dprime (memory)

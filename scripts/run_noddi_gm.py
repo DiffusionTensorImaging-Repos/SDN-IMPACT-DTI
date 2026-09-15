@@ -2,10 +2,8 @@
 # ============================================================
 # NODDI refit for GRAY MATTER (hippocampus) — corrected dPar
 # ============================================================
-# Per Ranesh (2026-08-14 meeting): "when you run NODDI in gray matter versus
-# white matter, you have to tweak the parallel diffusivity parameter, because
-# water diffuses differently in gray matter and white matter. So if you didn't
-# lower the parameter, you might have to rerun that."
+# NODDI in gray matter needs a lower intrinsic parallel diffusivity than white matter;
+# the white-matter default over-estimates it and distorts NDI in gray-matter tissue.
 #
 # Our Step-29 fit used AMICO's default dPar = 1.7e-3 (the WHITE-matter value),
 # so hippocampal (gray matter) NDI/ODI/FWF from that fit are not valid.

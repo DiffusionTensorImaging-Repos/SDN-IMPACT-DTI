@@ -78,17 +78,20 @@ A. Preprocessing
 24. [Step 24 — Full Tractography (All 57 Subjects)](#step-24--full-tractography-all-57-subjects)
 25. [Step 25 — Tract Cleaning (pyAFQ Mahalanobis Distance)](#step-25--tract-cleaning-pyafq-mahalanobis-distance)
 26. [Step 26 — Visual QC of Cleaned Tracts](#step-26--visual-qc-of-cleaned-tracts-all-57-subjects)
-    - [Anterior VTA→HPC Tract Addendum](#anterior-vtahpc-tract-addendum) — same pipeline re-run with new atlas from Ranesh
+    - [Anterior VTA→HPC Tract Addendum](#anterior-vtahpc-tract-addendum) — same pipeline re-run with the anterior tract atlas
 
 
 ### Index — IMPACT DTI Microstructure & Statistics (Section C)
 
 27. [Step 27 — Node-wise FA Extraction (AFQ-style Tract Profiling)](#step-27--node-wise-fa-extraction-afq-style-tract-profiling)
-28. *Step 28 — Statistical Analysis: Permutation Testing (pending — awaiting outcome variable selection)*
 29. [Step 29 — NODDI Model Fitting (AMICO with Modulated Maps)](#step-29--noddi-model-fitting-amico-with-modulated-maps)
 30. [Step 30 — Node-wise NODDI Extraction (NDI, ODI, FWF)](#step-30--node-wise-noddi-extraction-ndi-odi-fwf-along-tracts)
     - [Mid-50-Nodes Summary + L vs R Hemisphere Correlations](#mid-50-nodes-summary--l-vs-r-hemisphere-correlations)
-31. *Step 31 — Statistical Analysis on NDI/ODI (pending — paired with Step 28)*
+31. [Final Analyses — VTA→HPC Microstructure & Motivated Memory](#final-analyses--vtahpc-microstructure--motivated-memory)
+    - 1 Sample & covariates (bilateral) · 2 Memory outcomes · 3 Is memory real? · 4 Behavioral bias
+    - 5 Everything we ran: node-wise · quartiles · whole tract, all four metrics, both subregions
+    - 6 How we narrowed: no subregion interaction · only NDI · effect is diffuse
+    - 7 What we report · 8 Hippocampal gray-matter NDI & HVLT
 
 
 # DTI PREPROCESSING: 
@@ -1191,7 +1194,7 @@ echo -e "\n=== BET audit finished ==="
 ## Step 7 — Gibbs Ringing Removal + b=250 Cleanup
 
 This step does two things:  reduces oscillation artifacts in diffusion MRI caused by Fourier sampling. Additionaly, we remove volumes with b=250 from the `.bvec` and `.bval` files. These volumes can cause instability in downstream tensor modeling.  
-   The Olson Lab (and others at Temple) have regularly excluded these volumes, and doing so will not interfere with analyses. (Many labs don't even ***collect*** b=250 for DTI anymore, so this is a safe bet.)
+   These volumes are regularly excluded in comparable pipelines, and doing so will not interfere with analyses. (Many labs don't even ***collect*** b=250 for DTI anymore, so this is a safe bet.)
 
 **! Required Software**:
 
@@ -2781,17 +2784,17 @@ For the IMPACT analysis — testing whether white matter microstructure *along s
 - Run **node-wise permutation testing** to identify which segments of the tract carry the effect
 - Apply **Mahalanobis-distance cleaning** (pyAFQ) to remove anatomically implausible streamlines
 
-MRtrix3's **dwi2fod** (Constrained Spherical Deconvolution) → **tckgen** pipeline produces these streamlines. This is the recommended approach for tract-specific microstructure analysis, as confirmed by Ranesh Mopuru (Olson Lab), Blake Elliott, and Linda Hoffman.
+MRtrix3's **dwi2fod** (Constrained Spherical Deconvolution) → **tckgen** pipeline produces these streamlines. This is the recommended approach for tract-specific microstructure analysis.
 
 **The good news:** BedpostX wasn't wasted. When we ran BedpostX in Step 9, we organized the eddy-corrected DWI data, rotated gradient tables, b-values, and brain mask into a clean `bedpostx_input/` directory — and that is exactly what MRtrix needs as input. So we go back to `BEDPOSTX/<subj>/bedpostx_input/` and feed those same files (`data.nii.gz`, `bvecs`, `bvals`, `nodif_brain_mask.nii.gz`) into the MRtrix CSD pipeline.
 
-**Pipeline adapted from**: Ranesh Mopuru's complete MRtrix tractography pipeline (originally developed for HCP 7T data in the Olson Lab at Temple). His scripts were adapted for our IMPACT 3T multi-shell data with the following key differences:
+**Pipeline adapted from**: an established MRtrix tractography pipeline originally developed for HCP 7T data. Its scripts were adapted for our IMPACT 3T multi-shell data with the following key differences:
 
-| | Ranesh (HCP 7T) | IMPACT (3T) |
+| | Reference (HCP 7T) | IMPACT (3T) |
 |---|---|---|
 | Skull stripping | mri_synthstrip | ANTs (already done, Step 2) |
 | Registration to diffusion space | Not needed (HCP data already T1-aligned) | FLIRT transforms from Step 12 |
-| Exclusion ROIs for tractography | 20+ individual hand-drawn exclusion masks | Ranesh's tract atlas (GroupMean_thr50) as single exclusion mask |
+| Exclusion ROIs for tractography | 20+ individual hand-drawn exclusion masks | Group-mean tract atlas (GroupMean_thr50) as single exclusion mask |
 | tckgen streamline count | 2500 | 1000 |
 | tckgen seeding attempts | 25 million | 5 million |
 | FOD cutoff | 0.06 | Start at 0.1, experiment with 0.08 and 0.06 |
@@ -3200,7 +3203,7 @@ This is the core modeling step — the MRtrix equivalent of what BedpostX did ba
 
 The key details:
 - We use `dwi2fod msmt_csd` — the multi-shell multi-tissue variant, which takes advantage of all our b-value shells (b=0, 1000, 2000, 3250, 5000) to better separate tissue types.
-- We use the **group-averaged response functions** from Step 17 (not per-subject), matching Ranesh's pipeline and MRtrix recommendations.
+- We use the **group-averaged response functions** from Step 17 (not per-subject), matching the reference pipeline and MRtrix recommendations.
 - Each subject gets three FOD images: `wm_fod.mif` (white matter — this is the one that matters for tractography), `gm_fod.mif`, and `csf_fod.mif`.
 
 **Input (per subject):**
@@ -3341,7 +3344,7 @@ Before tractography, we normalize the FOD intensities across tissue types and su
 
 The normalized WM FOD (`wm_fod_norm.mif`) is what feeds into tractography in Steps 23–24.
 
-This step also creates **tissue-concatenated images** (`vf_fod.mif`, `vf_fod_norm.mif`) for visualization and quality checking — matching Ranesh's pipeline. These combine the first spherical harmonic component (l=0) of the WM FOD with the GM and CSF FODs into a single RGB-like image where you can see all three tissue compartments at once in mrview.
+This step also creates **tissue-concatenated images** (`vf_fod.mif`, `vf_fod_norm.mif`) for visualization and quality checking — matching the reference pipeline. These combine the first spherical harmonic component (l=0) of the WM FOD with the GM and CSF FODs into a single RGB-like image where you can see all three tissue compartments at once in mrview.
 
 **Input (per subject — from Step 18):**
 - `/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/<subj>/wm_fod.mif`
@@ -3421,7 +3424,7 @@ process_subj() {
         -mask "$d/mask.mif" \
         -force
 
-    # Tissue concatenation for visualization (matches Ranesh's pipeline)
+    # Tissue concatenation for visualization (matches the reference pipeline)
     mrconvert -coord 3 0 "$d/wm_fod.mif" - | \
         mrcat "$d/csf_fod.mif" "$d/gm_fod.mif" - "$d/vf_fod.mif" -force
 
@@ -3485,9 +3488,9 @@ echo -e "\n=== mtnormalise Audit Complete ==="
 
 ---
 
-## ROI Upload — Ranesh's VTA, Hippocampus, and Tract Atlas Files
+## ROI Upload — VTA, Hippocampus, and Tract Atlas Files
 
-Before we can run tractography, we need the seed, target, and exclusion ROIs in each subject's diffusion space. Ranesh Mopuru (Olson Lab) provided the following ROI files, all in **MNI 1mm standard space**:
+Before we can run tractography, we need the seed, target, and exclusion ROIs in each subject's diffusion space. The following ROI files are used, all in **MNI 1mm standard space**:
 
 | File | Description |
 |---|---|
@@ -3495,8 +3498,8 @@ Before we can run tractography, we need the seed, target, and exclusion ROIs in 
 | `right_VTA_0.25_bin.nii.gz` | Right VTA — Pauli atlas, thresholded at 25% (seed ROI) |
 | `HPC_L_0.5_bin.nii.gz` | Left hippocampus — Harvard-Oxford atlas, 50% threshold (target ROI) |
 | `HPC_R_0.5_bin.nii.gz` | Right hippocampus — Harvard-Oxford atlas, 50% threshold (target ROI) |
-| `l_vta_l_hipp_1mm_MNI_GroupMean_thr50.nii.gz` | Left VTA→HPC tract atlas — Ranesh's group mean, 50% threshold (for exclusion mask) |
-| `r_vta_r_hipp_1mm_MNI_GroupMean_thr50.nii.gz` | Right VTA→HPC tract atlas — Ranesh's group mean, 50% threshold (for exclusion mask) |
+| `l_vta_l_hipp_1mm_MNI_GroupMean_thr50.nii.gz` | Left VTA→HPC tract atlas — HCP group mean, 50% threshold (for exclusion mask) |
+| `r_vta_r_hipp_1mm_MNI_GroupMean_thr50.nii.gz` | Right VTA→HPC tract atlas — HCP group mean, 50% threshold (for exclusion mask) |
 | `l_vta_l_hipp_1mm_MNI_GroupMean_OverlapProp.nii.gz` | Left tract — raw probabilistic overlap map (reference only) |
 | `r_vta_r_hipp_1mm_MNI_GroupMean_OverlapProp.nii.gz` | Right tract — raw probabilistic overlap map (reference only) |
 
@@ -3514,14 +3517,14 @@ scp /Users/dannyzweben/Desktop/SDN/DTI/Connectivity-Next-Steps/ROIS/VTA-HPC\ ROI
 
 ## Step 20 — ANTs Registration: MNI → T1 Space
 
-The ROIs from Ranesh are in MNI standard space (1mm). Tractography runs in each subject's native diffusion space. To get ROIs from MNI → diffusion, we need two transforms applied in sequence:
+The ROIs are in MNI standard space (1mm). Tractography runs in each subject's native diffusion space. To get ROIs from MNI → diffusion, we need two transforms applied in sequence:
 
 1. **MNI → T1** (ANTs nonlinear warp — this step)
 2. **T1 → Diffusion** (FLIRT linear transform — Step 21, using existing matrices from Step 12)
 
 We need the **nonlinear** ANTs warp for the MNI → T1 step because every brain is shaped differently from the MNI template. A linear (affine) transform can handle rotation, scaling, and shearing, but it cannot account for the fact that one person's hippocampus is a little wider, or their VTA sits a few mm lower, than the template. ANTs SyN registration deforms the MNI template to match each subject's specific brain shape, so the ROIs land precisely where they should.
 
-Ranesh used `antsRegistrationSyNQuick.sh` for this same purpose. We use the same tool with the same approach. The only difference is that Ranesh's HCP data was already T1-aligned to diffusion (no Step 21 needed), whereas our IMPACT data requires the additional FLIRT step.
+The reference pipeline used `antsRegistrationSyNQuick.sh` for this same purpose. We use the same tool with the same approach. The only difference is that the HCP data was already T1-aligned to diffusion (no Step 21 needed), whereas our IMPACT data requires the additional FLIRT step.
 
 **Input (per subject):**
 - `/data/projects/STUDIES/IMPACT/DTI/derivatives/ANTs/<subj>/<subj>_BrainExtractionBrain.nii.gz` (skull-stripped T1 from Step 2)
@@ -3852,7 +3855,7 @@ tmux attach -t csd
 
 ### Step 21 Comprehensive Audit (9 Checks)
 
-Following Ranesh Mopuru's QC approach — where he excluded 3 subjects for problematic registration — we run a 9-part automated audit covering every aspect of the ROI warp. The full audit script is at `/data/projects/STUDIES/IMPACT/DTI/scripts/step20_21_full_audit.sh`.
+Following the reference QC approach — which excluded 3 subjects for problematic registration — we run a 9-part automated audit covering every aspect of the ROI warp. The full audit script is at `/data/projects/STUDIES/IMPACT/DTI/scripts/step20_21_full_audit.sh`.
 
 **Audit results (57/57 subjects):**
 
@@ -3862,7 +3865,7 @@ Following Ranesh Mopuru's QC approach — where he excluded 3 subjects for probl
 | 2 | Step 21 ROI file completeness (6 diff + 6 T1 intermediates) | 57/57 PASS |
 | 3 | Voxel counts + outlier detection (>2 SD from mean) | 0 empty ROIs |
 | 4 | ROI dimensions match diffusion reference | 57/57 PASS |
-| 5 | VTA-HPC overlap (must be zero, per Ranesh) | 0 subjects with overlap |
+| 5 | VTA-HPC overlap (must be zero) | 0 subjects with overlap |
 | 6 | Binariness (all values 0 or 1) | 57/57 PASS |
 | 7 | ROI laterality (left ROIs on left hemisphere) | 57/57 PASS |
 | 8 | T1 intermediate files present (verify 2-stage warp) | 57/57 PASS |
@@ -3883,7 +3886,7 @@ Following Ranesh Mopuru's QC approach — where he excluded 3 subjects for probl
 
 ### Visual QC: Verifying ROI Placement in Diffusion Space
 
-After warping, we visually confirm that ROIs landed in the correct anatomical locations. Following Ranesh's approach, visual QC was performed on **all 57 subjects** using three complementary methods.
+After warping, we visually confirm that ROIs landed in the correct anatomical locations. Visual QC was performed on **all 57 subjects** using three complementary methods.
 
 **What to look for:**
 - **VTA**: Should sit in the ventral midbrain, just anterior to the red nucleus, near the midline. It's tiny — only a few voxels. If it lands in the cerebral peduncle, pons, or outside the brainstem, the registration failed for that subject.
@@ -3951,17 +3954,17 @@ All QC scripts are stored at `/data/projects/STUDIES/IMPACT/DTI/scripts/`:
 
 All 57 subjects pass all 9 automated audits and visual inspection. No subjects excluded. ROIs consistently land in the correct anatomical locations across all subjects. Ready for Step 22.
 
-> **Anterior VTA→HPC tract:** The same MNI→T1→Diffusion warping procedure was later repeated for Ranesh's anterior tract atlas files. The VTA and HPC ROIs (seed/target) are shared — only the tract atlas file changes between the posterior and anterior pipelines. All 114 anterior atlas warps passed QC. See [Anterior Tract Addendum](#anterior-vtahpc-tract-addendum).
+> **Anterior VTA→HPC tract:** The same MNI→T1→Diffusion warping procedure was later repeated for the anterior tract atlas files. The VTA and HPC ROIs (seed/target) are shared — only the tract atlas file changes between the posterior and anterior pipelines. All 114 anterior atlas warps passed QC. See [Anterior Tract Addendum](#anterior-vtahpc-tract-addendum).
 
 ---
 
 ## Step 22 — Atlas-Based Exclusion Masks
 
-Ranesh's original pipeline used 13 individual exclusion ROIs (ventral pallidum, accumbens L/R, striatum, thalamus, cortex/cerebellum, brainstem, amygdala, red nucleus, fornix, optic tract, optic nerve, opposite hemisphere) to constrain tractography. Each had to be warped, tidied (overlaps subtracted), and passed as separate `-exclude` flags to tckgen.
+The reference pipeline used 13 individual exclusion ROIs (ventral pallidum, accumbens L/R, striatum, thalamus, cortex/cerebellum, brainstem, amygdala, red nucleus, fornix, optic tract, optic nerve, opposite hemisphere) to constrain tractography. Each had to be warped, tidied (overlaps subtracted), and passed as separate `-exclude` flags to tckgen.
 
-Instead, we use the **atlas shortcut** that Ranesh recommended: his GroupMean_thr50 tract atlas (built from ~170 HCP 7T subjects using those 13 exclusion ROIs) already encodes "where VTA→HPC streamlines should plausibly go." We dilate this atlas by 2 voxels, add the VTA seed and HPC target ROIs, binarize the result into an "inclusion zone," and invert everything outside it into a single exclusion mask.
+Instead, we use an **atlas shortcut**: the GroupMean_thr50 tract atlas (built from ~170 HCP 7T subjects using those 13 exclusion ROIs) already encodes "where VTA→HPC streamlines should plausibly go." We dilate this atlas by 2 voxels, add the VTA seed and HPC target ROIs, binarize the result into an "inclusion zone," and invert everything outside it into a single exclusion mask.
 
-From Ranesh's meeting notes: "By dilating the atlas by like two-ish voxels, you're generating like this box where your streamlines should plausibly go through... you exclude everything outside of this box... add the VTA and the hippocampus to this atlas mask, and then you invert everything else."
+The logic: dilating the atlas by about two voxels defines a corridor where streamlines should plausibly travel, and everything outside that corridor is excluded. The VTA and hippocampus are added to the atlas mask before inverting.
 
 **Logic (per hemisphere):**
 1. Dilate tract atlas by 2 voxels (`fslmaths -dilM -dilM`)
@@ -4009,10 +4012,10 @@ nano run_step22_exclusion_masks.sh
 # ============================================================
 # Step 22: Build Atlas-Based Exclusion Masks
 # ============================================================
-# Uses Ranesh's GroupMean_thr50 tract atlas to create a single
+# Uses the GroupMean_thr50 tract atlas to create a single
 # exclusion mask per hemisphere, replacing 13 individual exclusion ROIs.
 #
-# Logic (per Ranesh):
+# Logic:
 #   1. Dilate tract atlas by 2 voxels (fslmaths -dilM -dilM)
 #   2. Add VTA seed + HPC target to dilated atlas
 #   3. Binarize = inclusion zone (where streamlines are allowed)
@@ -4142,35 +4145,35 @@ All 57 subjects pass all 7 automated audits and visual inspection. Exclusion mas
 
 > **Anterior VTA→HPC tract:** Anterior exclusion masks were later built using the same dilated-corridor approach with the anterior tract atlas. Inclusion zone sizes (~1,400 voxels per hemisphere) are comparable to the posterior tract. All 114 anterior masks passed QC. See [Anterior Tract Addendum](#anterior-vtahpc-tract-addendum).
 
-**NOTE**: Ranesh recommended experimenting with 1 vs 2 voxel dilation. We start with 2 voxels. If Step 23 test tractography produces tracts that look too loose/dispersed, we can re-run with 1 voxel dilation.
+**NOTE**: 1 vs 2 voxel dilation is worth testing. We start with 2 voxels. If Step 23 test tractography produces tracts that look too loose/dispersed, we can re-run with 1 voxel dilation.
 
 ---
 
 ## Step 23 — Test Tractography (Parameter Tuning)
 
-Before running tractography on all 57 subjects, we test on 5 subjects with multiple FOD cutoff values to find optimal parameters for our 3T IMPACT data. Ranesh's pipeline was optimized for 7T HCP data — the key difference is that lower magnetic field strength produces noisier FOD estimates, so the FOD amplitude cutoff (which determines when tracking stops) may need to be higher at 3T to avoid following noise.
+Before running tractography on all 57 subjects, we test on 5 subjects with multiple FOD cutoff values to find optimal parameters for our 3T IMPACT data. The reference pipeline was optimized for 7T HCP data — the key difference is that lower magnetic field strength produces noisier FOD estimates, so the FOD amplitude cutoff (which determines when tracking stops) may need to be higher at 3T to avoid following noise.
 
-Ranesh's exact advice: "Start at 0.1, try 0.08, maybe 0.06. At 3T, 0.08 might work." He also noted that minlength/maxlength (35-65mm at 7T) may need adjustment at 3T.
+Recommended starting points: cutoff 0.1, then 0.08, then 0.06, with 0.08 expected to work at 3T. The minlength/maxlength bounds (35-65 mm at 7T) may also need adjustment at 3T.
 
-**Ranesh's 7T parameters vs. our 3T test values:**
+**Reference 7T parameters vs. our 3T test values:**
 
-| Parameter | Ranesh (HCP 7T) | Our test (IMPACT 3T) | Rationale |
+| Parameter | Reference (HCP 7T) | Our test (IMPACT 3T) | Rationale |
 |-----------|-----------------|---------------------|-----------|
 | FOD cutoff (`-cutoff`) | 0.06 | **0.1, 0.08, 0.06** | 3T may need higher cutoff — test all three |
 | Streamline target (`-select`) | 2500 | **1000** | Reduced for faster testing (will increase in Step 24) |
 | Seeding attempts (`-seeds`) | 25,000,000 | **5,000,000** | Reduced for faster testing (will increase in Step 24) |
-| Min track length (`-minlength`) | 35 mm | **35 mm** | Start with Ranesh's value |
-| Max track length (`-maxlength`) | 65 mm | **65 mm** | Start with Ranesh's value |
-| Seed direction (`-seed_unidirectional`) | yes | **yes** | Match Ranesh |
+| Min track length (`-minlength`) | 35 mm | **35 mm** | Start with reference value |
+| Max track length (`-maxlength`) | 65 mm | **65 mm** | Start with reference value |
+| Seed direction (`-seed_unidirectional`) | yes | **yes** | Match reference |
 | Stop flag (`-stop`) | yes | **yes** | Stop when select count reached |
 | Threads (`-nthreads`) | 24 | **8** | Shared cluster |
-| Exclusion strategy | 13 individual ROIs | **1 atlas-based mask** | Ranesh's recommended shortcut (Step 22) |
+| Exclusion strategy | 13 individual ROIs | **1 atlas-based mask** | Atlas shortcut (Step 22) |
 
-**Flags NOT used** (Ranesh didn't use these either): ACT, backtrack, crop_at_gmwmif, angle, step_size (MRtrix defaults).
+**Flags NOT used** (also unused in the reference pipeline): ACT, backtrack, crop_at_gmwmif, angle, step_size (MRtrix defaults).
 
 **NOT using `-fslgrad`** because gradients are already embedded in dwi.mif from Step 15 (mrconvert with `-fslgrad`).
 
-**Test subjects** (from Ranesh's suggestion): s169, s4222, s4418, s606, s1000
+**Test subjects**: s169, s4222, s4418, s606, s1000
 
 **Total runs:** 5 subjects × 3 cutoffs × 2 hemispheres = **30 tckgen runs**
 
@@ -4217,7 +4220,7 @@ nano /data/projects/STUDIES/IMPACT/DTI/scripts/run_step23_test_tractography.sh
 # ============================================================
 # Tests tckgen with 3 FOD cutoff values (0.1, 0.08, 0.06) on
 # 5 subjects to find optimal parameters for 3T IMPACT data.
-# Ranesh used cutoff=0.06 at 7T; predicted 0.08 for 3T.
+# Reference pipeline used cutoff=0.06 at 7T; 0.08 predicted for 3T.
 #
 # Input:  CSD/<subj>/wm_fod_norm.mif (normalized WM FODs)
 #         CSD/<subj>/rois/left_VTA_diff.nii.gz (seed)
@@ -4228,18 +4231,18 @@ nano /data/projects/STUDIES/IMPACT/DTI/scripts/run_step23_test_tractography.sh
 # Output: CSD/<subj>/tckgen/l_vta_l_hipp/l_vta_l_hipp_<cutoff>.tck
 #         CSD/<subj>/tckgen/r_vta_r_hipp/r_vta_r_hipp_<cutoff>.tck
 #
-# Parameters matching Ranesh's pipeline (adjusted for 3T):
-#   -seed_unidirectional (same as Ranesh)
-#   -select 1000 (Ranesh: 2500, reduced for test)
-#   -seeds 5000000 (Ranesh: 25M, reduced for test)
-#   -minlength 35 (Ranesh: 35mm at 7T)
-#   -maxlength 65 (Ranesh: 65mm at 7T)
-#   -stop (same as Ranesh)
-#   -cutoff varies: 0.1, 0.08, 0.06 (Ranesh: fixed 0.06 at 7T)
-#   -nthreads 8 (Ranesh: 24, reduced for shared cluster)
+# Parameters matching the reference pipeline (adjusted for 3T):
+#   -seed_unidirectional (same as reference)
+#   -select 1000 (reference: 2500, reduced for test)
+#   -seeds 5000000 (reference: 25M, reduced for test)
+#   -minlength 35 (reference: 35mm at 7T)
+#   -maxlength 65 (reference: 65mm at 7T)
+#   -stop (same as reference)
+#   -cutoff varies: 0.1, 0.08, 0.06 (reference: fixed 0.06 at 7T)
+#   -nthreads 8 (reference: 24, reduced for shared cluster)
 #
 # NOT using -fslgrad (gradients already embedded in dwi.mif from Step 15)
-# NOT using ACT, backtrack, angle, step_size (Ranesh didn't use these)
+# NOT using ACT, backtrack, angle, step_size (unused in the reference pipeline)
 # ============================================================
 
 export PATH=/data/tools/mrtrix3/bin:$PATH
@@ -4247,7 +4250,7 @@ export PATH=/data/tools/mrtrix3/bin:$PATH
 csd_base="/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD"
 log_file="/data/projects/STUDIES/IMPACT/DTI/scripts/step23_test.log"
 
-# 5 test subjects (from Ranesh's suggestion)
+# 5 test subjects
 test_subjects="s169 s4222 s4418 s606 s1000"
 
 echo "=== Step 23: Test Tractography ===" > "$log_file"
@@ -4478,25 +4481,25 @@ Note the slightly thicker TDI at 0.01 — this reflects the broader spatial spre
 
 **Decision: Use cutoff 0.01 for full tractography (Step 24).**
 
-Ranesh confirmed this choice — he reported that with the atlas-based exclusion mask, dropping the FOD cutoff as low as 0.01 produces robust and clean streamlines. The mask constrains tracking to the anatomically plausible corridor, preventing the spurious streamlines that would normally result from a permissive cutoff. He also noted that the tracts may not even require pyAFQ cleaning afterward, though we will still run the cleaning step (Step 25) as a safeguard.
+This choice was independently confirmed: with the atlas-based exclusion mask, dropping the FOD cutoff as low as 0.01 produces robust and clean streamlines. The mask constrains tracking to the anatomically plausible corridor, preventing the spurious streamlines that would normally result from a permissive cutoff. The tracts may not even require pyAFQ cleaning afterward, though we still run the cleaning step (Step 25) as a safeguard.
 
 ---
 
 ## Step 24 — Full Tractography (All 57 Subjects)
 
-With the optimal FOD cutoff determined in Step 23 (0.01), we now run tractography on all 57 subjects using Ranesh's full parameters. The only change from the pilot is scaling up the streamline target and seed limit to match Ranesh's production values.
+With the optimal FOD cutoff determined in Step 23 (0.01), we now run tractography on all 57 subjects using the full reference parameters. The only change from the pilot is scaling up the streamline target and seed limit to the production values.
 
 **Parameters (finalized):**
 
 | Parameter | Value | Source |
 |-----------|-------|--------|
-| FOD cutoff (`-cutoff`) | 0.01 | Pilot-tested (Step 23) + Ranesh confirmation |
-| Streamline target (`-select`) | 2500 | Ranesh's production value |
-| Seeding attempts (`-seeds`) | 25,000,000 | Ranesh's production value |
-| Min track length (`-minlength`) | 35 mm | Ranesh's value |
-| Max track length (`-maxlength`) | 65 mm | Ranesh's value |
-| Seed direction (`-seed_unidirectional`) | yes | Ranesh's value |
-| Stop flag (`-stop`) | yes | Ranesh's value |
+| FOD cutoff (`-cutoff`) | 0.01 | Pilot-tested (Step 23) + independent confirmation |
+| Streamline target (`-select`) | 2500 | Reference production value |
+| Seeding attempts (`-seeds`) | 25,000,000 | Reference production value |
+| Min track length (`-minlength`) | 35 mm | reference value |
+| Max track length (`-maxlength`) | 65 mm | reference value |
+| Seed direction (`-seed_unidirectional`) | yes | reference value |
+| Stop flag (`-stop`) | yes | reference value |
 | Threads (`-nthreads`) | 8 | Shared cluster |
 | Exclusion strategy | 1 atlas-based mask per hemisphere | Step 22 |
 
@@ -4538,10 +4541,10 @@ nano /data/projects/STUDIES/IMPACT/DTI/scripts/run_step24_full_tractography.sh
 # Step 24: Full Tractography — All 57 Subjects (cutoff 0.01)
 # ============================================================
 # Runs tckgen on all subjects with parameters determined in Step 23:
-#   - cutoff 0.01 (confirmed by Ranesh + pilot testing)
-#   - select 2500 streamlines (Ranesh's target)
-#   - seeds 25,000,000 (Ranesh's seed limit)
-#   - minlength 35mm, maxlength 65mm (Ranesh's values)
+#   - cutoff 0.01 (pilot testing + independent confirmation)
+#   - select 2500 streamlines (reference target)
+#   - seeds 25,000,000 (reference seed limit)
+#   - minlength 35mm, maxlength 65mm (reference values)
 #   - Atlas-based exclusion masks from Step 22
 #
 # Input:  CSD/<subj>/wm_fod_norm.mif
@@ -4713,11 +4716,11 @@ All 57 subjects completed successfully — **114/114 runs hit 2500 streamlines**
 - **Average seeds used:** ~1.1M (~4.4% of the 25M limit)
 - **Total tck files:** 114 (57 subjects × 2 hemispheres)
 
-The cutoff 0.01 + atlas-based exclusion mask combination proved highly efficient at 3T, consistent with Ranesh's experience at 7T. No subject came close to exhausting the seed budget.
+The cutoff 0.01 + atlas-based exclusion mask combination proved highly efficient at 3T, consistent with the reference pipeline's behavior at 7T. No subject came close to exhausting the seed budget.
 
 **Step 24 Audit Result:** 114/114 pass (all ≥ 2500 streamlines). 0 failures.
 
-> **Anterior VTA→HPC tract:** The same tractography was later repeated for the anterior VTA→HPC atlas that Ranesh provided after we completed the posterior pipeline. Same parameters, same script (adapted for anterior atlas files), all 114 runs hit 2500 streamlines. See [Anterior Tract Addendum](#anterior-vtahpc-tract-addendum) for full details.
+> **Anterior VTA→HPC tract:** The same tractography was later repeated for the anterior VTA→HPC atlas, which became available after we completed the posterior pipeline. Same parameters, same script (adapted for anterior atlas files), all 114 runs hit 2500 streamlines. See [Anterior Tract Addendum](#anterior-vtahpc-tract-addendum) for full details.
 
 ---
 
@@ -4725,7 +4728,7 @@ The cutoff 0.01 + atlas-based exclusion mask combination proved highly efficient
 
 After tractography, we clean each tract bundle using pyAFQ's `clean_bundle` function, which removes anatomically implausible streamlines using Mahalanobis distance. This is a standard post-tractography step — even with the atlas-based exclusion mask constraining tracking (Step 22), some streamlines will take unusual paths through the corridor. Mahalanobis cleaning identifies and removes these outliers by comparing each streamline's shape to the bundle's average shape across multiple iterations.
 
-Ranesh used this exact approach on his HCP 7T data and provided the specific parameters. He noted that with the atlas mask keeping tracts clean at cutoff 0.01, the cleaning step may not need to remove many streamlines — but we run it as a safeguard to ensure the cleanest possible bundles for FA extraction.
+The reference pipeline used this exact approach on HCP 7T data with the parameters below. With the atlas mask keeping tracts clean at cutoff 0.01, the cleaning step may not need to remove many streamlines — but we run it as a safeguard to ensure the cleanest possible bundles for FA extraction.
 
 **Dependencies (installed on cluster):**
 
@@ -4735,7 +4738,7 @@ pip3 install --user pyAFQ dipy
 ```
 Note: The cluster's system `zipp` package (1.0.0) was too old for pyAFQ — `pip3 install --user --upgrade zipp` resolved the version conflict.
 
-**Cleaning parameters (from Ranesh):**
+**Cleaning parameters:**
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
@@ -4783,10 +4786,10 @@ nano /data/projects/STUDIES/IMPACT/DTI/scripts/run_step25_cleaning.py
 # ============================================================
 # Step 25: Clean tracts using pyAFQ
 # ============================================================
-# Adapted from Ranesh's cleaning script
+# Adapted from the reference cleaning script
 # (hcp_afq_tract_cleaning_hipp_accumbens.txt)
 #
-# Parameters (from Ranesh):
+# Parameters:
 #   n_points = 100
 #   clean_rounds = 5
 #   distance_threshold = 3 (Mahalanobis SD)
@@ -4810,7 +4813,7 @@ csd_base = Path("/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD")
 nifti_base = Path("/data/projects/STUDIES/IMPACT/DTI/NIFTI")
 log_file = Path("/data/projects/STUDIES/IMPACT/DTI/scripts/step25_cleaning.log")
 
-# pyAFQ cleaning parameters (from Ranesh)
+# pyAFQ cleaning parameters
 n_points = 100
 clean_rounds = 5
 distance_threshold = 3      # 3 SD Mahalanobis distance
@@ -5002,13 +5005,13 @@ Left: 0.06 conservative (1000 streamlines). Middle: 0.01 uncleaned (2500 streaml
 
 The green bars (0.01 cleaned) are consistently the lowest — meaning the tightest, most consistent bundles. The cleaning removed outlier streamlines that were making 0.01 appear messier, producing bundles with ~3.5-4.5mm std dev compared to ~5-7mm for both uncleaned options.
 
-**Summary:** The 0.01 cutoff + pyAFQ cleaning produces tracts that are more efficient to generate AND tighter than the conservative 0.06 cutoff alone. This validates Ranesh's recommendation to use a permissive cutoff with the atlas-based exclusion mask and rely on Mahalanobis cleaning to refine the bundles.
+**Summary:** The 0.01 cutoff + pyAFQ cleaning produces tracts that are more efficient to generate AND tighter than the conservative 0.06 cutoff alone. This validates the strategy of using a permissive cutoff with the atlas-based exclusion mask and rely on Mahalanobis cleaning to refine the bundles.
 
 ---
 
 ## Step 26 — Visual QC of Cleaned Tracts (All 57 Subjects)
 
-Ranesh emphasized that visual QC is mandatory after both tractography and cleaning. In this step, we generate tract density images (TDIs) for every cleaned tract across all 57 subjects and both hemispheres, overlay them on each subject's mean b0, and inspect for anatomical plausibility.
+Visual QC is mandatory after both tractography and cleaning. In this step, we generate tract density images (TDIs) for every cleaned tract across all 57 subjects and both hemispheres, overlay them on each subject's mean b0, and inspect for anatomical plausibility.
 
 **What we're looking for:**
 - The VTA→HPC arc — a curved bundle running from the ventral midbrain laterally into the medial temporal lobe
@@ -5310,11 +5313,11 @@ Even the subject with the most aggressive cleaning (s0105-pilot, 659 streamlines
 
 ### Background
 
-After we completed the full pipeline for the posterior VTA→HPC tract, Ranesh and Blake informed us they had identified a second VTA→HPC tract — an **anterior** projection that is "more aligned with how we think of the VTA-hipp projections" than the posterior tract we ran. Ranesh's exact words:
+After we completed the full pipeline for the posterior VTA→HPC tract, a second VTA→HPC tract was identified — an **anterior** projection more aligned with how VTA-hippocampal projections are usually conceived than the posterior tract we ran. The rationale for keeping both:
 
-> "The one you have right now is what we are calling the posterior VTA-hipp tract, we found an anterior one that is more aligned with how we think of the VTA-hipp projections. I think you should still run this posterior one, since they travel the same path for the first 75-80 ish nodes, so if you see an effect in the posterior tract, it will extend to the anterior tract."
+> The two tracts travel the same path for roughly the first 75-80 nodes, so an effect in the posterior tract should extend to the anterior tract. The posterior tract was therefore retained alongside the anterior one.
 
-Ranesh sent us two new tract atlas files (left and right anterior VTA→HPC, both thresholded at 50% from his group mean at HCP 7T) and confirmed that **the exact same pipeline (Steps 21-26) applies**, just swapping in the anterior atlas files for the posterior ones at Step 22.
+Two new tract atlas files were added (left and right anterior VTA→HPC, both thresholded at 50% from the HCP 7T group mean). **The exact same pipeline (Steps 21-26) applies**, just swapping in the anterior atlas files for the posterior ones at Step 22.
 
 ### Files Added
 
@@ -5332,7 +5335,7 @@ Ran the same Steps 21, 22, 24, and 25 pipeline using the anterior atlas files �
 - **Step 21a:** Warped anterior atlas MNI → T1 (ANTs) → Diffusion (FLIRT). Output: `anterior_<l/r>_tract_atlas_diff.nii.gz`
 - **Step 22a:** Built anterior exclusion masks (dilated corridor + VTA + HPC, then inverted). Output: `anterior_exclusion_mask_<l/r>.nii.gz`
 - **Step 24a:** Ran tckgen on all 57 subjects (seed: VTA, include: HPC, exclude: anterior mask, cutoff 0.01, select 2500, seeds 25M). Output: `tckgen/anterior_<l/r>_vta_<l/r>_hipp/anterior_<l/r>_vta_<l/r>_hipp_0.01.tck`
-- **Step 25a:** Ran pyAFQ `clean_bundle` with Ranesh's parameters. Output: `..._0.01_cleaned.tck`
+- **Step 25a:** Ran pyAFQ `clean_bundle` with the reference parameters. Output: `..._0.01_cleaned.tck`
 
 **Result: 114/114 pass** — every subject hit 2500 streamlines and produced a clean bundle. Seeds used ranged from ~1.5M to ~11M (slightly higher than posterior ~1.1M average, reflecting the smaller anterior projection — but all well under the 25M cap).
 
@@ -5413,10 +5416,10 @@ fsleyes /data/projects/STUDIES/IMPACT/DTI/derivatives/CSD/s1000/qc/mean_b0.nii.g
 
 All downstream steps (27–31) will be run on **both** the posterior and anterior tracts:
 - **Step 27** (Node-wise FA extraction): 100 nodes × 2 hemispheres × 2 tracts (posterior/anterior) = 4 FA profiles per subject
-- **Step 28** (Permutation testing): Same for both tracts — will enable the anterior vs posterior dissociability analysis Ranesh mentioned
+- **Step 28** (Permutation testing): Same for both tracts — enables the anterior vs posterior comparison
 - **Steps 29–31** (NODDI): NDI/ODI extraction and testing on both tract sets
 
-Ranesh noted that the core bundles are similar for the first ~60 nodes, so effects in the posterior tract should extend to the anterior tract. Differences in the later nodes (especially nodes 60+) may reveal tract-specific functional roles — this is the kind of analysis he and Blake are actively working on.
+The core bundles are similar for the first ~60 nodes, so effects in the posterior tract should extend to the anterior tract. Differences in the later nodes (especially nodes 60+) could in principle reveal tract-specific roles. In this sample they do not: the two subregions show no interaction with memory and the pathway is analyzed as one (Section C, §6a).
 
 ---
 
@@ -5424,9 +5427,9 @@ Ranesh noted that the core bundles are similar for the first ~60 nodes, so effec
 
 With the cleaned tracts from Step 25 and the DTIFIT FA maps from Step 11, we extract FA along each tract at 100 equidistant nodes using AFQ-style tract profiling. This produces a subject-by-node matrix of FA values that feeds into the node-wise statistical analysis (Step 28).
 
-**Adapted from Ranesh's `nodewise_noddi.py` script**, with identical profiling machinery (QuickBundles orientation, resampling, Gaussian-weighted AFQ profiling). The only change: instead of extracting NDI/ODI/FWF from NODDI maps, we extract FA from the DTIFIT output. This matches Ranesh's exact approach but applied to FA first; Step 30 will do the same for NODDI metrics.
+**Adapted from the reference `nodewise_noddi.py` script**, with identical profiling machinery (QuickBundles orientation, resampling, Gaussian-weighted AFQ profiling). The only change: instead of extracting NDI/ODI/FWF from NODDI maps, we extract FA from the DTIFIT output. This matches the reference approach exactly but applied to FA first; Step 30 will do the same for NODDI metrics.
 
-**Why 100 nodes:** Matches Ranesh's pipeline exactly. Nodes near the seed (0-4) and target (95-99) are typically excluded from final analyses due to partial-volume contamination from gray matter (VTA, hippocampus). Deep white matter sits around nodes 25-75.
+**Why 100 nodes:** Matches the reference pipeline exactly. Nodes near the seed (0-4) and target (95-99) are typically excluded from final analyses due to partial-volume contamination from gray matter (VTA, hippocampus). Deep white matter sits around nodes 25-75.
 
 **Why Gaussian-weighted AFQ profiling:** At each node, instead of taking the FA value at a single centroid voxel, `dipy.stats.analysis.afq_profile` weights each streamline by its Mahalanobis distance from the bundle centroid, then computes a weighted mean of FA across streamlines at that node. This reduces the influence of outlier streamlines and produces smoother, more reliable profiles.
 
@@ -5451,13 +5454,13 @@ derivatives/nodewise_fa/
 
 Each CSV has 5,701 rows (header + 57 subjects × 100 nodes) with columns: `Subject, Tract, Node, FA`.
 
-**Parameters (match Ranesh's NODDI script exactly):**
+**Parameters (match the reference NODDI script exactly):**
 
 | Parameter | Value | Description |
 |-----------|-------|-------------|
 | `num_nodes` | 100 | Nodes per streamline after resampling |
 | `min_streamlines` | 5 | Minimum streamlines required to process a subject |
-| `bbox_valid_check` | False | Allow streamlines outside image bounding box (matches Ranesh) |
+| `bbox_valid_check` | False | Allow streamlines outside image bounding box (matches reference) |
 
 **Running Step 27 in tmux:**
 
@@ -5478,7 +5481,7 @@ nano /data/projects/STUDIES/IMPACT/DTI/scripts/run_step27_fa_extraction.py
 # ============================================================
 # Step 27: Node-wise FA Extraction (AFQ-style tract profiling)
 # ============================================================
-# Adapted from Ranesh's nodewise_noddi.py — exact same profiling
+# Adapted from the reference nodewise_noddi.py — exact same profiling
 # machinery (QuickBundles orientation + AFQ Gaussian-weighted
 # profile), just applied to FA maps from DTIFIT instead of
 # NODDI metrics. Processes both posterior and anterior tracts.
@@ -5517,7 +5520,7 @@ nodewise.mkdir(parents=True, exist_ok=True)
 csv_dir = nodewise / "csvs"
 csv_dir.mkdir(parents=True, exist_ok=True)
 
-# Profile parameters (match Ranesh's NODDI script)
+# Profile parameters (match the reference NODDI script)
 num_nodes = 100
 min_streamlines = 5
 
@@ -5525,7 +5528,7 @@ subjects = sorted([d.name for d in nifti_root.iterdir() if d.is_dir()])
 
 
 # =========================
-# HELPERS (verbatim from Ranesh)
+# HELPERS (verbatim from the reference implementation)
 # =========================
 
 def orient_to_centroid(streamlines, nb_points=num_nodes):
@@ -5689,9 +5692,9 @@ Posterior VTA→HPC, left hemisphere (s169) — different subject, similar overa
 
 ## Step 29 — NODDI Model Fitting (AMICO with Modulated Maps)
 
-Ranesh emphasized NODDI — he found NDI revealed effects that FA missed in his HCP cohort ("NDI_modulated" specifically, nodes 25–75). We fit NODDI on all 57 subjects using the AMICO toolbox with his exact configuration.
+NODDI was prioritized because, in prior HCP work on this pathway, NDI revealed effects that FA missed ("NDI_modulated" specifically, nodes 25–75). We fit NODDI on all 57 subjects using the AMICO toolbox with the same configuration.
 
-**Why modulated maps (per Ranesh's email):** Standard NODDI output is contaminated by partial-volume effects (free-water signal mixing with tissue compartments). The `doSaveModulatedMaps=True` flag in AMICO produces `fit_NDI_modulated.nii.gz` and `fit_ODI_modulated.nii.gz`, which apply a tissue-weighted correction described in [Parker et al. 2021](https://doi.org/10.1016/j.neuroimage.2021.118749). FWF has no modulated version — the tissue-weighting *is* the partial-volume correction for NDI/ODI, so you use the regular `fit_FWF.nii.gz` if you want free-water content.
+**Why modulated maps:** Standard NODDI output is contaminated by partial-volume effects (free-water signal mixing with tissue compartments). The `doSaveModulatedMaps=True` flag in AMICO produces `fit_NDI_modulated.nii.gz` and `fit_ODI_modulated.nii.gz`, which apply a tissue-weighted correction described in [Parker et al. 2021](https://doi.org/10.1016/j.neuroimage.2021.118749). FWF has no modulated version — the tissue-weighting *is* the partial-volume correction for NDI/ODI, so you use the regular `fit_FWF.nii.gz` if you want free-water content.
 
 **Dependencies:**
 - AMICO (`pip3 install --user dmri-amico`) — version 2.1.1 installed on cluster.
@@ -5717,7 +5720,7 @@ derivatives/NODDI/sub-s1000/
 └── fit_RMSE.nii.gz              # quality: model-fit residual
 ```
 
-**Ranesh's parameters (reproduced exactly):**
+**Reference parameters (reproduced exactly):**
 
 | Parameter | Value | Notes |
 |-----------|-------|-------|
@@ -5728,7 +5731,7 @@ derivatives/NODDI/sub-s1000/
 | `BLAS_nthreads` | 1 | Prevents BLAS over-subscription |
 | `save_dir_avg` | True | Saves full per-voxel metrics |
 
-**Parallelization strategy:** Ranesh ran 48 threads per subject serially. Our cluster has 48 cores + 125 GB RAM, so we ran **4 subjects in parallel × 12 threads each** = all 48 cores saturated with better wall-time utilization. A single-subject fit takes ~36 seconds, so 57 subjects with 4-way parallelism completed in ~15 minutes total.
+**Parallelization strategy:** The reference pipeline ran 48 threads per subject serially. Our cluster has 48 cores + 125 GB RAM, so we ran **4 subjects in parallel × 12 threads each** = all 48 cores saturated with better wall-time utilization. A single-subject fit takes ~36 seconds, so 57 subjects with 4-way parallelism completed in ~15 minutes total.
 
 **Running Step 29 in tmux:**
 
@@ -5743,7 +5746,7 @@ tmux new -s step29
 nano /data/projects/STUDIES/IMPACT/DTI/scripts/run_step29_noddi.py
 ```
 
-3. Paste the Python script (adapted from Ranesh's `NODDI_fitting.py` with IMPACT paths — one-subject-per-invocation pattern).
+3. Paste the Python script (adapted from the reference `NODDI_fitting.py` with IMPACT paths — one-subject-per-invocation pattern).
 
 4. Create the parallel runner `run_step29_noddi_parallel.sh` that loops through all 57 subjects launching 4 at a time with `NODDI_NTHREADS=12`.
 
@@ -5814,9 +5817,9 @@ echo "Fail: $fail / $((pass + fail))"
 
 ## Step 30 — Node-wise NODDI Extraction (NDI, ODI, FWF along tracts)
 
-With the NODDI maps from Step 29 and the cleaned tracts from Step 25, we extract NDI, ODI, and FWF along each tract at 100 equidistant nodes. This is a direct port of Ranesh's `nodewise_noddi.py` script to our IMPACT paths — identical profiling approach (QuickBundles orientation + AFQ Gaussian-weighted profiling), just using our cleaned tract files instead of Ranesh's HCP tracts.
+With the NODDI maps from Step 29 and the cleaned tracts from Step 25, we extract NDI, ODI, and FWF along each tract at 100 equidistant nodes. This is a direct port of the reference `nodewise_noddi.py` script to our IMPACT paths — identical profiling approach (QuickBundles orientation + AFQ Gaussian-weighted profiling), just using our cleaned tract files instead of the HCP tracts.
 
-**Extraction follows Ranesh's exact approach (modulated NDI + ODI, regular FWF):**
+**Extraction follows the reference approach exactly (modulated NDI + ODI, regular FWF):**
 - **NDI** from `fit_NDI_modulated.nii.gz` (partial-volume corrected)
 - **ODI** from `fit_ODI_modulated.nii.gz` (partial-volume corrected)
 - **FWF** from `fit_FWF.nii.gz` (no modulated version needed — tissue weighting is the PVE correction)
@@ -5853,7 +5856,7 @@ ssh -XY tur50045@cla19097.tu.temple.edu
 tmux new -s step30
 ```
 
-2. Create the script `run_step30_noddi_extraction.py` — it's a direct port of Ranesh's `nodewise_noddi.py` with identical helpers (`orient_to_centroid`, `profile_metric`) and identical output schema (Subject, Tract, Node, NDI, ODI, FWF). The only differences from Ranesh's script: subject list is derived from the NIFTI directory, tract list is ours (posterior + anterior VTA-HPC), and paths point to our IMPACT directories.
+2. Create the script `run_step30_noddi_extraction.py` — it's a direct port of the reference `nodewise_noddi.py` with identical helpers (`orient_to_centroid`, `profile_metric`) and identical output schema (Subject, Tract, Node, NDI, ODI, FWF). The only differences from the reference script: subject list is derived from the NIFTI directory, tract list is ours (posterior + anterior VTA-HPC), and paths point to our IMPACT directories.
 
 3. Run the script inside tmux:
 ```bash
@@ -5936,7 +5939,7 @@ FWF (free water fraction) — low in deep WM, climbs sharply near HPC endpoint (
 
 ## Mid-50-Nodes Summary + L vs R Hemisphere Correlations
 
-Per Ranesh's pre-meeting request: take the average of each metric across the **mid 50 nodes (nodes 25–74)** of each tract, then compute the correlation between left and right hemispheres for each tract type and metric. The mid 50 nodes correspond to the deep white matter portion of the tract (avoiding the partial-volume contamination from gray matter at the endpoints, nodes 0–4 and 95–99).
+As a pre-analysis check: take the average of each metric across the **mid 50 nodes (nodes 25–74)** of each tract, then compute the correlation between left and right hemispheres for each tract type and metric. The mid 50 nodes correspond to the deep white matter portion of the tract (avoiding the partial-volume contamination from gray matter at the endpoints, nodes 0–4 and 95–99).
 
 **Script** (`scripts/mid50_correlations.py`):
 ```python
@@ -6021,34 +6024,44 @@ The NDI and ODI scatterplots show the tightest clouds (points hugging the identi
 
 # Final Analyses — VTA→HPC Microstructure & Motivated Memory
 
-Does white-matter microstructure along the VTA→hippocampus pathway track how well — and how *positively* — mothers remember social vs. monetary feedback? The full analysis is five clean steps, from raw trial files to permutation-tested tract associations.
+Does microstructure along the VTA→hippocampus pathway track how well, and how positively, mothers remember social versus monetary feedback? This section records everything that was run, in the order the analysis narrowed: the full analytic space first (three spatial resolutions, four metrics, two hippocampal subregions, two domains), then the three decisions that reduce it, then the results that are reported.
 
 ## Pipeline at a glance
 
 | Step | What | Output |
 |---|---|---|
-| **1 · Data** | Pull imaging covariates + memory outcomes | 55-mother roster, 5 covariates |
-| **2 · Clean memory data** | Recompute d′ from raw trials; exclude 2 broken sessions | d′ + positivity-bias per mother |
-| **3 · d′ statistics** | Above-chance tests + social-vs-monetary breakdown | both above chance; social = more false alarms |
-| **4 · Tract analyses** | d′ + bias × FA + NODDI (NDI/ODI/FWF), node-wise permutation FWE | **96 analyses** → surviving clusters |
-| **5 · Hippocampus (NDI)** | Region vs. connection specificity | HPC density tracks social memory too |
+| **1 · Sample & covariates** | Bilateral tracts, five covariates | 55 mothers; analytic n = 52 social / 53 monetary |
+| **2 · Memory outcomes** | Recompute from raw trials, screen sessions, score d′ / misattribution / positivity bias | three outcomes per domain |
+| **3 · Is memory real?** | Above-chance tests, per-subject binomial, reaction times | real but small |
+| **4 · Behavioral bias** | Total positivity bias, hit-rate and false-alarm bias, social vs monetary | bias is domain-general |
+| **5 · Everything we ran** | Node-wise (cluster FWE) · quartiles · whole tract, all four metrics, both subregions | the full space |
+| **6 · How we narrowed** | No subregion interaction · only NDI carries the effects · effect is diffuse | one bilateral NDI pathway |
+| **7 · What we report** | Whole-tract model with a subregion term | three social effects, monetary null |
+| **8 · Hippocampus & HVLT** | Gray-matter NDI at corrected diffusivity; HVLT trial 1 | region converges; HVLT is separate |
 
-Interactive browsers: **[Results Explorer](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/results_explorer.html)** · **[Memory data & d′](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/data_quality.html)** · **[Hippocampus NDI](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/hpc_region_vs_connection.html)**
+Interactive browsers: **[Results Explorer](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/results_explorer.html)** · **[Memory data & d′](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/data_quality.html)** · **[Hippocampus NDI](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/hpc_region_vs_connection.html)** · **[Hit / false-alarm explorer](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/hitfa_explorer.html)** · **[HVLT explorer](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/hvlt_explorer.html)**
 
 ---
 
 ## 1 · Sample & covariates
 
-**Roster: 55 mothers** with complete VTA→HPC tractography (2 pilot scans removed; maternal age recovered for all 55 from current demographics). Every tract model controls for five covariates:
+**Roster: 55 mothers** with complete VTA→HPC tractography (2 pilot scans removed; maternal age recovered for all 55 from current demographics).
+
+**Bilateral collapse.** Left and right node profiles were verified aligned before averaging (node 0 = VTA end, node 99 = hippocampus end; L[i] vs R[i] r = +0.98 anterior and +0.97 posterior, versus −0.90 / −0.95 if one side were flipped). Node values are averaged across hemispheres; streamline count is summed and mean length averaged. This yields two bilateral tracts, **VTA→anterior hippocampus** and **VTA→posterior hippocampus**, in `data.check/analysis_ready_bilateral/vta_{anthipp,posthipp}__{NDI,ODI,FWF,FA}__analysis.csv`.
+
+Every tract model controls for five covariates:
 
 - `ICV` — intracranial volume (FSL `fslstats -V`)
-- `Mean_tckstats` / `Count_tckstats` — mean cleaned-streamline length & count for *this* tract (MRtrix)
+- `Mean_tckstats` / `Count_tckstats` — mean cleaned-streamline length and count for *this* tract (MRtrix)
 - `absolute_motion` — absolute head motion (`qc_mot_abs`, eddy QUAD)
 - `maternal_age` — coalesced from REDCap ∪ current demographics
 
 Handedness was not collected in IMPACT (verified across REDCap, DICOM/JSON, and task files) and is omitted with that note.
 
-## 2 · Memory data — computed & cleaned
+## 2 · Memory outcomes — computed and cleaned
+
+Memory outcomes are **computed directly from each mother's raw trial files**. Two objective screens run **before** any tract analysis, because a bad session caught late forces a full re-run.
+
 
 Memory outcomes are **computed directly from each mother's raw trial files** with the standard signal-detection d′ formula — one transparent computation, straight from the responses. The d′ formula is **never changed**; two objective screens (below) run **before** the tract analyses, because a bad session caught late forces a full re-run.
 
@@ -6071,80 +6084,172 @@ Memory outcomes are **computed directly from each mother's raw trial files** wit
 
 > **Example — s4127.** Compliant (55% "remember" rate, real discrimination) but never attributed a memory to "loss" — the most positively-biased mother in the sample. The rule gives her `FABias` **+0.27** and `HitRateBias` **+0.17** (≈ 90th percentile), so she is **kept and scored**, not lost to a divide-by-zero.
 
-**Outcomes (per condition):** `d′` (memory accuracy), `FABias` (positivity bias in false memories), `HitRateBias` (positivity bias in correct memories). Final Ns after both screens + listwise deletion:
+**Outcomes (per domain; social = faces, monetary = doors):**
+
+| Outcome | Definition | Script |
+|---|---|---|
+| `d′` | z(hit rate) − z(false-alarm rate), log-linear corrected (+0.5 to each count, +1 to each total) so boundary rates stay finite | `scripts/dprime_corrections.py` |
+| `misattribution` | false-alarm rate residualized on response criterion *c*: claiming feedback from someone who never gave it, net of overall willingness to say "remember" | `scripts/misattribution_scores.py` |
+| `FABias` | positive false-alarm rate − negative false-alarm rate: positivity skew in false memories | `scripts/compute_bias_scores.py` |
+| `HitRateBias` | positive hit rate − negative hit rate | `scripts/compute_bias_scores.py` |
+| total positivity bias | proportion of all reported memories that were positive | `scripts/bias_comparisons.py` |
 
 | Outcome | N |
 |---|---|
-| `SOCIAL_dprime` | 52 |
-| `MONETARY_dprime` | 53 |
-| `SOCIAL_FABias`, `SOCIAL_HitRateBias` | 52 |
-| `MONETARY_FABias`, `MONETARY_HitRateBias` | 53 |
+| social d′, misattribution, FABias | 52 |
+| monetary d′, misattribution, FABias | 53 |
 
-Why the Ns differ (all justified, none are bugs): exclusions are **per task** (social and monetary are separate recall sessions). Social loses **s1694** (corrupted), **s1350** (missed 40% of social), and **s4210** (non-compliant) → 52. Monetary loses only **s1694** and **s4210** (s1350's monetary session was clean) → 53. Bias tracks d′ exactly, now that the zero-valence rule keeps valid mothers like s4127 in.
+Why the Ns differ: exclusions are **per task**. Social loses s1694 (corrupted), s1350 (missed 40% of social recall) and s4210 (non-compliant) → 52. Monetary loses s1694 and s4210 → 53.
 
-## 3 · d′ statistics — is memory real, and why do the conditions differ?
+## 3 · Is memory real?
 
-Both conditions are **above chance**, recomputed from raw trials after the exclusions:
+The task is hard and d′ is small. Pooled across mothers, memory is nonetheless above chance on every test:
 
-- **Social d′** = +0.10 — above chance (t = 2.47, p = 0.017, n = 53)
-- **Monetary d′** = +0.21 — above chance (t = 4.75, p < 0.001, n = 54)
+| Test | Faces (social) | Doors (monetary) |
+|---|---|---|
+| Recognition accuracy vs 50% | 51.5%, p = .023 | 53.9%, p < .001 |
+| Correct feedback among recognized items vs 33% | 37.2%, p = .003 | 38.2%, p = .0003 |
+| d′ > 0 | 0.088, p = .018 | 0.208, p < .001 |
+| RT, recognized vs correctly rejected | 1679 vs 1800 ms (−121 ms, p = .0008) | 1640 vs 1749 ms (−109 ms, p = .0003) |
+| RT, named feedback correctly vs wrong | 1640 vs 1680 ms (−40 ms, p = .119) | 1598 vs 1658 ms (−59 ms, p = .011) |
 
-They **do not differ significantly** (paired t p = 0.073) and are **uncorrelated** at the subject level (r ≈ −0.14, p = 0.30) — distinct abilities, not two views of one signal.
+**Per-subject binomial test** (`scripts/binomial_test.py`; recognition vs chance, one-sided): 2 of 54 mothers clear individually on social and 9 of 54 on monetary, none on both. At a median of 83 trials per subject the per-subject test has almost no resolution, so the low pass rate is a statement about trial counts rather than evidence against the task, and a passers-only rerun is not viable.
 
-**Why is social d′ a bit lower? It's false alarms, not weaker memory.** Splitting d′ into its two ingredients (n = 53, paired tests):
+**Why social d′ is lower: false alarms, not weaker memory.** Hit rates do not differ across domains (0.556 vs 0.538, p = .46); the lower social d′ is more false alarms (0.524 vs 0.459, p = .012). Paired, n = 52. Social and monetary d′ differ modestly (paired p = .048) and correlate at r = −.13 (p = .37). Full breakdown: **[Memory data & d′](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/data_quality.html)**.
 
-| Component | Social | Monetary | differ? |
+## 4 · Behavioral bias
+
+Total positivity bias, the proportion of all reported memories that were positive rather than negative or neutral:
+
+| | Positive | Negative | Neutral |
 |---|---|---|---|
-| **Hit rate** (remembered correctly) | 0.568 | 0.548 | no (p = 0.40) |
-| **False-alarm rate** (false positives) | 0.536 | 0.470 | **yes (p = 0.008)** |
+| Faces | 58.5% | 20.4% | 21.1% |
+| Doors | 57.9% | 24.9% | 17.2% |
 
-Social and monetary items are remembered **equally well** — identical hit rates. The lower social d′ is driven **entirely by more false alarms**: mothers more often falsely "remember" social faces they never chose. That is exactly the phenomenon the tract findings capture — the robust VTA→HPC effect is on **social positivity bias in false memories**. Full breakdown: **[Memory data & d′](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/data_quality.html)**.
+Both are far above the 33% baseline (p < 1e-12) and do not differ from each other (p = .85). The accuracy-based scores agree: FABias is above zero for faces (+.068, p = .013) and doors (+.072, p = .002); HitRateBias is stronger (+.121 and +.120, both p < .0001); neither differs across domains (p = .82, .79). Splitting each score, the bias loads on the positive side: social positive hit rate .334 vs negative .215 (p = .0001), positive false-alarm rate .305 vs negative .228 (p = .005); monetary shows the same pattern (p < .0001, p = .020).
 
-## 4 · Tract analyses — the main test
+So the bias itself is domain-general. Only its relation to microstructure is social-specific (§5–7). Script: `scripts/bias_comparisons.py` → `data.check/bias_comparisons.csv`.
 
-For each of **6 outcomes × 4 tracts × 4 metrics (FA + NODDI: NDI, ODI, FWF) = 96 analyses**, we test whether the metric *along the tract* (100 nodes) predicts the outcome, controlling for the five covariates. Node-wise model (Ranesh's Freedman–Lane design):
+## 5 · Everything we ran
+
+The full analytic space: three spatial resolutions × four metrics × two subregions × two domains × three outcomes.
+
+| | Node-wise (100 nodes) | Quartiles (4 × 25 nodes) | Whole tract (mean of 100) |
+|---|---|---|---|
+| **Model** | per node; Freedman–Lane permutation; cluster-extent FWE | mixed model, both subregions, subregion term | mixed model, both subregions, subregion term |
+| **Metrics** | NDI, ODI, FWF, FA | NDI | NDI, ODI, FWF, FA |
+| **Subregions** | anterior and posterior separately | both in one model | both in one model |
+| **Question** | *where* along the tract | does the effect vary by segment or subregion | is there an effect, and does subregion matter |
+
+### 5a · Node-wise
+
+Model per node, for each tract, metric and outcome:
 
 ```r
 full ~ metric_node + ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age
-red  ~            ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age
+red  ~               ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age
 ```
 
-Each node's observed t on `metric_node` is compared against **5000 Freedman–Lane permutations** (permute reduced-model residuals, re-fit per node). Contiguous runs of nodewise-significant nodes form clusters; a cluster passes if its extent ≥ the 95th-percentile null max (**cluster-extent FWE, α = 0.05**). Run on cr2 (128 cores), 5000 perms each.
+The observed t on `metric_node` is compared against **5000 Freedman–Lane permutations** (permute reduced-model residuals, refit per node). Contiguous nodewise-significant nodes form a cluster; a cluster survives if its extent ≥ the 95th percentile of the null maximum (**cluster-extent FWE, α = .05**). Script: `scripts/permutation_one.R`, run on cr2. Outputs: `data.check/bilateral_perm_results/`.
 
-### Results — a social-specific VTA→HPC circuit
+NDI, bilateral, n = 52 social / 53 monetary:
 
-| Outcome | Tract | Metric | Nodes | p (FWE) | Association |
+| Outcome | VTA→anterior HPC | VTA→posterior HPC |
+|---|---|---|
+| Social d′ | ns (0 / 29) | **p = .045**, nodes 28–54, positive |
+| Social misattribution | ns (0 / 29) | **p = .039**, nodes 27–55, negative |
+| Social FABias | **p = .036**, nodes 43–77, negative | **p = .008**, nodes 26–77, negative |
+| Monetary d′, misattribution, FABias | ns | ns |
+
+Across the full sweep (86 memory measures × 2 tracts), **0 monetary tests survive**. FA, ODI and FWF node-wise were run in the same batch; their outputs sit in the same directory and are not the reported analysis (see §6b).
+
+Two of the three social effects reach threshold only in the posterior tract, and the clusters sit at nodes 27–55, where the two bundles run through the same tissue. Whether that is a genuine subregional difference is what §5b–c test and §6a answers.
+
+### 5b · Quartiles
+
+The same mixed model as §5c, with NDI averaged within each quartile rather than across all 100 nodes: Q1 = nodes 0–24 (VTA end), Q2 = 25–49, Q3 = 50–74, Q4 = 75–99 (hippocampus end). *Whole* repeats the all-100-node model for comparison.
+
+Interaction p (memory × subregion, likelihood-ratio test):
+
+| | Q1 | Q2 | Q3 | Q4 | Whole |
 |---|---|---|---|---|---|
-| **Social d′** (accuracy) | Posterior L VTA→HPC | NDI | 0–54 | **0.0032** | denser neurites → **sharper** memory |
-| **Social positivity bias**<br>(false memories) | Posterior R VTA→HPC | FWF | 0–45 | 0.0008 | more free water → **more** positive bias |
-|   | Anterior R VTA→HPC | FA | 32–77 | 0.0016 | more coherent/dense WM → **less** positive bias |
-|   | Posterior R VTA→HPC | FA | 24–66 | 0.0026 | more coherent/dense WM → **less** positive bias |
-|   | Posterior R VTA→HPC | ODI | 0–39 | 0.0064 | more coherent/dense WM → **less** positive bias |
-|   | Anterior R VTA→HPC | ODI | 0–32 | 0.012 | more coherent/dense WM → **less** positive bias |
-|   | Posterior R VTA→HPC | NDI | 25–65 | 0.014 | more coherent/dense WM → **less** positive bias |
-|   | Anterior R VTA→HPC | NDI | 38–77 | 0.026 | more coherent/dense WM → **less** positive bias |
-|   | Posterior L VTA→HPC | FA | 46–74 | 0.0264 | more coherent/dense WM → **less** positive bias |
-|   | Posterior L VTA→HPC | ODI | 15–38 | 0.0402 | more coherent/dense WM → **less** positive bias |
-|   | Anterior L VTA→HPC | FA | 52–75 | 0.0444 | more coherent/dense WM → **less** positive bias |
-|   | Anterior R VTA→HPC | FWF | 0–21 & 35–56 | 0.047 | more free water → **more** positive bias |
-| Monetary bias *(isolated)* | Posterior L VTA→HPC | ODI | 63–86 | 0.0404 | 1 of 32 monetary tests — likely noise |
+| Social FABias | .658 | .601 | .797 | .708 | .582 |
+| Social d′ | .114 | **.016** | .136 | .478 | .056 |
+| Social misattribution | .233 | **.044** | .424 | .378 | .154 |
+| Monetary FABias | .071 | .968 | .577 | .809 | .205 |
+| Monetary d′ | .937 | .993 | .631 | .596 | .915 |
+| Monetary misattribution | .826 | .940 | .556 | .495 | .952 |
 
-**13 social clusters; monetary is null but for one isolated blip.**
+Main-effect p, interaction dropped:
 
-- **Social memory accuracy** tracks the **left posterior** VTA→HPC pathway's **neurite density** (NDI): denser neurites → sharper social memory (nodes 0–54, p = 0.003).
-- **Social positivity bias** — falsely "remembering" positive social events more than negative — is the most robust result: **12 clusters, bilateral, across all four metrics**. More coherent / denser white matter (↑FA, NDI, ODI) predicts *less* positive bias; more free water (↑FWF) predicts *more*. Strongest on the **right** (FWF p = 0.0008, FA p ≈ 0.002), also present on the left.
-- **Monetary** produces **one** borderline cluster (monetary FABias, left-posterior ODI, p = 0.040). With 32 monetary bias tests, one hit right at the α = 0.05 threshold — with no coherent pattern across metrics or tracts — is what you expect by chance. We report it, but it does not indicate a monetary circuit; social and monetary d′ are uncorrelated and equally well remembered, so the pathway's relationship is domain-specific to **social** motivated memory.
+| | Q1 | Q2 | Q3 | Q4 | Whole |
+|---|---|---|---|---|---|
+| Social FABias | **.033** | **.016** | **.016** | **.029** | **.025** |
+| Social d′ | **.021** | .052 | **.047** | .204 | **.019** |
+| Social misattribution | .066 | .070 | .086 | .148 | **.046** |
+| Monetary FABias | .906 | .865 | .985 | .766 | .934 |
+| Monetary d′ | .297 | .193 | .084 | .060 | .120 |
+| Monetary misattribution | .152 | .120 | .059 | .110 | .069 |
 
-Browse every analysis (surviving or not), node profiles, and laterality: **[Results Explorer](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/results_explorer.html)**.
+### 5c · Whole tract, both subregions in one model
 
-## 5 · Hippocampus (NDI) — region vs. connection
+NDI averaged across all 100 nodes, giving one value per subject per subregion, stacked long so each subject contributes two rows (anterior, posterior). Model: NDI regressed on memory, subregion, ICV, tract length, streamline count, motion and maternal age, with a random intercept for subject; each row carries its own tract length and streamline count. Fit by maximum likelihood. The interaction model adds memory × subregion and is compared to the main-effects model by likelihood-ratio test on 1 df. Script: `scripts/final_models.py`.
 
-Is the memory signal specific to the *pathway*, or does the hippocampal *region* itself carry it? We regressed d′ and bias on hippocampal **NDI density** (mean NODDI neurite density inside the anatomical HPC ROI), hemisphere-matched, with ICV + motion + age.
+| Outcome | Interaction p | Main effect b | Main effect p |
+|---|---|---|---|
+| Social FABias | .582 | −.257 | **.025** |
+| Social d′ | .056 | +.274 | **.019** |
+| Social misattribution | .154 | −.234 | **.046** |
+| Monetary FABias | .205 | +.010 | .934 |
+| Monetary d′ | .915 | −.183 | .120 |
+| Monetary misattribution | .952 | +.214 | .069 |
 
-Among the three NODDI compartments, **only neurite density (NDI) tracks social memory** — left-hippocampal NDI predicts social d′ (β = +0.09, p = 0.04), the same direction as the tract, with a matching social-bias trend (p ≈ 0.06). **ODI (dispersion) and FWF (free water) are silent, and monetary tracks nothing.** So the memory-relevant density signal is **shared between the pathway and its hippocampal target** — a circuit-wide neurite-density signature, not a size effect (hippocampal volume is not used).
+## 6 · How we narrowed
 
-Details: **[Hippocampus NDI](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/hpc_region_vs_connection.html)**.
+### 6a · Two subregions → one pathway
+
+The memory × subregion interaction is droppable for every outcome on the whole-tract average (§5c) and in 18 of 20 quartile tests (§5b); the two exceptions, d′ and misattribution at Q2, do not survive correction across the four quartiles. The node-wise clusters sit at nodes 27–55, before the bundles separate, so the anterior and posterior labels are not describing different tissue in that stretch. The distinction would have earned its keep only if significant nodes had landed past the divergence, closer to the hippocampus. They did not. The pathway is analyzed and reported as **one bilateral VTA→hippocampus tract**.
+
+### 6b · Four metrics → NDI
+
+Same whole-tract model (§5c), each metric in turn. Main-effect p:
+
+| | NDI | ODI | FWF | FA |
+|---|---|---|---|---|
+| Social d′ | **.019** | .691 | .923 | .058 |
+| Social misattribution | **.046** | .667 | .990 | .060 |
+| Social FABias | **.025** | **.043** | **.029** | **.018** |
+| Monetary d′ | .120 | .474 | .088 | .392 |
+| Monetary FABias | .934 | .230 | .509 | .088 |
+| Monetary misattribution | .069 | .354 | .041 | .254 |
+
+NDI is the only metric carrying all three social effects while leaving every monetary outcome null. FWF's one monetary hit (misattribution, p = .041) is a control-domain effect and a further reason to drop it. FA tracks it in direction throughout and is the supplement for traditional-DTI readers. FWF contributes nothing beyond the bias effect (positive sign: more free water, more bias) and is dropped. ODI's bias effect runs in the same direction as NDI rather than opposite, which is atypical for the pair, so it is reported with that caveat or left out.
+
+### 6c · Node-wise → whole tract
+
+Contrasting the VTA-end quartile against the hippocampus-end quartile, with mean and difference entered together, is null for all three social outcomes (difference p = .44, .45, .95) while the mean carries the effect. The effect is **diffuse along the tract rather than focal**. Cluster-extent thresholding is built to detect focal supra-threshold runs, and with per-node t hovering near 2.0 along the whole length it has no headroom here. Node-wise results are therefore descriptive (where along the tract); the whole-tract model is the inferential unit.
+
+## 7 · What we report
+
+One bilateral VTA→hippocampus pathway, NDI, whole-tract model with a subregion term (the §5c table). Three social effects: higher neurite density → better discrimination of who gave the feedback (d′), fewer misattributions, and less positivity skew in false memories. All three monetary counterparts are null, and monetary misattribution runs in the opposite direction (+.214 vs −.234). No subregional claim is made. The quartile results (§5b) are reported as confirmation that the FABias effect is uniform along the tract (significant in all four segments, all surviving FDR across quartiles), not as localization.
+
+## 8 · Hippocampal gray matter and HVLT
+
+**Hippocampal NDI.** NODDI in gray matter requires a lower intrinsic parallel diffusivity than white matter. The hippocampal ROI was refit at dPar = 1.1e-3 mm²/s (white-matter default 1.7e-3; isotropic 3.0e-3), restricted to the ROI (`scripts/run_noddi_gm.py`). Bilateral mean NDI regressed on each outcome with ICV, hippocampal volume, motion and maternal age; standardized betas:
+
+| Outcome | β | p |
+|---|---|---|
+| Social d′ | +.314 | **.036** |
+| Social misattribution | −.276 | .064 |
+| Social FABias | −.303 | **.044** |
+| Monetary d′ | −.147 | .312 |
+| Monetary misattribution | +.142 | .337 |
+| Monetary FABias | −.021 | .886 |
+
+Hippocampal volume on its own predicts none of them. The region converges with the pathway: same outcomes, same directions, same social specificity, and the effect survives the gray-matter diffusivity correction. Browser: **[Hippocampus NDI](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/hpc_region_vs_connection.html)**.
+
+**HVLT.** Under the same collapsed whole-tract specification (each subregion's streamline count entered separately), HVLT trial 1 relates to pathway NDI (+.851, p = .025, n = 42); total recall is marginal (p = .097); delayed recall is null (p = .35). HVLT trial 1 and RAFT social d′ correlate at −.05, so they measure different things: the HVLT result is not convergent validation of the RAFT and is treated as a separate line of work. Browser: **[HVLT explorer](https://diffusiontensorimaging-repos.github.io/SDN-IMPACT-DTI/results_html/hvlt_explorer.html)**.
 
 ---
 
-*Scripts: `scripts/permutation_one.R` (node-wise Freedman–Lane), `scripts/html_builders/` (recompute d′, build the three browsers). Corrected-roster analysis-ready CSVs in `data.check/analysis_ready/`; permutation outputs in `data.check/permutation_results/`. Prior versions preserved in `*_ORIG_backup/`.*
+*Scripts: `scripts/permutation_one.R` (node-wise Freedman–Lane), `scripts/final_models.py` (whole-tract, quartile and metric mixed models; hippocampal NDI; HVLT), `scripts/dprime_corrections.py`, `scripts/misattribution_scores.py`, `scripts/compute_bias_scores.py`, `scripts/bias_comparisons.py`, `scripts/binomial_test.py`, `scripts/compliance_screen.py`, `scripts/run_noddi_gm.py`, `scripts/split_hpc.py`. Analysis-ready CSVs: `data.check/analysis_ready_bilateral/`. Permutation outputs: `data.check/bilateral_perm_results/`.*

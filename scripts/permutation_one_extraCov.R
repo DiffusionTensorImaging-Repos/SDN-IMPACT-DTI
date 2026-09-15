@@ -1,6 +1,6 @@
 # =========================================================================
 # IMPACT — Cluster-extent permutation testing (Freedman-Lane)
-# Adapted from Ranesh's vta_hippocampus_substance_use_noddi_permutation_testing.R
+# Adapted from the reference vta_hippocampus_substance_use_noddi_permutation_testing.R
 # =========================================================================
 # Args (positional):
 #   1. data_csv       — path to analysis-ready CSV

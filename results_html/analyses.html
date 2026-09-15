@@ -13,65 +13,64 @@
 </nav>
 <div class="wrap">
   <h1>Analyses</h1>
-  <p class="lead">Memory was scored as accuracy (d′) and two positivity-bias scores, then tested node by node against each tract's microstructure.</p>
+  <p class="lead">Everything that was run, in the order it narrowed: three spatial resolutions, four microstructure metrics, two hippocampal subregions, two feedback domains. Then the three decisions that reduce it to one bilateral pathway, one metric, and three social effects.</p>
+  <p class="small">n = 52 social (faces), 53 monetary (doors). Covariates in every tract model: ICV, tract length, streamline count, absolute head motion, maternal age. * p &lt; .05.</p>
 
   <h2>Memory scoring</h2>
-  <p>Per condition (social faces, monetary doors): one accuracy score and two positivity-bias scores.</p>
-
+  <p>Three outcomes per domain, computed from each mother's raw trial files after two screens: broken recall sessions (s1694, s1350 social) and a compliance gate for yes-to-everything responding (s4210).</p>
   <h3>Accuracy: d′</h3>
-  <div class="formula"><span class="lbl">d′</span> = z(hit rate) − z(false-alarm rate)</div>
-  <p class="small"><b>Hit rate</b> = proportion of items she chose that she later calls "remember." <b>False-alarm rate</b> = proportion of non-chosen foils she calls "remember." d′ is high when hits are common and false alarms rare.</p>
-  <div class="step"><div class="stephead"><span class="cmd">recompute_dprime_all.py</span><span class="pkg">pandas · scipy</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre>import pandas as pd, numpy as np, glob, json, os
-from scipy.stats import norm, pearsonr
-def z(p): return norm.ppf(np.clip(p,1e-6,1-1e-6))
-base=&#x27;/tmp/alltsv&#x27;
-grp=pd.read_csv(&#x27;/Users/dannyzweben/Desktop/SDN/DTI/Impact-Analyses/IMPACT_grouped_export.csv&#x27;).drop_duplicates(&#x27;ID&#x27;)
-ready=pd.read_csv(&#x27;/Users/dannyzweben/Desktop/SDN/DTI/data.check/analysis_ready/r_vta_r_hipp__NDI__analysis.csv&#x27;)
-subs=set(ready[&#x27;Subject&#x27;])
+  <div class="formula"><span class="lbl">d′</span> = z(hit rate) − z(false-alarm rate) <span class="note">log-linear corrected</span></div>
+  <div class="step"><div class="stephead"><span class="cmd">dprime_corrections.py</span><span class="pkg">pandas · scipy</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/usr/bin/env python3</span>
+<span class="c">&quot;&quot;&quot;</span>
+d-prime with the standard corrections for boundary hit/FA rates.
 
-def recompute(subj,cond):
-    tag=&#x27;social&#x27; if cond==&#x27;SOCIAL&#x27; else &#x27;monetary&#x27;
-    dt=&#x27;decision_social&#x27; if cond==&#x27;SOCIAL&#x27; else &#x27;decision_monetary&#x27;
-    ef=[f for f in glob.glob(f&#x27;{base}/{subj}/*Encoding_{tag}*.tsv&#x27;) if &#x27;practice&#x27; not in f]
-    rf=glob.glob(f&#x27;{base}/{subj}/*Recall_{tag}*.tsv&#x27;); rf=[f for f in rf if &#x27;practice&#x27; not in f]
-    if not ef or not rf: return None
-    enc=pd.read_csv(ef[0],sep=&#x27;\t&#x27;); rec=pd.read_csv(rf[0],sep=&#x27;\t&#x27;)
-    edec=enc[enc[&#x27;trial_type&#x27;].astype(str).str.startswith(f&#x27;decision_{tag}&#x27;)].copy()
-    chosen,notchosen=set(),set()
-    for _,r in edec.iterrows():
-        if r.get(&#x27;selection&#x27;)==&#x27;right&#x27;: chosen.add(r.get(&#x27;image_right&#x27;)); notchosen.add(r.get(&#x27;image_left&#x27;))
-        elif r.get(&#x27;selection&#x27;)==&#x27;left&#x27;: chosen.add(r.get(&#x27;image_left&#x27;)); notchosen.add(r.get(&#x27;image_right&#x27;))
-    rdec=rec[rec[&#x27;trial_type&#x27;]==dt].copy(); rdec=rdec[rdec[&#x27;selection&#x27;]!=&#x27;missed&#x27;]
-    isrecall=rdec[&#x27;selection&#x27;].astype(str).str.startswith(&#x27;recall&#x27;)
-    hit=((isrecall)&amp;(rdec[&#x27;image&#x27;].isin(chosen))).sum(); nold=rdec[&#x27;image&#x27;].isin(chosen).sum()
-    fatot=((isrecall)&amp;(rdec[&#x27;image&#x27;].isin(notchosen))).sum(); nnew=rdec[&#x27;image&#x27;].isin(notchosen).sum()
-    if nold&lt;5 or nnew&lt;5: return None
-    H=hit/nold; F=fatot/nnew
-    return z(H)-z(F)
+Raw d&#x27; is undefined at rates of 0 or 1. In this dataset s1350 (hit=.92, FA=1.00) produced
+d&#x27; = -3.33, which suppressed the node-wise cluster test (24 nodes vs a 25 threshold).
+
+  log-linear (Hautus 1995): (hits+0.5)/(n_old+1), (fa+0.5)/(n_new+1) -- applied to EVERYONE
+  Snodgrass &amp; Corwin (1988): adjust only boundary values by 1/(2N)
+
+The two agree at r = .998. Log-linear is used as primary.
+
+Note: in this task the &quot;new&quot; items are the co-presented pair partners (seen but not chosen),
+so d&#x27; indexes memory for WHICH person delivered feedback, i.e. source memory.
+
+Out: data.check/dprime_corrected.csv
+<span class="c">&quot;&quot;&quot;</span>
+import pandas as pd, numpy as np
+from scipy.stats import norm
+
+TRIAL=&#x27;/Users/dannyzweben/Desktop/SDN/IMPACT_triallevel.csv&#x27;
+OUT=&#x27;/Users/dannyzweben/Desktop/SDN/DTI/data.check/dprime_corrected.csv&#x27;
+def z(p): return norm.ppf(np.clip(p,1e-6,1-1e-6))
+
+d=pd.read_csv(TRIAL)
+d=d[d[&#x27;recall_selection&#x27;].astype(str)!=&#x27;missed&#x27;].copy()
+d[&#x27;said_rem&#x27;]=d[&#x27;recall_selection&#x27;].astype(str).str.startswith(&#x27;recall&#x27;)
+d[&#x27;chosen&#x27;]=d[&#x27;selected&#x27;]==&#x27;Selected&#x27;
 
 rows=[]
-for subj in sorted(subs):
-    row={&#x27;Subject&#x27;:subj}
-    for cond in [&#x27;SOCIAL&#x27;,&#x27;MONETARY&#x27;]:
-        mine=recompute(subj,cond)
-        rep=grp[grp[&#x27;ID&#x27;]==subj][f&#x27;{cond}_dprime&#x27;]
-        row[f&#x27;{cond}_mine&#x27;]=round(mine,4) if mine is not None else None
-        row[f&#x27;{cond}_reported&#x27;]=round(float(rep.iloc[0]),4) if len(rep) and pd.notna(rep.iloc[0]) else None
-    rows.append(row)
-df=pd.DataFrame(rows)
-<span class="c"># correlations</span>
-res={}
-for cond in [&#x27;SOCIAL&#x27;,&#x27;MONETARY&#x27;]:
-    d=df[[f&#x27;{cond}_mine&#x27;,f&#x27;{cond}_reported&#x27;]].dropna()
-    r,p=pearsonr(d[f&#x27;{cond}_mine&#x27;],d[f&#x27;{cond}_reported&#x27;])
-    res[cond]={&#x27;r&#x27;:round(r,4),&#x27;n&#x27;:len(d)}
-print(&quot;Recompute vs reported:&quot;,res)
-<span class="c"># save sample rows for HTML (subjects with both)</span>
-df.to_json(&#x27;/Users/dannyzweben/Desktop/SDN/DTI/SDN-IMPACT-DTI/results_html/dprime_recompute.json&#x27;,orient=&#x27;records&#x27;)
-<span class="c"># NOTE: does NOT write meta_data[&#x27;data_quality&#x27;][&#x27;dprime_recompute&#x27;] — build_demo_dq.py is the</span>
-<span class="c"># single source of truth for that value (analysis d′ vs export on the clean roster). This script&#x27;s</span>
-<span class="c"># recompute↔export r can include DQ-excluded sessions and must not clobber the published value.</span>
-print(&quot;NOTE: meta_data recompute is owned by build_demo_dq.py; not overwriting here.&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Recompute d′ straight from each mother's raw Encoding and Recall trials as a transparency check on the study's exported scores.</p><div class="lead-lbl">Produces</div><p class="res">Matched the export: social r = 0.96, monetary r = 0.99.</p></div></details></div></div>
+for (sid,dom),g in d.groupby([&#x27;ID&#x27;,&#x27;domain&#x27;]):
+    ch=g[g[&#x27;chosen&#x27;]]; un=g[~g[&#x27;chosen&#x27;]]
+    if len(ch)&lt;10 or len(un)&lt;10: continue
+    H,nH=ch[&#x27;said_rem&#x27;].sum(),len(ch); F,nF=un[&#x27;said_rem&#x27;].sum(),len(un)
+    h,f=H/nH,F/nF
+    ll=z((H+0.5)/(nH+1))-z((F+0.5)/(nF+1))
+    sh,sf=h,f
+    if sh==1: sh=1-1/(2*nH)
+    if sh==0: sh=1/(2*nH)
+    if sf==1: sf=1-1/(2*nF)
+    if sf==0: sf=1/(2*nF)
+    rows.append(dict(Subject=sid,domain=dom,hit=h,fa=f,
+                     dprime_raw=z(h)-z(f),dprime_loglinear=ll,dprime_snodgrass=z(sh)-z(sf)))
+m=pd.DataFrame(rows)
+piv=m.pivot(index=&#x27;Subject&#x27;,columns=&#x27;domain&#x27;,values=[&#x27;dprime_loglinear&#x27;,&#x27;dprime_snodgrass&#x27;])
+piv.columns=[f&quot;{b.upper()}_{a}&quot; for a,b in piv.columns]
+piv.reset_index().to_csv(OUT,index=False)
+s=m[m.domain==&#x27;social&#x27;]
+print(f&quot;corrected d&#x27; written. social: raw SD={s.dprime_raw.std():.3f} -&gt; loglinear SD={s.dprime_loglinear.std():.3f}&quot;)
+print(f&quot;loglinear vs snodgrass r={s[[&#x27;dprime_loglinear&#x27;,&#x27;dprime_snodgrass&#x27;]].corr().iloc[0,1]:.4f}&quot;)
+print(f&quot;-&gt; {OUT}&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>d′ from each mother's raw trials with the log-linear correction (0.5 added to each count, 1 to each total), so boundary hit or false-alarm rates stay finite. Snodgrass–Corwin is computed alongside as a check.</p><div class="lead-lbl">Produces</div><p class="res">Corrected d′ per condition; the two corrections agree at r = .998.</p></div></details></div></div>
   <div class="step"><div class="stephead"><span class="cmd">compliance_screen.py</span><span class="pkg">pandas</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">&quot;&quot;&quot;</span>
 Compliance screen — a PRE-ANALYSIS data-quality gate for the memory task.
 
@@ -136,14 +135,54 @@ def main():
     print(f&quot;  -&gt; wrote {OUT}&quot;)
 
 if __name__ == &#x27;__main__&#x27;:
-    main()</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Pre-analysis gate: flag yes-to-everything responders (remember-rate ≥ 0.95), whose d′ is degenerate, and drop that condition.</p><div class="lead-lbl">Produces</div><p class="res">Excludes s4210 from every memory outcome.</p></div></details></div></div>
-
-  <h3>Positivity bias: two scores</h3>
+    main()</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Pre-analysis gate: any condition with a remember rate of 95% or more is a yes-to-everything response set with no discrimination, and is dropped.</p><div class="lead-lbl">Produces</div><p class="res">Excludes s4210 from every memory outcome.</p></div></details></div></div>
+  <h3>Misattribution</h3>
+  <div class="formula"><span class="lbl">misattribution</span> = residual of false-alarm rate on criterion c <span class="note">false memories net of response bias</span></div>
+  <div class="step"><div class="stephead"><span class="cmd">misattribution_scores.py</span><span class="pkg">pandas · statsmodels</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre>import pandas as pd, numpy as np, warnings
+from scipy.stats import norm
+warnings.filterwarnings(&#x27;ignore&#x27;)
+def z(p): return norm.ppf(np.clip(p,1e-6,1-1e-6))
+d=pd.read_csv(&#x27;/Users/dannyzweben/Desktop/SDN/IMPACT_triallevel.csv&#x27;)
+d=d[d[&#x27;recall_selection&#x27;].astype(str)!=&#x27;missed&#x27;].copy()
+d[&#x27;said_rem&#x27;]=d[&#x27;recall_selection&#x27;].astype(str).str.startswith(&#x27;recall&#x27;)
+d[&#x27;chosen&#x27;]=d[&#x27;selected&#x27;]==&#x27;Selected&#x27;
+rows=[]
+for (sid,dom),g in d.groupby([&#x27;ID&#x27;,&#x27;domain&#x27;]):
+    ch=g[g[&#x27;chosen&#x27;]]; un=g[~g[&#x27;chosen&#x27;]]
+    if len(ch)&lt;10 or len(un)&lt;10: continue
+    r={&#x27;Subject&#x27;:sid,&#x27;domain&#x27;:dom}
+    nH,nF=len(ch),len(un)
+    H,F=ch[&#x27;said_rem&#x27;].sum(),un[&#x27;said_rem&#x27;].sum()
+    r[&#x27;hit&#x27;]=H/nH; r[&#x27;fa&#x27;]=F/nF
+<span class="c">    # MISATTRIBUTION = claiming feedback from the person you did NOT choose.</span>
+<span class="c">    # Decompose it by whether the claimed feedback matches that trial&#x27;s real outcome:</span>
+    fa=un[un[&#x27;said_rem&#x27;]]
+<span class="c">    #   source confusion: right event, wrong person (valence matches the pair&#x27;s real outcome)</span>
+    r[&#x27;fa_source_conf&#x27;] = (fa[&#x27;feedback_acc&#x27;]==&#x27;FeedbackSameAsPair&#x27;).sum()/nF
+<span class="c">    #   full fabrication: wrong person AND wrong feedback</span>
+    r[&#x27;fa_fabrication&#x27;] = (fa[&#x27;feedback_acc&#x27;]==&#x27;FeedbackDifferentThanPair&#x27;).sum()/nF
+<span class="c">    # log-linear corrected rates for stability</span>
+    r[&#x27;fa_ll&#x27;] = (F+0.5)/(nF+1)
+    r[&#x27;hit_ll&#x27;]= (H+0.5)/(nH+1)
+<span class="c">    # criterion (response liberalness) -- the nuisance we must hold constant</span>
+    r[&#x27;criterion&#x27;] = -0.5*(z(r[&#x27;hit_ll&#x27;])+z(r[&#x27;fa_ll&#x27;]))
+    rows.append(r)
+m=pd.DataFrame(rows)
+piv=m.pivot(index=&#x27;Subject&#x27;,columns=&#x27;domain&#x27;)
+piv.columns=[f&quot;{b.upper()}_{a}&quot; for a,b in piv.columns]
+piv.reset_index().to_csv(&#x27;data.check/misattribution_scores.csv&#x27;,index=False)
+s=m[m.domain==&#x27;social&#x27;]
+print(&quot;=== Decomposing MISATTRIBUTION (social) ===&quot;)
+print(f&quot;  overall false-alarm rate : {s[&#x27;fa&#x27;].mean():.3f}&quot;)
+print(f&quot;    source confusion (right event, wrong person): {s[&#x27;fa_source_conf&#x27;].mean():.3f}&quot;)
+print(f&quot;    full fabrication (wrong event AND person)   : {s[&#x27;fa_fabrication&#x27;].mean():.3f}&quot;)
+print(f&quot;\nsaved {piv.shape[1]} measures&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>False-alarm rate residualized on the response criterion c, so the score is claiming feedback from someone who never gave it, net of overall willingness to say remember.</p><div class="lead-lbl">Produces</div><p class="res">Misattribution per condition.</p></div></details></div></div>
+  <h3>Positivity bias</h3>
   <div class="two">
-    <div class="formula"><span class="lbl">HitRateBias</span><br>= TrueMem<sub>pos</sub>/Total<sub>pos</sub> − TrueMem<sub>neg</sub>/Total<sub>neg</sub><br><span class="note">skew in <b>correct</b> memories</span></div>
-    <div class="formula"><span class="lbl">FABias</span><br>= FalseMem<sub>pos</sub>/Total<sub>pos</sub> − FalseMem<sub>neg</sub>/Total<sub>neg</sub><br><span class="note">skew in <b>false</b> memories</span></div>
+    <div class="formula"><span class="lbl">FABias</span><br>= FA rate<sub>pos</sub> − FA rate<sub>neg</sub><br><span class="note">skew in <b>false</b> memories</span></div>
+    <div class="formula"><span class="lbl">HitRateBias</span><br>= hit rate<sub>pos</sub> − hit rate<sub>neg</sub><br><span class="note">skew in <b>correct</b> memories</span></div>
   </div>
-  <p class="small">"Positive / negative" is how she <b>remembered</b> each item (every response is tagged positive, negative, or neutral). TrueMem = an item she'd chosen at encoding and correctly recognized; FalseMem = a foil she falsely remembered. Total<sub>pos</sub> and Total<sub>neg</sub> are her total positive and negative responses on the test, so each score is a positive-minus-negative skew in what she remembers.</p>
+  <p class="small">Positive and negative refer to how she remembered each item. Total bias, used below, is simply the proportion of all reported memories that were positive.</p>
   <div class="step"><div class="stephead"><span class="cmd">compute_bias_scores.py</span><span class="pkg">pandas</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">&quot;&quot;&quot;</span>
 Positivity-bias scores (HitRateBias, FABias) from the study&#x27;s valence-coded counts,
 with the zero-valence rule, written into the analysis-ready CSVs.
@@ -199,24 +238,77 @@ def main():
         print(f&quot;  {bc:22s} N={pd.to_numeric(ref[bc], errors=&#x27;coerce&#x27;).notna().sum()}&quot;)
 
 if __name__ == &#x27;__main__&#x27;:
-    main()</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Build HitRateBias and FABias from the valence-coded counts, with the zero-valence rule.</p><div class="lead-lbl">Produces</div><p class="res">The two bias scores per condition, written into the analysis tables.</p></div></details></div></div>
+    main()</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Positive minus negative rate, separately for false memories (FABias) and correct memories (HitRateBias), with the zero-valence rule for mothers who never used one valence.</p><div class="lead-lbl">Produces</div><p class="res">The two bias scores per condition.</p></div></details></div></div>
 
-  <h3>Is memory above chance?</h3>
-  <table class="dtable"><thead><tr><th>Condition</th><th>mean d′</th><th>t vs 0</th><th>p</th></tr></thead><tbody>
-    <tr><td>Social</td><td>+0.098</td><td>2.47</td><td class="sig">0.017</td></tr>
-    <tr><td>Monetary</td><td>+0.215</td><td>4.77</td><td class="sig">&lt;0.001</td></tr>
+  <h2>Is memory real?</h2>
+  <p>The task is hard and d′ is small. Pooled across mothers, memory is above chance on every test.</p>
+  <table class="dtable"><thead><tr><th>Test</th><th>Faces (social)</th><th>Doors (monetary)</th></tr></thead><tbody>
+    <tr><td>Recognition accuracy vs 50%</td><td>51.5%, <span class="sig">p = .023</span></td><td>53.9%, <span class="sig">p &lt; .001</span></td></tr>
+    <tr><td>Correct feedback among recognized items vs 33%</td><td>37.2%, <span class="sig">p = .003</span></td><td>38.2%, <span class="sig">p = .0003</span></td></tr>
+    <tr><td>d′ vs 0</td><td>+0.088, <span class="sig">p = .018</span> (n = 52)</td><td>+0.208, <span class="sig">p &lt; .001</span> (n = 53)</td></tr>
+    <tr><td>RT, recognized vs correctly rejected</td><td>1679 vs 1800 ms, −121 ms, <span class="sig">p = .0008</span></td><td>1640 vs 1749 ms, −109 ms, <span class="sig">p = .0003</span></td></tr>
+    <tr><td>RT, named feedback correctly vs wrong</td><td>1640 vs 1680 ms, −40 ms, p = .119</td><td>1598 vs 1658 ms, −59 ms, <span class="sig">p = .011</span></td></tr>
   </tbody></table>
-  <p>Both above chance. Social and monetary d′ are uncorrelated (r = -0.15, p = 0.29): distinct abilities.</p>
+  <div class="step"><div class="stephead"><span class="cmd">binomial_test.py</span><span class="pkg">scipy</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/usr/bin/env python3</span>
+<span class="c">&quot;&quot;&quot;</span>
+Per-subject binomial test on raw recognition (Deepu&#x27;s request, 2026-08-14 meeting).
 
-  <h3>Social vs. monetary</h3>
-  <table class="dtable"><thead><tr><th>Component</th><th>Social</th><th>Monetary</th><th>differ?</th></tr></thead><tbody>
-    <tr><td>Hit rate</td><td>0.560</td><td>0.539</td><td>no (p=.40)</td></tr>
-    <tr><td>False-alarm rate</td><td>0.527</td><td>0.460</td><td class="sig">yes (p=.008)</td></tr>
-    <tr><td>d′ (accuracy)</td><td>0.10 ± .29</td><td>0.22 ± .33</td><td>no (p=.07)</td></tr>
-    <tr><td>HitRateBias (correct-memory positivity)</td><td>+0.12 ± .19</td><td>+0.12 ± .16</td><td>no (p=.92)</td></tr>
-    <tr><td>FABias (false-memory positivity)</td><td>+0.07 ± .19</td><td>+0.08 ± .16</td><td>no (p=.82)</td></tr>
+Question: is each mother individually above chance at telling old (chosen at encoding)
+from new (foil) items? A d&#x27; near 0 could be real-but-small memory, or noise hovering
+around chance. The binomial test labels who is actually above chance.
+
+Recognition is &quot;remember&quot; (recall_*) vs &quot;predict&quot; (predict_*): responding remember to
+an old item = hit; responding predict to a new item = correct rejection. Old/new and
+remember/predict are both ~balanced in the data, so chance = 0.5.
+
+Out: data.check/binomial_test_subjects.csv (per subject x domain: correct, n, acc, p, pass)
+<span class="c">&quot;&quot;&quot;</span>
+import pandas as pd
+from scipy.stats import binomtest
+
+TRIAL = &#x27;/Users/dannyzweben/Desktop/SDN/IMPACT_triallevel.csv&#x27;
+ROSTER = &#x27;/Users/dannyzweben/Desktop/SDN/DTI/data.check/analysis_ready_bilateral/vta_anthipp__NDI__analysis.csv&#x27;
+OUT = &#x27;/Users/dannyzweben/Desktop/SDN/DTI/data.check/binomial_test_subjects.csv&#x27;
+
+d = pd.read_csv(TRIAL)
+d = d[d[&#x27;recall_selection&#x27;].astype(str) != &#x27;missed&#x27;].copy()
+d[&#x27;isrec&#x27;] = d[&#x27;recall_selection&#x27;].astype(str).str.startswith(&#x27;recall&#x27;)
+d[&#x27;old&#x27;] = d[&#x27;selected&#x27;] == &#x27;Selected&#x27;
+roster = set(pd.read_csv(ROSTER)[&#x27;Subject&#x27;])
+
+rows = []
+for (sid, dom), g in d.groupby([&#x27;ID&#x27;, &#x27;domain&#x27;]):
+    if sid not in roster or len(g) &lt; 10:
+        continue
+    correct = int(((g[&#x27;isrec&#x27;]) &amp; (g[&#x27;old&#x27;])).sum() + ((~g[&#x27;isrec&#x27;]) &amp; (~g[&#x27;old&#x27;])).sum())
+    n = int(len(g))
+    p = binomtest(correct, n, 0.5, alternative=&#x27;greater&#x27;).pvalue
+    rows.append(dict(ID=sid, domain=dom, correct=correct, n=n,
+                     acc=correct / n, p=p, passed=bool(p &lt; 0.05)))
+
+r = pd.DataFrame(rows)
+r.to_csv(OUT, index=False)
+
+print(&quot;=== per-subject binomial test (recognition vs chance, one-sided) ===&quot;)
+for dom in [&#x27;social&#x27;, &#x27;monetary&#x27;]:
+    s = r[r[&#x27;domain&#x27;] == dom]
+    print(f&quot;  {dom:9s}: {int(s[&#x27;passed&#x27;].sum())}/{len(s)} above chance &quot;
+          f&quot;({100*s[&#x27;passed&#x27;].mean():.0f}%) | acc mean={s[&#x27;acc&#x27;].mean():.3f} &quot;
+          f&quot;sd={s[&#x27;acc&#x27;].std():.3f} max={s[&#x27;acc&#x27;].max():.3f} | median trials={s[&#x27;n&#x27;].median():.0f}&quot;)
+
+p = r.pivot_table(index=&#x27;ID&#x27;, columns=&#x27;domain&#x27;, values=&#x27;passed&#x27;).fillna(0).astype(bool)
+if {&#x27;social&#x27;, &#x27;monetary&#x27;} &lt;= set(p.columns):
+    print(f&quot;  pass BOTH: {int((p[&#x27;social&#x27;] &amp; p[&#x27;monetary&#x27;]).sum())} | &quot;
+          f&quot;pass EITHER: {int((p[&#x27;social&#x27;] | p[&#x27;monetary&#x27;]).sum())} | &quot;
+          f&quot;pass NEITHER: {int((~p[&#x27;social&#x27;] &amp; ~p[&#x27;monetary&#x27;]).sum())}&quot;)
+print(f&quot;  -&gt; wrote {OUT}&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Per-subject binomial test of recognition against chance, one-sided.</p><div class="lead-lbl">Produces</div><p class="res">2 of 54 clear individually on social, 9 of 54 on monetary, none on both. At a median of 83 trials the per-subject test has almost no resolution.</p></div></details></div></div>
+  <h3>Social vs monetary</h3>
+  <table class="dtable"><thead><tr><th>Component</th><th>Social</th><th>Monetary</th><th>Differ?</th></tr></thead><tbody>
+    <tr><td>Hit rate</td><td>0.556</td><td>0.538</td><td>no (p = .46)</td></tr>
+    <tr><td>False-alarm rate</td><td>0.524</td><td>0.459</td><td class="sig">yes (p = .012)</td></tr>
+    <tr><td>d′</td><td>+0.088</td><td>+0.208</td><td class="sig">yes (p = .048)</td></tr>
   </tbody></table>
-  <p class="small">Paired t-tests, n = 52. The only difference between domains is the <b>false-alarm rate</b>: the social task produces more false alarms. Hit rate, d′, and both positivity biases are equivalent, so the lower social d′ is more false positives, not weaker memory, and the social signal lives specifically in false memories.</p>
+  <p class="small">Paired, n = 52. Items are remembered equally well in both domains; the lower social d′ is more false alarms. Social and monetary d′ correlate at r = −.13 (p = .37).</p>
   <div class="step"><div class="stephead"><span class="cmd">dprime_breakdown.py</span><span class="pkg">pandas · scipy</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">&quot;&quot;&quot;</span>
 d&#x27; component breakdown: split each mother&#x27;s d&#x27; into hit rate (memory strength) and
 false-alarm rate (false positives), then paired-compare social vs monetary. Applies the
@@ -272,180 +364,321 @@ def main():
     print(f&quot;dprime_breakdown.json  (n={bd[&#x27;n&#x27;]}): hit p={bd[&#x27;hit&#x27;][&#x27;p&#x27;]}  fa p={bd[&#x27;fa&#x27;][&#x27;p&#x27;]}&quot;)
 
 if __name__ == &#x27;__main__&#x27;:
-    main()</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Split each d′ into hit rate and false-alarm rate, paired social vs. monetary, under the same data-quality and compliance gates.</p><div class="lead-lbl">Produces</div><p class="res">The hit / false-alarm breakdown above.</p></div></details></div></div>
+    main()</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Split d′ into hit rate and false-alarm rate and compare social against monetary, paired, under the same data-quality gates.</p><div class="lead-lbl">Produces</div><p class="res">The hit / false-alarm table above.</p></div></details></div></div>
 
-  <h2>The tract test</h2>
-  <p>Six outcomes (social and monetary × d′, HitRateBias, FABias) tested against each tract's along-node microstructure, for all four metrics, plus the hippocampus region.</p>
-
-  <h3>Model, per node</h3>
-  <p>At each of the 100 nodes, the outcome on that node's microstructure value plus five covariates: ICV, tract streamline count and mean length, head motion, and maternal age.</p>
-  <div class="formula"><span class="lbl">full</span>&nbsp;&nbsp;&nbsp; y ~ node + ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age<br><span class="lbl">reduced</span>&nbsp; y ~ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age</div>
-  <div class="step"><div class="stephead"><span class="cmd">build_analysis_csvs.py</span><span class="pkg">pandas</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/usr/bin/env python3</span>
+  <h2>Behavioral bias</h2>
+  <table class="dtable"><thead><tr><th>Reported memories</th><th>Positive</th><th>Negative</th><th>Neutral</th></tr></thead><tbody>
+    <tr><td>Faces</td><td>58.5%</td><td>20.4%</td><td>21.1%</td></tr>
+    <tr><td>Doors</td><td>57.9%</td><td>24.9%</td><td>17.2%</td></tr>
+  </tbody></table>
+  <p>Both far above the 33% baseline (p &lt; 1e-12) and not different from each other (p = .85). The accuracy-based scores agree: positive false-alarm bias above zero for faces (+.068, p = .013) and doors (+.072, p = .002); hit-rate bias stronger (+.121 and +.120, both p &lt; .0001); neither differs across domains (p = .82, .79). Each loads on the positive side (social: positive hit rate .334 vs negative .215, p = .0001; positive FA rate .305 vs negative .228, p = .005; monetary the same pattern). The bias is domain-general. Only its relation to microstructure is social-specific.</p>
+  <div class="step"><div class="stephead"><span class="cmd">bias_comparisons.py</span><span class="pkg">pandas · scipy</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/usr/bin/env python3</span>
 <span class="c">&quot;&quot;&quot;</span>
-================================================================================
-Step 28-prep: Build analysis-ready CSVs for permutation testing
-================================================================================
-Merges everything Ranesh&#x27;s permutation R script needs:
-  - Subject ID
-  - 5 outcomes:
-      * SOCIAL_dprime, MONETARY_dprime (memory)
-      * ctqsf_adult_totalmaltreatment_pnrscoring (trauma — total)
-      * ctqsf_adult_totalabuse_pnrscoring (trauma — abuse)
-      * ctqsf_adult_totalneglect_pnrscoring (trauma — neglect)
-  - 5 covariates:
-      * mot_abs (absolute head motion, eddy quad)
-      * ICV_mm3
-      * &lt;tract&gt;_count (streamline count)
-      * &lt;tract&gt;_mean_length
-      * demo_poc_51 (maternal age)
-  - 100 wide metric columns (FA_0..FA_99 OR NDI_0..NDI_99 etc.)
+Bias comparisons requested at the 2026-08-14 meeting.
 
-Output: 16 CSVs (4 tracts × 4 metrics) in
-        ~/Desktop/SDN/DTI/data.check/analysis_ready/
-        Each named: &lt;tract&gt;__&lt;metric&gt;__analysis.csv
+1. Social vs monetary bias (paired) — is the bias bigger in social? (Deepu: this is
+   what would support treating monetary as the low-salience/near-neutral condition.)
+2. Split each subtraction bias into its positive and negative halves — is the effect
+   driven by the positive rate or the negative rate (&quot;increasing signal&quot; vs
+   &quot;reducing interference&quot;)?
+3. Simple behavioral positivity bias (Johanna, PNAS-style): of ALL your memory
+   responses, what proportion were positive? No accuracy involved.
+
+Out: data.check/bias_comparisons.csv  (+ printed tests)
 <span class="c">&quot;&quot;&quot;</span>
-import pandas as pd
+import pandas as pd, numpy as np
+from scipy.stats import ttest_rel, ttest_1samp
+
+GRP = &#x27;/Users/dannyzweben/Desktop/SDN/DTI/Impact-Analyses/IMPACT_grouped_export.csv&#x27;
+TRIAL = &#x27;/Users/dannyzweben/Desktop/SDN/IMPACT_triallevel.csv&#x27;
+ROSTER = &#x27;/Users/dannyzweben/Desktop/SDN/DTI/data.check/analysis_ready_bilateral/vta_anthipp__NDI__analysis.csv&#x27;
+OUT = &#x27;/Users/dannyzweben/Desktop/SDN/DTI/data.check/bias_comparisons.csv&#x27;
+
+ready = pd.read_csv(ROSTER)
+roster = set(ready[&#x27;Subject&#x27;])
+g = pd.read_csv(GRP).rename(columns={&#x27;ID&#x27;: &#x27;Subject&#x27;}).drop_duplicates(&#x27;Subject&#x27;)
+g = g[g[&#x27;Subject&#x27;].isin(roster)].copy()
+
+
+def rate(num, den):
+    n = pd.to_numeric(num, errors=&#x27;coerce&#x27;); d = pd.to_numeric(den, errors=&#x27;coerce&#x27;)
+    return np.where(d &gt; 0, n / d.replace(0, np.nan), 0.0)
+
+
+<span class="c"># --- component rates behind each bias score ---</span>
+for c in [&#x27;SOCIAL&#x27;, &#x27;MONETARY&#x27;]:
+    g[f&#x27;{c}_Hit_pos&#x27;] = rate(g[f&#x27;{c}_TrueMem_positive&#x27;],  g[f&#x27;{c}_Total_pos&#x27;])
+    g[f&#x27;{c}_Hit_neg&#x27;] = rate(g[f&#x27;{c}_TrueMem_negative&#x27;],  g[f&#x27;{c}_Total_neg&#x27;])
+    g[f&#x27;{c}_FA_pos&#x27;]  = rate(g[f&#x27;{c}_FalseMem_positive&#x27;], g[f&#x27;{c}_Total_pos&#x27;])
+    g[f&#x27;{c}_FA_neg&#x27;]  = rate(g[f&#x27;{c}_FalseMem_negative&#x27;], g[f&#x27;{c}_Total_neg&#x27;])
+    g[f&#x27;{c}_HitRateBias&#x27;] = g[f&#x27;{c}_Hit_pos&#x27;] - g[f&#x27;{c}_Hit_neg&#x27;]
+    g[f&#x27;{c}_FABias&#x27;]      = g[f&#x27;{c}_FA_pos&#x27;]  - g[f&#x27;{c}_FA_neg&#x27;]
+
+<span class="c"># --- simple behavioral positivity bias: % of ALL memory responses that were positive ---</span>
+d = pd.read_csv(TRIAL)
+d = d[d[&#x27;recall_selection&#x27;].astype(str) != &#x27;missed&#x27;].copy()
+d[&#x27;isrec&#x27;] = d[&#x27;recall_selection&#x27;].astype(str).str.startswith(&#x27;recall&#x27;)
+mem = d[d[&#x27;isrec&#x27;]].copy()
+mem[&#x27;val&#x27;] = mem[&#x27;recall_selection&#x27;].astype(str).str.replace(&#x27;recall_&#x27;, &#x27;&#x27;, regex=False)
+rows = []
+for (sid, dom), gg in mem.groupby([&#x27;ID&#x27;, &#x27;domain&#x27;]):
+    if sid not in roster or len(gg) &lt; 5:
+        continue
+    rows.append(dict(Subject=sid, domain=dom, n_mem=len(gg),
+                     pct_positive=(gg[&#x27;val&#x27;] == &#x27;positive&#x27;).mean(),
+                     pct_negative=(gg[&#x27;val&#x27;] == &#x27;negative&#x27;).mean(),
+                     pct_neutral=(gg[&#x27;val&#x27;] == &#x27;neutral&#x27;).mean()))
+simple = pd.DataFrame(rows)
+piv = simple.pivot_table(index=&#x27;Subject&#x27;, columns=&#x27;domain&#x27;, values=&#x27;pct_positive&#x27;)
+
+print(&quot;=== 1. Social vs monetary bias (paired) ===&quot;)
+res = []
+for name in [&#x27;HitRateBias&#x27;, &#x27;FABias&#x27;]:
+    m = g[[f&#x27;SOCIAL_{name}&#x27;, f&#x27;MONETARY_{name}&#x27;]].dropna()
+    t, p = ttest_rel(m[f&#x27;SOCIAL_{name}&#x27;], m[f&#x27;MONETARY_{name}&#x27;])
+    print(f&quot;  {name:12s}: social={m[f&#x27;SOCIAL_{name}&#x27;].mean():+.3f}  monetary={m[f&#x27;MONETARY_{name}&#x27;].mean():+.3f}  &quot;
+          f&quot;t={t:+.2f} p={p:.3f} n={len(m)}&quot;)
+    res.append(dict(test=f&#x27;{name} social vs monetary&#x27;, social=m[f&#x27;SOCIAL_{name}&#x27;].mean(),
+                    monetary=m[f&#x27;MONETARY_{name}&#x27;].mean(), t=t, p=p, n=len(m)))
+
+print(&quot;\n=== 2. Is each bias driven by the positive or the negative side? ===&quot;)
+print(&quot;   (each rate tested against the other; bias = pos - neg)&quot;)
+for c in [&#x27;SOCIAL&#x27;, &#x27;MONETARY&#x27;]:
+    for name, pos, neg in [(&#x27;HitRateBias&#x27;, f&#x27;{c}_Hit_pos&#x27;, f&#x27;{c}_Hit_neg&#x27;),
+                           (&#x27;FABias&#x27;,      f&#x27;{c}_FA_pos&#x27;,  f&#x27;{c}_FA_neg&#x27;)]:
+        m = g[[pos, neg]].dropna()
+        t, p = ttest_rel(m[pos], m[neg])
+        print(f&quot;  {c:8s} {name:12s}: pos-rate={m[pos].mean():.3f}  neg-rate={m[neg].mean():.3f}  &quot;
+              f&quot;diff={m[pos].mean()-m[neg].mean():+.3f}  t={t:+.2f} p={p:.4f}&quot;)
+        res.append(dict(test=f&#x27;{c} {name} pos vs neg rate&#x27;, social=m[pos].mean(),
+                        monetary=m[neg].mean(), t=t, p=p, n=len(m)))
+
+print(&quot;\n=== 3. Simple behavioral positivity bias (% of all memories that were positive) ===&quot;)
+for dom in [&#x27;social&#x27;, &#x27;monetary&#x27;]:
+    s = simple[simple[&#x27;domain&#x27;] == dom]
+    t, p = ttest_1samp(s[&#x27;pct_positive&#x27;], 1/3)   # vs equal use of pos/neg/neutral
+    print(f&quot;  {dom:9s}: {100*s[&#x27;pct_positive&#x27;].mean():.1f}% positive, &quot;
+          f&quot;{100*s[&#x27;pct_negative&#x27;].mean():.1f}% negative, {100*s[&#x27;pct_neutral&#x27;].mean():.1f}% neutral &quot;
+          f&quot;| vs 33.3%: t={t:+.2f} p={p:.2g} n={len(s)}&quot;)
+if {&#x27;social&#x27;, &#x27;monetary&#x27;} &lt;= set(piv.columns):
+    m = piv.dropna()
+    t, p = ttest_rel(m[&#x27;social&#x27;], m[&#x27;monetary&#x27;])
+    print(f&quot;  social vs monetary % positive: t={t:+.2f} p={p:.3f} n={len(m)}&quot;)
+
+simple.to_csv(OUT, index=False)
+print(f&quot;\n-&gt; wrote {OUT}&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Social against monetary bias, paired; each bias split into its positive and negative rate; and total bias, the proportion of all reported memories that were positive.</p><div class="lead-lbl">Produces</div><p class="res">The tables above; data.check/bias_comparisons.csv.</p></div></details></div></div>
+
+  <h2>Everything we ran</h2>
+  <table class="dtable"><thead><tr><th></th><th>Node-wise (100 nodes)</th><th>Quartiles (4 × 25)</th><th>Whole tract</th></tr></thead><tbody>
+    <tr><td class="mut">Model</td><td>per node, Freedman–Lane permutation, cluster-extent FWE</td><td>mixed model, both subregions, subregion term</td><td>mixed model, both subregions, subregion term</td></tr>
+    <tr><td class="mut">Metrics</td><td>NDI, ODI, FWF, FA</td><td>NDI</td><td>NDI, ODI, FWF, FA</td></tr>
+    <tr><td class="mut">Subregions</td><td>anterior, posterior separately</td><td>both in one model</td><td>both in one model</td></tr>
+    <tr><td class="mut">Question</td><td>where along the tract</td><td>does it vary by segment or subregion</td><td>is there an effect; does subregion matter</td></tr>
+  </tbody></table>
+
+  <h3>Bilateral tracts</h3>
+  <p>Left and right profiles were verified aligned before averaging (node 0 at the VTA, node 99 at the hippocampus; L[i] vs R[i] r = +.98 anterior, +.97 posterior, versus −.90 / −.95 if one side were flipped). Mid-tract averages correlate across hemispheres:</p>
+  <table class="dtable"><thead><tr><th>Tract</th><th>FA</th><th>NDI</th><th>ODI</th><th>FWF</th></tr></thead><tbody>
+    <tr><td>VTA→posterior hippocampus</td><td>0.52</td><td>0.86</td><td>0.88</td><td>0.70</td></tr>
+    <tr><td>VTA→anterior hippocampus</td><td>0.53</td><td>0.81</td><td>0.80</td><td>0.70</td></tr>
+  </tbody></table>
+  <figure class="fig"><img src="../images/lr_scatterplots_mid50.png" alt="Left versus right hemisphere, mid-tract averages" loading="lazy"><figcaption>Each point a subject; dashed line is identity. n = 57.</figcaption></figure>
+  <div class="step"><div class="stephead"><span class="cmd">build_bilateral_csvs.py</span><span class="pkg">pandas</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/usr/bin/env python3</span>
+<span class="c">&quot;&quot;&quot;</span>
+Collapse the left+right VTA-&gt;hippocampus tracts into bilateral tracts (post-meeting).
+
+Averages the L and R 100-node microstructure profiles per subject (verified aligned:
+node 0 = VTA end, node 99 = hippocampus end, L[i] vs R[i] r~0.98). Produces bilateral
+analysis CSVs named by the CORRECT convention (anterior/posterior modifies the
+HIPPOCAMPUS): vta_anthipp (VTA-&gt;anterior hippocampus) and vta_posthipp.
+
+Covariates: ICV / motion / age unchanged (per subject); tract count = L+R (total
+streamlines), tract mean length = mean(L,R). Outcomes unchanged.
+
+Out: data.check/analysis_ready_bilateral/&lt;vta_anthipp|vta_posthipp&gt;__&lt;metric&gt;__analysis.csv
+<span class="c">&quot;&quot;&quot;</span>
+import pandas as pd, numpy as np
 from pathlib import Path
 
-base = Path(&quot;/Users/dannyzweben/Desktop/SDN/DTI&quot;)
-fa_dir = base / &quot;data.check/step27_fa&quot;
-nd_dir = base / &quot;data.check/step30_noddi&quot;
-out_dir = base / &quot;data.check/analysis_ready&quot;
+AR = Path(&quot;/Users/dannyzweben/Desktop/SDN/DTI/data.check/analysis_ready&quot;)
+OUT = Path(&quot;/Users/dannyzweben/Desktop/SDN/DTI/data.check/analysis_ready_bilateral&quot;)
+OUT.mkdir(exist_ok=True, parents=True)
+
+METRICS = [&quot;FA&quot;, &quot;NDI&quot;, &quot;ODI&quot;, &quot;FWF&quot;]
+<span class="c"># (bilateral name, left tract, right tract)</span>
+PAIRS = [
+    (&quot;vta_anthipp&quot;,  &quot;anterior_l_vta_l_hipp&quot;, &quot;anterior_r_vta_r_hipp&quot;),
+    (&quot;vta_posthipp&quot;, &quot;l_vta_l_hipp&quot;,          &quot;r_vta_r_hipp&quot;),
+]
+NONNODE = [&quot;Subject&quot;, &quot;absolute_motion&quot;, &quot;ICV&quot;, &quot;maternal_age&quot;,
+           &quot;SOCIAL_dprime&quot;, &quot;MONETARY_dprime&quot;,
+           &quot;SOCIAL_HitRateBias&quot;, &quot;SOCIAL_FABias&quot;, &quot;MONETARY_HitRateBias&quot;, &quot;MONETARY_FABias&quot;,
+           &quot;SOCIAL_TrueMemRate&quot;, &quot;SOCIAL_FalseMemRate&quot;, &quot;MONETARY_TrueMemRate&quot;, &quot;MONETARY_FalseMemRate&quot;,
+           &quot;SOCIAL_hitrate&quot;, &quot;SOCIAL_farate&quot;, &quot;MONETARY_hitrate&quot;, &quot;MONETARY_farate&quot;]
+
+for bil, ltr, rtr in PAIRS:
+    for m in METRICS:
+        lf = AR / f&quot;{ltr}__{m}__analysis.csv&quot;
+        rf = AR / f&quot;{rtr}__{m}__analysis.csv&quot;
+        if not lf.exists() or not rf.exists():
+            print(f&quot;  skip {bil} {m}: missing {lf.name if not lf.exists() else rf.name}&quot;); continue
+        L = pd.read_csv(lf); R = pd.read_csv(rf)
+        node_cols = [c for c in L.columns if c.startswith(f&quot;{m}_&quot;) and c.split(&quot;_&quot;)[-1].isdigit()]
+        keep = [c for c in NONNODE if c in L.columns]
+        out = L[keep].copy()
+        Ri = R.set_index(&quot;Subject&quot;)
+<span class="c">        # bilateral node profile = mean(L, R) per node</span>
+        for c in node_cols:
+            out[c] = (L.set_index(&quot;Subject&quot;)[c] + Ri[c]).values / 2.0
+<span class="c">        # tract covariates: count = sum, mean length = mean</span>
+        out[&quot;Count_tckstats&quot;] = (L.set_index(&quot;Subject&quot;)[&quot;Count_tckstats&quot;] + Ri[&quot;Count_tckstats&quot;]).values
+        out[&quot;Mean_tckstats&quot;]  = (L.set_index(&quot;Subject&quot;)[&quot;Mean_tckstats&quot;]  + Ri[&quot;Mean_tckstats&quot;]).values / 2.0
+<span class="c">        # order: covariates then node cols</span>
+        cov = [&quot;Subject&quot;, &quot;absolute_motion&quot;, &quot;ICV&quot;, &quot;maternal_age&quot;, &quot;Mean_tckstats&quot;, &quot;Count_tckstats&quot;]
+        outcomes = [c for c in keep if c not in (&quot;Subject&quot;, &quot;absolute_motion&quot;, &quot;ICV&quot;, &quot;maternal_age&quot;)]
+        out = out[cov + outcomes + node_cols]
+        out.to_csv(OUT / f&quot;{bil}__{m}__analysis.csv&quot;, index=False)
+        print(f&quot;  wrote {bil}__{m}__analysis.csv  shape={out.shape}  (nodes={len(node_cols)})&quot;)
+
+print(&quot;bilateral CSVs written to&quot;, OUT)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Average the left and right 100-node profiles per subject after verifying they are aligned end to end; sum streamline count, average length. One CSV per tract × metric.</p><div class="lead-lbl">Produces</div><p class="res">data.check/analysis_ready_bilateral/vta_{anthipp,posthipp}__{NDI,ODI,FWF,FA}__analysis.csv</p></div></details></div></div>
+  <div class="step"><div class="stephead"><span class="cmd">mid50_correlations.py</span><span class="pkg">pandas</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/usr/bin/env python3</span>
+<span class="c">&quot;&quot;&quot;</span>
+Mid-50-nodes (25-74) average + L/R hemisphere correlations.
+Pre-analysis check that the left and right tracts measure the same thing.
+<span class="c">&quot;&quot;&quot;</span>
+import pandas as pd
+import numpy as np
+from pathlib import Path
+
+fa_dir = Path(&quot;/Users/dannyzweben/Desktop/SDN/DTI/data.check/step27_fa&quot;)
+nd_dir = Path(&quot;/Users/dannyzweben/Desktop/SDN/DTI/data.check/step30_noddi&quot;)
+out_dir = Path(&quot;/Users/dannyzweben/Desktop/SDN/DTI/data.check/mid50_summary&quot;)
 out_dir.mkdir(exist_ok=True, parents=True)
 
-red = pd.read_csv(base / &quot;Impact-Analyses/IMPACT_REDCap_clean_093024.csv&quot;)
-grp = pd.read_csv(base / &quot;Impact-Analyses/IMPACT_grouped_export.csv&quot;)
-cov = pd.read_csv(base / &quot;Impact-Analyses/imaging_covariates.csv&quot;)
+<span class="c"># Mid 50 nodes (deep white matter, away from the gray-matter endpoints)</span>
+mid_nodes = list(range(25, 75))  # nodes 25..74 inclusive
 
-<span class="c"># Outcomes</span>
-TRAUMA_COLS = [
-    &quot;ctqsf_adult_totalmaltreatment_pnrscoring&quot;,
-    &quot;ctqsf_adult_totalabuse_pnrscoring&quot;,
-    &quot;ctqsf_adult_totalneglect_pnrscoring&quot;,
+<span class="c"># === Load and process per-tract averages ===</span>
+results = {}  # results[(tract_label, metric)] = pd.Series indexed by Subject
+metrics_per_tract = {}  # for combining FA + NODDI per tract
+
+for tract in [&quot;l_vta_l_hipp&quot;, &quot;r_vta_r_hipp&quot;, &quot;anterior_l_vta_l_hipp&quot;, &quot;anterior_r_vta_r_hipp&quot;]:
+<span class="c">    # FA</span>
+    fa = pd.read_csv(fa_dir / f&quot;{tract}_fa_nodewise_all_subjects.csv&quot;)
+    fa_mid = fa[fa[&quot;Node&quot;].isin(mid_nodes)].groupby(&quot;Subject&quot;)[&quot;FA&quot;].mean()
+    results[(tract, &quot;FA&quot;)] = fa_mid
+
+<span class="c">    # NODDI</span>
+    nd = pd.read_csv(nd_dir / f&quot;{tract}_noddi_nodewise_all_subjects.csv&quot;)
+    nd_mid = nd[nd[&quot;Node&quot;].isin(mid_nodes)].groupby(&quot;Subject&quot;)[[&quot;NDI&quot;, &quot;ODI&quot;, &quot;FWF&quot;]].mean()
+    for col in [&quot;NDI&quot;, &quot;ODI&quot;, &quot;FWF&quot;]:
+        results[(tract, col)] = nd_mid[col]
+
+<span class="c"># === Build a wide table: rows=Subject, cols=tract_metric ===</span>
+wide = pd.DataFrame()
+for (tract, metric), series in results.items():
+    wide[f&quot;{tract}__{metric}&quot;] = series
+wide.to_csv(out_dir / &quot;mid50_averages_per_subject.csv&quot;)
+print(f&quot;Wide table saved: {out_dir / &#x27;mid50_averages_per_subject.csv&#x27;}  shape={wide.shape}\n&quot;)
+
+<span class="c"># === L vs R correlations ===</span>
+def lr_pair(tract_pair, metric):
+    l_col = f&quot;{tract_pair[0]}__{metric}&quot;
+    r_col = f&quot;{tract_pair[1]}__{metric}&quot;
+    s = wide[[l_col, r_col]].dropna()
+    return s.iloc[:, 0].corr(s.iloc[:, 1]), len(s)
+
+posterior = (&quot;l_vta_l_hipp&quot;, &quot;r_vta_r_hipp&quot;)
+anterior = (&quot;anterior_l_vta_l_hipp&quot;, &quot;anterior_r_vta_r_hipp&quot;)
+
+print(&quot;=&quot; * 72)
+print(&quot;L vs R correlations (mid 50 nodes, nodes 25-74)&quot;)
+print(&quot;=&quot; * 72)
+print(f&quot;{&#x27;Tract&#x27;:&lt;22} {&#x27;Metric&#x27;:&lt;6} {&#x27;L vs R r&#x27;:&gt;10}  {&#x27;n&#x27;:&gt;4}&quot;)
+print(&quot;-&quot; * 72)
+for label, pair in [(&quot;Posterior VTA→HPC&quot;, posterior), (&quot;Anterior VTA→HPC&quot;, anterior)]:
+    for metric in [&quot;FA&quot;, &quot;NDI&quot;, &quot;ODI&quot;, &quot;FWF&quot;]:
+        r, n = lr_pair(pair, metric)
+        print(f&quot;{label:&lt;22} {metric:&lt;6} {r:&gt;10.3f}  {n:&gt;4}&quot;)
+    print()
+
+<span class="c"># === Save correlation table ===</span>
+rows = []
+for label, pair in [(&quot;Posterior VTA→HPC&quot;, posterior), (&quot;Anterior VTA→HPC&quot;, anterior)]:
+    for metric in [&quot;FA&quot;, &quot;NDI&quot;, &quot;ODI&quot;, &quot;FWF&quot;]:
+        r, n = lr_pair(pair, metric)
+        rows.append({&quot;Tract_Pair&quot;: label, &quot;Metric&quot;: metric, &quot;L_vs_R_r&quot;: round(r, 3), &quot;n&quot;: n})
+pd.DataFrame(rows).to_csv(out_dir / &quot;lr_correlations_mid50.csv&quot;, index=False)
+print(f&quot;\nCorr table saved: {out_dir / &#x27;lr_correlations_mid50.csv&#x27;}&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Average each metric over the mid-tract nodes (25 to 74) and correlate left against right, per subject.</p><div class="lead-lbl">Produces</div><p class="res">The L / R correlation table above.</p></div></details></div></div>
+  <div class="step"><div class="stephead"><span class="cmd">lr_scatterplots.py</span><span class="pkg">matplotlib</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/usr/bin/env python3</span>
+<span class="c">&quot;&quot;&quot;L vs R hemisphere scatterplots for FA + NODDI mid-50 averages.&quot;&quot;&quot;</span>
+import pandas as pd
+import numpy as np
+import matplotlib
+matplotlib.use(&#x27;Agg&#x27;)
+import matplotlib.pyplot as plt
+from pathlib import Path
+
+wide = pd.read_csv(&quot;/Users/dannyzweben/Desktop/SDN/DTI/data.check/mid50_summary/mid50_averages_per_subject.csv&quot;, index_col=0)
+
+tract_pairs = [
+    (&quot;Posterior&quot;, &quot;l_vta_l_hipp&quot;, &quot;r_vta_r_hipp&quot;),
+    (&quot;Anterior&quot;, &quot;anterior_l_vta_l_hipp&quot;, &quot;anterior_r_vta_r_hipp&quot;),
 ]
-MEM_COLS = [&quot;SOCIAL_dprime&quot;, &quot;MONETARY_dprime&quot;]
+metrics = [&quot;FA&quot;, &quot;NDI&quot;, &quot;ODI&quot;, &quot;FWF&quot;]
 
-<span class="c"># Memory-rate outcomes derived from raw counts</span>
-<span class="c"># True memory rate  = TrueMem / TotalTrials</span>
-<span class="c"># False memory rate = FalseMem / (TrueMem + FalseMem)</span>
-RAW_MEM_COLS = [
-    &quot;SOCIAL_TrueMem&quot;, &quot;SOCIAL_FalseMem&quot;, &quot;SOCIAL_TotalTrials&quot;,
-    &quot;MONETARY_TrueMem&quot;, &quot;MONETARY_FalseMem&quot;, &quot;MONETARY_TotalTrials&quot;,
-]
-DERIVED_MEM_COLS = [
-    &quot;SOCIAL_TrueMemRate&quot;, &quot;SOCIAL_FalseMemRate&quot;,
-    &quot;MONETARY_TrueMemRate&quot;, &quot;MONETARY_FalseMemRate&quot;,
-]
+fig, axes = plt.subplots(2, 4, figsize=(16, 8))
+fig.suptitle(&quot;L vs R Hemisphere — Mid-50 Node Averages (nodes 25-74)&quot;,
+             fontsize=15, fontweight=&#x27;bold&#x27;)
 
-<span class="c"># Positivity memory-bias outcomes — valence-broken-down counts</span>
-<span class="c"># HitRateBias  = P(hit | positive item) - P(hit | negative item)</span>
-<span class="c"># FABias       = P(FA  | positive item) - P(FA  | negative item)</span>
-RAW_BIAS_COLS = [
-    &quot;SOCIAL_TrueMem_positive&quot;, &quot;SOCIAL_TrueMem_negative&quot;,
-    &quot;SOCIAL_FalseMem_positive&quot;, &quot;SOCIAL_FalseMem_negative&quot;,
-    &quot;SOCIAL_Total_pos&quot;, &quot;SOCIAL_Total_neg&quot;,
-    &quot;MONETARY_TrueMem_positive&quot;, &quot;MONETARY_TrueMem_negative&quot;,
-    &quot;MONETARY_FalseMem_positive&quot;, &quot;MONETARY_FalseMem_negative&quot;,
-    &quot;MONETARY_Total_pos&quot;, &quot;MONETARY_Total_neg&quot;,
-]
-BIAS_COLS = [
-    &quot;SOCIAL_HitRateBias&quot;, &quot;SOCIAL_FABias&quot;,
-    &quot;MONETARY_HitRateBias&quot;, &quot;MONETARY_FABias&quot;,
-]
+for row, (label, lt, rt) in enumerate(tract_pairs):
+    for col, m in enumerate(metrics):
+        ax = axes[row, col]
+        x = wide[f&quot;{lt}__{m}&quot;]
+        y = wide[f&quot;{rt}__{m}&quot;]
+        r = x.corr(y)
 
-<span class="c"># === Tidy IDs ===</span>
-red = red.rename(columns={&quot;sub_id&quot;: &quot;Subject&quot;})
-grp = grp.rename(columns={&quot;ID&quot;: &quot;Subject&quot;})
-cov = cov.rename(columns={&quot;subject&quot;: &quot;Subject&quot;})
+<span class="c">        # Scatter</span>
+        ax.scatter(x, y, s=35, alpha=0.6, edgecolor=&#x27;black&#x27;, linewidth=0.4,
+                   color=&#x27;#2196F3&#x27; if row == 0 else &#x27;#FF9800&#x27;)
 
-<span class="c"># REDCap may have repeated rows per subject (event); collapse on Subject taking first non-null</span>
-red_subset = red[[&quot;Subject&quot;, &quot;demo_poc_51&quot;] + TRAUMA_COLS].copy()
-red_subset = (red_subset.dropna(subset=[&quot;Subject&quot;])
-                        .groupby(&quot;Subject&quot;)
-                        .first()
-                        .reset_index())
+<span class="c">        # Identity + best-fit line</span>
+        lim_min = min(x.min(), y.min())
+        lim_max = max(x.max(), y.max())
+        rng = lim_max - lim_min
+        lim_min -= rng * 0.05
+        lim_max += rng * 0.05
+        ax.plot([lim_min, lim_max], [lim_min, lim_max],
+                color=&#x27;gray&#x27;, linestyle=&#x27;--&#x27;, linewidth=0.8, alpha=0.5)
 
-grp_subset = grp[[&quot;Subject&quot;] + MEM_COLS + RAW_MEM_COLS + RAW_BIAS_COLS].copy()
-grp_subset = (grp_subset.dropna(subset=[&quot;Subject&quot;])
-                        .groupby(&quot;Subject&quot;)
-                        .first()
-                        .reset_index())
+<span class="c">        # Linear fit</span>
+        coef = np.polyfit(x, y, 1)
+        xfit = np.array([lim_min, lim_max])
+        ax.plot(xfit, np.polyval(coef, xfit),
+                color=&#x27;red&#x27;, linewidth=1.2, alpha=0.7)
 
-<span class="c"># Derive memory rates per subject</span>
-for cond in [&quot;SOCIAL&quot;, &quot;MONETARY&quot;]:
-    true_mem = pd.to_numeric(grp_subset[f&quot;{cond}_TrueMem&quot;], errors=&quot;coerce&quot;)
-    false_mem = pd.to_numeric(grp_subset[f&quot;{cond}_FalseMem&quot;], errors=&quot;coerce&quot;)
-    total = pd.to_numeric(grp_subset[f&quot;{cond}_TotalTrials&quot;], errors=&quot;coerce&quot;)
-    grp_subset[f&quot;{cond}_TrueMemRate&quot;] = true_mem / total
-    grp_subset[f&quot;{cond}_FalseMemRate&quot;] = false_mem / (true_mem + false_mem)
+        ax.set_xlim(lim_min, lim_max)
+        ax.set_ylim(lim_min, lim_max)
+        ax.set_xlabel(f&quot;Left {m}&quot;)
+        ax.set_ylabel(f&quot;Right {m}&quot;)
+        ax.set_title(f&quot;{label} VTA→HPC — {m}\nr = {r:.3f}&quot;,
+                     fontsize=11, fontweight=&#x27;bold&#x27;)
+        ax.grid(True, alpha=0.2)
 
-<span class="c">    # Positivity memory biases</span>
-    tm_pos = pd.to_numeric(grp_subset[f&quot;{cond}_TrueMem_positive&quot;], errors=&quot;coerce&quot;)
-    tm_neg = pd.to_numeric(grp_subset[f&quot;{cond}_TrueMem_negative&quot;], errors=&quot;coerce&quot;)
-    fm_pos = pd.to_numeric(grp_subset[f&quot;{cond}_FalseMem_positive&quot;], errors=&quot;coerce&quot;)
-    fm_neg = pd.to_numeric(grp_subset[f&quot;{cond}_FalseMem_negative&quot;], errors=&quot;coerce&quot;)
-    n_pos = pd.to_numeric(grp_subset[f&quot;{cond}_Total_pos&quot;], errors=&quot;coerce&quot;)
-    n_neg = pd.to_numeric(grp_subset[f&quot;{cond}_Total_neg&quot;], errors=&quot;coerce&quot;)
-    grp_subset[f&quot;{cond}_HitRateBias&quot;] = (tm_pos / n_pos) - (tm_neg / n_neg)
-    grp_subset[f&quot;{cond}_FABias&quot;]      = (fm_pos / n_pos) - (fm_neg / n_neg)
+plt.tight_layout()
+out = Path(&quot;/Users/dannyzweben/Desktop/SDN/DTI/data.check/mid50_summary/lr_scatterplots_mid50.png&quot;)
+plt.savefig(out, dpi=150, bbox_inches=&#x27;tight&#x27;)
+plt.close()
+print(f&quot;Saved: {out}&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>The scatterplots above.</p><div class="lead-lbl">Produces</div><p class="res">images/lr_scatterplots_mid50.png</p></div></details></div></div>
 
-<span class="c"># === Merge demographics + outcomes + imaging covariates ===</span>
-base_df = cov.merge(red_subset, on=&quot;Subject&quot;, how=&quot;left&quot;) \
-             .merge(grp_subset, on=&quot;Subject&quot;, how=&quot;left&quot;) \
-             .rename(columns={&quot;demo_poc_51&quot;: &quot;maternal_age&quot;,
-                              &quot;mot_abs&quot;: &quot;absolute_motion&quot;,
-                              &quot;ICV_mm3&quot;: &quot;ICV&quot;})
-
-print(f&quot;Base merged: {len(base_df)} subjects&quot;)
-print(f&quot;Outcome non-null counts:&quot;)
-for c in TRAUMA_COLS + MEM_COLS:
-    print(f&quot;  {c}: {base_df[c].notna().sum()}&quot;)
-print(f&quot;Covariates non-null:&quot;)
-for c in [&quot;absolute_motion&quot;, &quot;ICV&quot;, &quot;maternal_age&quot;]:
-    print(f&quot;  {c}: {base_df[c].notna().sum()}&quot;)
-
-TRACTS = [&quot;l_vta_l_hipp&quot;, &quot;r_vta_r_hipp&quot;,
-          &quot;anterior_l_vta_l_hipp&quot;, &quot;anterior_r_vta_r_hipp&quot;]
-METRICS = [&quot;FA&quot;, &quot;NDI&quot;, &quot;ODI&quot;, &quot;FWF&quot;]
-
-<span class="c"># Per (tract, metric), pivot the node-wise CSV to wide and merge</span>
-for tract in TRACTS:
-<span class="c">    # Per-tract covariates (count + mean length apply to THIS tract)</span>
-    tract_df = base_df.copy()
-    tract_df[&quot;Mean_tckstats&quot;] = tract_df[f&quot;{tract}_mean_length&quot;]
-    tract_df[&quot;Count_tckstats&quot;] = tract_df[f&quot;{tract}_count&quot;]
-    tract_df = tract_df[[
-        &quot;Subject&quot;, &quot;absolute_motion&quot;, &quot;ICV&quot;, &quot;maternal_age&quot;,
-        &quot;Mean_tckstats&quot;, &quot;Count_tckstats&quot;,
-        *TRAUMA_COLS, *MEM_COLS, *DERIVED_MEM_COLS, *BIAS_COLS
-    ]]
-
-    for metric in METRICS:
-        if metric == &quot;FA&quot;:
-            long = pd.read_csv(fa_dir / f&quot;{tract}_fa_nodewise_all_subjects.csv&quot;)
-        else:
-            long = pd.read_csv(nd_dir / f&quot;{tract}_noddi_nodewise_all_subjects.csv&quot;)
-            long = long.rename(columns={metric: &quot;value&quot;})[[&quot;Subject&quot;, &quot;Tract&quot;, &quot;Node&quot;, &quot;value&quot;]]
-            long = long.rename(columns={&quot;value&quot;: metric})
-
-<span class="c">        # Pivot: rows=Subject, cols=&lt;metric&gt;_&lt;node&gt;</span>
-        wide = (long.pivot(index=&quot;Subject&quot;, columns=&quot;Node&quot;, values=metric)
-                    .reset_index())
-        wide.columns = [&quot;Subject&quot;] + [f&quot;{metric}_{c}&quot; for c in wide.columns[1:]]
-
-<span class="c">        # Merge with covariates + outcomes</span>
-        out = tract_df.merge(wide, on=&quot;Subject&quot;, how=&quot;inner&quot;)
-        out_path = out_dir / f&quot;{tract}__{metric}__analysis.csv&quot;
-        out.to_csv(out_path, index=False)
-        print(f&quot;  wrote {out_path.name}  shape={out.shape}&quot;)
-
-print(&quot;\nAll 16 analysis-ready CSVs written.&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Assemble the 16 analysis tables (4 tracts × 4 metrics): one row per subject, with the outcomes, the 5 covariates, and the 100 node values.</p><div class="lead-lbl">Produces</div><p class="res">16 analysis-ready CSVs, the input to the permutation test.</p></div></details></div></div>
-
-  <h3>Correction: cluster-extent FWE</h3>
-  <p>Adjacent significant nodes form a cluster; the null is a Freedman-Lane permutation (shuffle the reduced-model residuals, refit all 100 nodes, 5,000 times), and a cluster is kept only if it beats 95% of the chance clusters. Run across 96 analyses.</p>
+  <h3>Node-wise</h3>
+  <div class="formula"><span class="lbl">full</span>&nbsp;&nbsp;&nbsp; y ~ node + ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age<br><span class="lbl">reduced</span>&nbsp; y ~ &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ICV + Mean_tckstats + Count_tckstats + absolute_motion + maternal_age</div>
+  <p>At each node the observed t on the node value is compared against 5000 Freedman–Lane permutations of the reduced-model residuals. Contiguous nodes with p &lt; .05 form a cluster; the cluster survives if its extent exceeds the 95th percentile of the null maximum. NDI, bilateral:</p>
+  <table class="dtable"><thead><tr><th>Outcome (NDI)</th><th>VTA→anterior hippocampus</th><th>VTA→posterior hippocampus</th></tr></thead><tbody><tr><td>Social positive FA bias</td><td class="sig">p = .036, nodes 43–77, negative</td><td class="sig">p = .008, nodes 26–77, negative</td></tr><tr><td>Social d′</td><td class="mut">ns (0 / 29)</td><td class="sig">p = .045, nodes 28–54, positive</td></tr><tr><td>Social misattribution</td><td class="mut">ns (0 / 29)</td><td class="sig">p = .039, nodes 27–55, negative</td></tr><tr><td>Monetary positive FA bias</td><td class="mut">ns (0 / 29)</td><td class="mut">ns (2 / 26)</td></tr><tr><td>Monetary d′</td><td class="mut">ns (0 / 27)</td><td class="mut">ns (0 / 27)</td></tr><tr><td>Monetary misattribution</td><td class="mut">ns (0 / 28)</td><td class="mut">ns (0 / 26)</td></tr></tbody></table>
+  <p class="small">Across the full sweep (86 measures × 2 tracts) no monetary test survives. FA, ODI and FWF were run in the same batch; their results are in the <a href="results_explorer.html">Results</a> browser. Two of the three social effects reach threshold only in the posterior tract, and the clusters sit at nodes 27 to 55 where the two bundles share tissue. Whether that is a subregional difference is what the next two analyses test.</p>
   <div class="step"><div class="stephead"><span class="cmd">permutation_one.R</span><span class="pkg">R</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c"># =========================================================================</span>
 <span class="c"># IMPACT — Cluster-extent permutation testing (Freedman-Lane)</span>
-<span class="c"># Adapted from Ranesh&#x27;s vta_hippocampus_substance_use_noddi_permutation_testing.R</span>
+<span class="c"># Adapted from the reference vta_hippocampus_substance_use_noddi_permutation_testing.R</span>
 <span class="c"># =========================================================================</span>
 <span class="c"># Args (positional):</span>
 <span class="c">#   1. data_csv       — path to analysis-ready CSV</span>
@@ -657,180 +890,323 @@ summary_df &lt;- tibble(
 )
 write_csv(summary_df, file.path(out_dir, paste0(base, &quot;_summary.csv&quot;)))
 message(&quot;Done: &quot;, base, &quot; — clusters=&quot;, num_clusters,
-        &quot; sig nodes=&quot;, num_sig_nodes, &quot; ext_thr=&quot;, extent_threshold)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>The node-wise test for one (tract, metric, outcome): fit full vs. reduced at each node, form clusters of adjacent significant nodes, and keep them by cluster-extent FWE against a Freedman-Lane null.</p><div class="lead-lbl">Produces</div><p class="res">Per-analysis nodewise, clusters, and summary CSVs.</p></div></details></div></div>
-  <div class="step"><div class="stephead"><span class="cmd">run_all_permutations.sh</span><span class="pkg">bash</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
-<span class="c"># Run all 80 permutation tests (5 outcomes × 4 metrics × 4 tracts)</span>
-DATA=&quot;/Users/dannyzweben/Desktop/SDN/DTI/data.check/analysis_ready&quot;
-OUT=&quot;/Users/dannyzweben/Desktop/SDN/DTI/data.check/permutation_results&quot;
-RSCRIPT=&quot;/Users/dannyzweben/Desktop/SDN/DTI/SDN-IMPACT-DTI/scripts/permutation_one.R&quot;
+        &quot; sig nodes=&quot;, num_sig_nodes, &quot; ext_thr=&quot;, extent_threshold)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>The node-wise test for one tract × metric × outcome: full against reduced model at each node, contiguous significant nodes form clusters, clusters kept by cluster-extent FWE against 5000 Freedman–Lane permutations.</p><div class="lead-lbl">Produces</div><p class="res">Per-analysis nodewise, clusters and summary CSVs.</p></div></details></div></div>
+  <div class="step"><div class="stephead"><span class="cmd">run_perm_cr2.sh</span><span class="pkg">bash</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/bin/bash</span>
+<span class="c"># cr2: 128 cores idle. Run all 80 tests in parallel, 1 core each (no foreach overhead).</span>
+<span class="c"># Each test ~8 min serial. With 80 parallel on 128 cores, finishes in ~10 min wall.</span>
+
+DATA=&quot;/data/scratch/dti_perm/analysis_ready&quot;
+OUT=&quot;/data/scratch/dti_perm/results&quot;
+RSCRIPT=&quot;/data/scratch/dti_perm/permutation_one.R&quot;
+LOG=&quot;/data/scratch/dti_perm/perm_all.log&quot;
+
+rm -rf &quot;$OUT&quot;
 mkdir -p &quot;$OUT&quot;
 
-OUTCOMES=(&quot;SOCIAL_dprime&quot; &quot;MONETARY_dprime&quot; \
-          &quot;ctqsf_adult_totalmaltreatment_pnrscoring&quot; \
-          &quot;ctqsf_adult_totalabuse_pnrscoring&quot; \
-          &quot;ctqsf_adult_totalneglect_pnrscoring&quot;)
-TRACTS=(&quot;l_vta_l_hipp&quot; &quot;r_vta_r_hipp&quot; \
-        &quot;anterior_l_vta_l_hipp&quot; &quot;anterior_r_vta_r_hipp&quot;)
-METRICS=(&quot;FA&quot; &quot;NDI&quot; &quot;ODI&quot; &quot;FWF&quot;)
+export R_PERM_CORES=1     # each Rscript = 1 process, no foreach workers
+export R_PERM_N=5000      # standard permutation count
 
-count=0
-total=$((${#OUTCOMES[@]} * ${#TRACTS[@]} * ${#METRICS[@]}))
-echo &quot;Running $total permutation tests...&quot;
-
-for outcome in &quot;${OUTCOMES[@]}&quot;; do
-  for tract in &quot;${TRACTS[@]}&quot;; do
-    for metric in &quot;${METRICS[@]}&quot;; do
-      count=$((count + 1))
+JOBS=$(mktemp)
+for outcome in SOCIAL_dprime MONETARY_dprime ctqsf_adult_totalmaltreatment_pnrscoring ctqsf_adult_totalabuse_pnrscoring ctqsf_adult_totalneglect_pnrscoring; do
+  for tract in l_vta_l_hipp r_vta_r_hipp anterior_l_vta_l_hipp anterior_r_vta_r_hipp; do
+    for metric in FA NDI ODI FWF; do
       csv=&quot;$DATA/${tract}__${metric}__analysis.csv&quot;
       base=&quot;${tract}__${metric}__${outcome}&quot;
-      echo &quot;[$count/$total] $base&quot;
-      Rscript &quot;$RSCRIPT&quot; &quot;$csv&quot; &quot;$outcome&quot; &quot;${metric}_&quot; &quot;$OUT&quot; &quot;$base&quot; 2&gt;&amp;1 \
-        | tail -1
+      echo &quot;$csv|$outcome|${metric}_|$OUT|$base&quot;
     done
   done
-done
-echo &quot;ALL_PERMUTATIONS_DONE&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Driver that loops the test over every outcome × tract × metric (96 analyses).</p><div class="lead-lbl">Produces</div><p class="res">The full grid of result CSVs.</p></div></details></div></div>
+done &gt; &quot;$JOBS&quot;
 
-  <h3>Within the hippocampus</h3>
-  <p>The same framework, but predicting memory from the mean NODDI inside the hippocampus ROI itself instead of along the tract, to separate a pathway effect from hippocampal tissue.</p>
-  <div class="step"><div class="stephead"><span class="cmd">hpc_analysis.py</span><span class="pkg">statsmodels</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre>import pandas as pd, numpy as np, json
-import statsmodels.formula.api as smf
-from scipy.stats import zscore
-import warnings; warnings.filterwarnings(&#x27;ignore&#x27;)
+total=$(wc -l &lt; &quot;$JOBS&quot;)
+echo &quot;=== cr2 run: $total jobs, 80 concurrent (xargs -P 80), 1 core each ===&quot; &gt; &quot;$LOG&quot;
+echo &quot;Started: $(date)&quot; &gt;&gt; &quot;$LOG&quot;
 
-base=&#x27;/Users/dannyzweben/Desktop/SDN/DTI/Impact-Analyses&#x27;
-den=pd.read_csv(f&#x27;{base}/hpc_density.csv&#x27;)
-for c in den.columns[1:]: den[c]=pd.to_numeric(den[c],errors=&#x27;coerce&#x27;)
-ready=pd.read_csv(&#x27;/Users/dannyzweben/Desktop/SDN/DTI/data.check/analysis_ready/r_vta_r_hipp__NDI__analysis.csv&#x27;)
-<span class="c"># outcomes + covariates straight from the analysis roster (DQ-corrected, recomputed d′, same as the tract models)</span>
-cov=ready[[&#x27;Subject&#x27;,&#x27;SOCIAL_dprime&#x27;,&#x27;MONETARY_dprime&#x27;,&#x27;SOCIAL_FABias&#x27;,&#x27;MONETARY_FABias&#x27;,&#x27;ICV&#x27;,&#x27;absolute_motion&#x27;,&#x27;maternal_age&#x27;]]
-df=den.merge(cov,on=&#x27;Subject&#x27;,how=&#x27;inner&#x27;)
+cat &quot;$JOBS&quot; | xargs -P 80 -I {} bash -c &#x27;
+  IFS=&quot;|&quot; read -r csv outcome prefix outdir base &lt;&lt;&lt; &quot;{}&quot;
+  Rscript &quot;&#x27;&quot;$RSCRIPT&quot;&#x27;&quot; &quot;$csv&quot; &quot;$outcome&quot; &quot;$prefix&quot; &quot;$outdir&quot; &quot;$base&quot; \
+    &gt; &quot;$outdir/${base}.stdout&quot; 2&gt;&amp;1
+  echo &quot;DONE $base $(date +%T)&quot; &gt;&gt; &quot;&#x27;&quot;$LOG&quot;&#x27;&quot;
+&#x27;
 
-<span class="c"># canonical NODDI in the hippocampus: NDI, ODI, FWF sampled inside the anatomical HPC ROI</span>
-NODDI=[(&#x27;NDI&#x27;,&#x27;NDI density&#x27;),(&#x27;ODI&#x27;,&#x27;ODI (dispersion)&#x27;),(&#x27;FWF&#x27;,&#x27;FWF (free water)&#x27;)]
-for key,_ in NODDI:
-    df[f&#x27;bilat_{key}&#x27;]=(df[f&#x27;L_HPC_{key}&#x27;]+df[f&#x27;R_HPC_{key}&#x27;])/2
+echo &quot;ALL_DONE&quot; &gt;&gt; &quot;$LOG&quot;
+echo &quot;Finished: $(date)&quot; &gt;&gt; &quot;$LOG&quot;
+rm -f &quot;$JOBS&quot;</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Runs every tract × metric × outcome in parallel on the cluster, one core each.</p><div class="lead-lbl">Produces</div><p class="res">data.check/sweep_withcount/ and data.check/bilateral_perm_results/</p></div></details></div></div>
 
-print(&quot;=== HPC NODDI QC (mean inside HPC ROI) ===&quot;)
-for key,lbl in NODDI:
-    print(f&quot;  {lbl}: L={df[f&#x27;L_HPC_{key}&#x27;].mean():.3f} R={df[f&#x27;R_HPC_{key}&#x27;].mean():.3f}  L-R r={df[f&#x27;L_HPC_{key}&#x27;].corr(df[f&#x27;R_HPC_{key}&#x27;]):.3f}&quot;)
+  <h3>Quartiles</h3>
+  <p>The whole-tract model below, with NDI averaged within each quarter. Q1 is nodes 0 to 24 at the VTA end, Q4 is 75 to 99 at the hippocampus.</p>
+  <p class="small">Interaction p</p><table class="dtable"><thead><tr><th>Outcome</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>Whole</th></tr></thead><tbody><tr><td>Social positive FA bias</td><td>.658</td><td>.601</td><td>.797</td><td>.708</td><td>.582</td></tr><tr><td>Social d′</td><td>.114</td><td class="sig">.016</td><td>.136</td><td>.478</td><td>.056</td></tr><tr><td>Social misattribution</td><td>.233</td><td class="sig">.044</td><td>.424</td><td>.378</td><td>.154</td></tr><tr><td>Monetary positive FA bias</td><td>.071</td><td>.968</td><td>.577</td><td>.809</td><td>.205</td></tr><tr><td>Monetary d′</td><td>.937</td><td>.993</td><td>.631</td><td>.596</td><td>.915</td></tr><tr><td>Monetary misattribution</td><td>.826</td><td>.940</td><td>.556</td><td>.495</td><td>.952</td></tr></tbody></table>
+  <p class="small">Main-effect p, interaction dropped</p><table class="dtable"><thead><tr><th>Outcome</th><th>Q1</th><th>Q2</th><th>Q3</th><th>Q4</th><th>Whole</th></tr></thead><tbody><tr><td>Social positive FA bias</td><td class="sig">.033 *</td><td class="sig">.016 *</td><td class="sig">.016 *</td><td class="sig">.029 *</td><td class="sig">.025 *</td></tr><tr><td>Social d′</td><td class="sig">.021 *</td><td>.052</td><td class="sig">.047 *</td><td>.204</td><td class="sig">.019 *</td></tr><tr><td>Social misattribution</td><td>.066</td><td>.070</td><td>.086</td><td>.148</td><td class="sig">.046 *</td></tr><tr><td>Monetary positive FA bias</td><td>.906</td><td>.865</td><td>.985</td><td>.766</td><td>.934</td></tr><tr><td>Monetary d′</td><td>.297</td><td>.193</td><td>.084</td><td>.060</td><td>.120</td></tr><tr><td>Monetary misattribution</td><td>.152</td><td>.120</td><td>.059</td><td>.110</td><td>.069</td></tr></tbody></table>
 
-def model(outcome,predictor):
-    d=df[[outcome,predictor,&#x27;ICV&#x27;,&#x27;absolute_motion&#x27;,&#x27;maternal_age&#x27;]].dropna().copy()
-    for c in [outcome,predictor]: d[c+&#x27;_z&#x27;]=zscore(d[c])
-    f=smf.ols(f&#x27;{outcome} ~ {predictor}_z + ICV + absolute_motion + maternal_age&#x27;,d).fit()
-    return round(f.params[predictor+&#x27;_z&#x27;],3),round(f.pvalues[predictor+&#x27;_z&#x27;],4),len(d)
-
-def run(outcome,oc_lbl,matched_side):
-<span class="c">    &quot;&quot;&quot;matched_side = hemisphere matched to the tract finding for this outcome.&quot;&quot;&quot;</span>
-    cross_side=&#x27;Right&#x27; if matched_side==&#x27;Left&#x27; else &#x27;Left&#x27;
-    out=[]
-    for key,meas in NODDI:
-        ms=&#x27;L&#x27; if matched_side==&#x27;Left&#x27; else &#x27;R&#x27;; cs=&#x27;L&#x27; if cross_side==&#x27;Left&#x27; else &#x27;R&#x27;
-        for side,typ,col in [(matched_side,&#x27;matched&#x27;,f&#x27;{ms}_HPC_{key}&#x27;),
-                             (cross_side,&#x27;cross&#x27;,f&#x27;{cs}_HPC_{key}&#x27;),
-                             (&#x27;Bilateral&#x27;,&#x27;bilateral&#x27;,f&#x27;bilat_{key}&#x27;)]:
-            b,p,n=model(outcome,col)
-            out.append(dict(outcome=oc_lbl,side=side,measure=meas,type=typ,beta=b,p=p,n=n))
-    return out
-
-<span class="c"># d′: social tract finding is LEFT, monetary would be RIGHT</span>
-models =run(&#x27;SOCIAL_dprime&#x27;,&#x27;Social d′&#x27;,&#x27;Left&#x27;)+run(&#x27;MONETARY_dprime&#x27;,&#x27;Monetary d′&#x27;,&#x27;Right&#x27;)
-<span class="c"># bias: social bias findings were bilateral, strongest RIGHT; match both to Right, cross = Left</span>
-bias   =run(&#x27;SOCIAL_FABias&#x27;,&#x27;Social FABias&#x27;,&#x27;Right&#x27;)+run(&#x27;MONETARY_FABias&#x27;,&#x27;Monetary FABias&#x27;,&#x27;Right&#x27;)
-
-def show(title,rows):
-    print(f&quot;\n=== {title} ===&quot;)
-    print(f&quot;{&#x27;Outcome&#x27;:16s} {&#x27;side&#x27;:10s} {&#x27;measure&#x27;:16s} {&#x27;type&#x27;:9s} {&#x27;beta&#x27;:&gt;7s} {&#x27;p&#x27;:&gt;7s} {&#x27;n&#x27;:&gt;4s}&quot;)
-    for m in rows:
-        print(f&quot;{m[&#x27;outcome&#x27;]:16s} {m[&#x27;side&#x27;]:10s} {m[&#x27;measure&#x27;]:16s} {m[&#x27;type&#x27;]:9s} {m[&#x27;beta&#x27;]:+.3f} {m[&#x27;p&#x27;]:7.3f} {m[&#x27;n&#x27;]:4d}{&#x27;  *&#x27; if m[&#x27;p&#x27;]&lt;0.05 else &#x27;&#x27;}&quot;)
-show(&quot;HPC NODDI -&gt; d′&quot;,models); show(&quot;HPC NODDI -&gt; positivity bias (FABias)&quot;,bias)
-
-qc={&#x27;n&#x27;:int(df[[&#x27;SOCIAL_dprime&#x27;]].dropna().shape[0])}
-for key,lbl in NODDI:
-    qc[f&#x27;{key}_L&#x27;]=round(df[f&#x27;L_HPC_{key}&#x27;].mean(),3); qc[f&#x27;{key}_R&#x27;]=round(df[f&#x27;R_HPC_{key}&#x27;].mean(),3)
-    qc[f&#x27;{key}_LR_r&#x27;]=round(df[f&#x27;L_HPC_{key}&#x27;].corr(df[f&#x27;R_HPC_{key}&#x27;]),3)
-json.dump({&#x27;models&#x27;:models,&#x27;bias_models&#x27;:bias,&#x27;qc&#x27;:qc,&#x27;noddi&#x27;:[k for k,_ in NODDI]},
-   open(&#x27;/Users/dannyzweben/Desktop/SDN/DTI/SDN-IMPACT-DTI/results_html/hpc_region_data.json&#x27;,&#x27;w&#x27;),indent=1)
-df.to_csv(&#x27;/Users/dannyzweben/Desktop/SDN/DTI/SDN-IMPACT-DTI/data/hpc_region_measures.csv&#x27;,index=False)
-print(&quot;\nsaved hpc_region_data.json + hpc_region_measures.csv&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Predict each memory outcome from the mean NODDI inside the hippocampus ROI itself (matched, cross, and bilateral), same covariates, to separate a pathway effect from hippocampal tissue.</p><div class="lead-lbl">Produces</div><p class="res">hpc_region_data.json, shown on the hippocampus Results page.</p></div></details></div></div>
-
-  <h3>Check: hemisphere consistency</h3>
-  <p>Left and right tracts should measure the same thing. Mid-tract (nodes 25 to 74) averages correlated across hemispheres (n = 57):</p>
-  <table class="dtable"><thead><tr><th>Tract</th><th>FA</th><th>NDI</th><th>ODI</th><th>FWF</th></tr></thead><tbody>
-    <tr><td>Posterior VTA→HPC</td><td>0.52</td><td>0.86</td><td>0.88</td><td>0.70</td></tr>
-    <tr><td>Anterior VTA→HPC</td><td>0.53</td><td>0.81</td><td>0.80</td><td>0.70</td></tr>
-  </tbody></table>
-  <figure class="fig"><img src="../images/lr_scatterplots_mid50.png" alt="Left versus right hemisphere scatterplots, mid-tract node averages" loading="lazy"><figcaption>Each point a subject; dashed line is identity. Top row posterior, bottom row anterior.</figcaption></figure>
-  <div class="step"><div class="stephead"><span class="cmd">mid50_correlations.py</span><span class="pkg">pandas</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/usr/bin/env python3</span>
+  <h3>Whole tract, both subregions in one model</h3>
+  <p>NDI averaged over all 100 nodes, one value per subject per subregion, stacked long so each subject contributes two rows. NDI regressed on memory, subregion and the covariates, with a random intercept for subject; each row carries its own tract length and streamline count. Maximum likelihood; the interaction model adds memory × subregion and is compared by likelihood-ratio test on 1 df.</p>
+  <table class="dtable"><thead><tr><th>Outcome</th><th>Interaction p</th><th>Main effect b</th><th>Main effect p</th></tr></thead><tbody><tr><td>Social positive FA bias</td><td>.582</td><td>-0.257</td><td class="sig">.025 *</td></tr><tr><td>Social d′</td><td>.056</td><td>+0.274</td><td class="sig">.019 *</td></tr><tr><td>Social misattribution</td><td>.154</td><td>-0.234</td><td class="sig">.046 *</td></tr><tr><td>Monetary positive FA bias</td><td>.205</td><td>+0.010</td><td>.934</td></tr><tr><td>Monetary d′</td><td>.915</td><td>-0.183</td><td>.120</td></tr><tr><td>Monetary misattribution</td><td>.952</td><td>+0.214</td><td>.069</td></tr></tbody></table>
+  <div class="step"><div class="stephead"><span class="cmd">final_models.py</span><span class="pkg">statsmodels</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/usr/bin/env python3</span>
 <span class="c">&quot;&quot;&quot;</span>
-Mid-50-nodes (25-74) average + L/R hemisphere correlations.
-Per Ranesh&#x27;s request before the meeting.
+Final models for the VTA→hippocampus × motivated-memory analysis (ReadMe, Section C).
+
+Reproduces the tables in §5b, §5c, §6b and §8 from the analysis-ready CSVs.
+
+  1. Whole tract. NDI averaged over all 100 nodes, one value per subject per subregion,
+     stacked long (two rows per subject: anterior, posterior). Mixed model:
+         NDI ~ memory + subregion + ICV + tract length + streamline count + motion + age
+     with a random intercept for subject; each row carries its own length and count.
+     Fit by maximum likelihood. The interaction model adds memory × subregion and is
+     compared by likelihood-ratio test (1 df). Main effect reported with the interaction dropped.
+  2. Quartiles. Same model with NDI averaged within Q1 (nodes 0-24), Q2 (25-49),
+     Q3 (50-74), Q4 (75-99).
+  3. Metric comparison. The whole-tract model for ODI, FWF and FA.
+  4. Hippocampal gray-matter NDI (corrected-dPar refit, scripts/run_noddi_gm.py), bilateral
+     mean, regressed on each outcome with ICV, hippocampal volume, motion and age.
+  5. HVLT. Collapsed whole-tract NDI (mean of both subregions) with each subregion&#x27;s
+     streamline count entered separately; trial 1, total recall, delayed recall.
+
+Outcomes per domain: d′ (log-linear corrected), misattribution (false-alarm rate
+residualised on criterion c), FABias (positive − negative false-alarm rate).
+
+Out: data.check/final_models_summary.csv
 <span class="c">&quot;&quot;&quot;</span>
-import pandas as pd
+import warnings
 import numpy as np
+import pandas as pd
+import statsmodels.formula.api as smf
+from scipy.stats import chi2, pearsonr
+
+warnings.filterwarnings(&#x27;ignore&#x27;)
+
+BASE = &#x27;/Users/dannyzweben/Desktop/SDN/DTI/&#x27;
+BIL  = BASE + &#x27;data.check/analysis_ready_bilateral/&#x27;
+HPC  = BASE + &#x27;Impact-Analyses/hpc_density_gm.csv&#x27;
+VOL  = BASE + &#x27;Impact-Analyses/hpc_volumes.csv&#x27;
+OUT  = BASE + &#x27;data.check/final_models_summary.csv&#x27;
+
+COVS = [&#x27;ICV&#x27;, &#x27;Mean_tckstats&#x27;, &#x27;Count_tckstats&#x27;, &#x27;absolute_motion&#x27;, &#x27;maternal_age&#x27;]
+COV  = &#x27; + &#x27;.join(COVS)
+OUTCOMES = [(&#x27;Social FABias&#x27;, &#x27;SOCIAL_FABias&#x27;),
+            (&#x27;Social d′&#x27;, &#x27;SOCIAL_dprime_loglinear&#x27;),
+            (&#x27;Social misattribution&#x27;, &#x27;SOCIAL_misattrib&#x27;),
+            (&#x27;Monetary FABias&#x27;, &#x27;MONETARY_FABias&#x27;),
+            (&#x27;Monetary d′&#x27;, &#x27;MONETARY_dprime_loglinear&#x27;),
+            (&#x27;Monetary misattribution&#x27;, &#x27;MONETARY_misattrib&#x27;)]
+SEGMENTS = [(&#x27;Q1&#x27;, 0, 25), (&#x27;Q2&#x27;, 25, 50), (&#x27;Q3&#x27;, 50, 75), (&#x27;Q4&#x27;, 75, 100), (&#x27;Whole&#x27;, 0, 100)]
+z = lambda s: (s - s.mean()) / s.std()
+
+
+def load(metric):
+    a = pd.read_csv(BIL + f&#x27;vta_anthipp__{metric}__analysis.csv&#x27;)
+    p = pd.read_csv(BIL + f&#x27;vta_posthipp__{metric}__analysis.csv&#x27;)
+    nodes = [c for c in a.columns if c.startswith(metric + &#x27;_&#x27;) and c.split(&#x27;_&#x27;)[-1].isdigit()]
+    return a, p, nodes
+
+
+def outcomes_table():
+<span class="c">    &quot;&quot;&quot;Memory outcomes keyed by Subject; misattribution computed here for both domains.&quot;&quot;&quot;</span>
+    ref = pd.read_csv(BIL + &#x27;vta_anthipp__NDI__analysis.csv&#x27;).copy()
+    for dom in [&#x27;SOCIAL&#x27;, &#x27;MONETARY&#x27;]:
+        m = ref[[f&#x27;{dom}_fa&#x27;, f&#x27;{dom}_criterion&#x27;]].dropna()
+        ref[f&#x27;{dom}_misattrib&#x27;] = np.nan
+        ref.loc[m.index, f&#x27;{dom}_misattrib&#x27;] = smf.ols(f&#x27;{dom}_fa ~ {dom}_criterion&#x27;, m).fit().resid
+    return ref[[&#x27;Subject&#x27;] + [o for _, o in OUTCOMES] +
+               [&#x27;hvlt_trial1&#x27;, &#x27;hvlt_totalrecall&#x27;, &#x27;hvlt_delayedrecall&#x27;]]
+
+
+Y = outcomes_table()
+
+
+def long_frame(metric, lo, hi):
+    a, p, nodes = load(metric)
+    rows = []
+    for sub, df in [(&#x27;anterior&#x27;, a), (&#x27;posterior&#x27;, p)]:
+        t = df[[&#x27;Subject&#x27;] + COVS].copy()
+        t[&#x27;M&#x27;] = df[nodes].values.astype(float)[:, lo:hi].mean(1)
+        t[&#x27;subregion&#x27;] = sub
+        rows.append(t.merge(Y, on=&#x27;Subject&#x27;, how=&#x27;left&#x27;))
+    return pd.concat(rows, ignore_index=True)
+
+
+def mixed(L, o):
+    d = L.dropna(subset=[o, &#x27;M&#x27;]).copy()
+    d[&#x27;Mz&#x27;] = z(d[&#x27;M&#x27;]); d[&#x27;yz&#x27;] = z(d[o])
+    m0 = smf.mixedlm(f&#x27;Mz ~ yz + subregion + {COV}&#x27;, d, groups=d.Subject).fit(reml=False)
+    m1 = smf.mixedlm(f&#x27;Mz ~ yz*subregion + {COV}&#x27;, d, groups=d.Subject).fit(reml=False)
+    p_int = chi2.sf(max(2 * (m1.llf - m0.llf), 0), 1)
+    return p_int, m0.params[&#x27;yz&#x27;], m0.pvalues[&#x27;yz&#x27;], int(len(d) / 2)
+
+
+rows = []
+print(&#x27;=== 1. WHOLE TRACT, NDI: memory × subregion mixed model ===&#x27;)
+print(f&quot;  {&#x27;outcome&#x27;:24s} {&#x27;n&#x27;:&gt;3s} {&#x27;interaction p&#x27;:&gt;14s} {&#x27;main b&#x27;:&gt;8s} {&#x27;main p&#x27;:&gt;8s}&quot;)
+L = long_frame(&#x27;NDI&#x27;, 0, 100)
+for lbl, o in OUTCOMES:
+    pi, b, pm, n = mixed(L, o)
+    rows.append(dict(analysis=&#x27;whole_tract&#x27;, metric=&#x27;NDI&#x27;, segment=&#x27;Whole&#x27;, outcome=lbl,
+                     n=n, interaction_p=pi, main_b=b, main_p=pm))
+    print(f&quot;  {lbl:24s} {n:3d} {pi:14.3f} {b:+8.3f} {pm:8.4f}{&#x27; *&#x27; if pm &lt; .05 else &#x27;&#x27;}&quot;)
+
+print(&#x27;\n=== 2. QUARTILES, NDI ===&#x27;)
+seg = {}
+for s, lo, hi in SEGMENTS:
+    Ls = long_frame(&#x27;NDI&#x27;, lo, hi)
+    for lbl, o in OUTCOMES:
+        seg[(s, lbl)] = mixed(Ls, o)
+        if s != &#x27;Whole&#x27;:
+            pi, b, pm, n = seg[(s, lbl)]
+            rows.append(dict(analysis=&#x27;quartile&#x27;, metric=&#x27;NDI&#x27;, segment=s, outcome=lbl,
+                             n=n, interaction_p=pi, main_b=b, main_p=pm))
+for title, k in [(&#x27;interaction p&#x27;, 0), (&#x27;main-effect p&#x27;, 2)]:
+    print(f&quot;  -- {title}&quot;)
+    print(f&quot;  {&#x27;outcome&#x27;:24s}&quot; + &#x27;&#x27;.join(f&quot;{s:&gt;8s}&quot; for s, _, _ in SEGMENTS))
+    for lbl, _ in OUTCOMES:
+        print(f&quot;  {lbl:24s}&quot; + &#x27;&#x27;.join(f&quot;{seg[(s, lbl)][k]:8.3f}&quot; for s, _, _ in SEGMENTS))
+
+print(&#x27;\n=== 3. METRIC COMPARISON, whole tract: main-effect p ===&#x27;)
+mets = [&#x27;NDI&#x27;, &#x27;ODI&#x27;, &#x27;FWF&#x27;, &#x27;FA&#x27;]
+comp = {}
+for met in mets:
+    Lm = long_frame(met, 0, 100)
+    for lbl, o in OUTCOMES:
+        comp[(met, lbl)] = mixed(Lm, o)
+        rows.append(dict(analysis=&#x27;metric&#x27;, metric=met, segment=&#x27;Whole&#x27;, outcome=lbl,
+                         n=comp[(met, lbl)][3], interaction_p=comp[(met, lbl)][0],
+                         main_b=comp[(met, lbl)][1], main_p=comp[(met, lbl)][2]))
+print(f&quot;  {&#x27;outcome&#x27;:24s}&quot; + &#x27;&#x27;.join(f&quot;{m:&gt;8s}&quot; for m in mets))
+for lbl, _ in OUTCOMES:
+    print(f&quot;  {lbl:24s}&quot; + &#x27;&#x27;.join(f&quot;{comp[(m, lbl)][2]:8.3f}&quot; for m in mets))
+
+print(&#x27;\n=== 4. HIPPOCAMPAL GRAY-MATTER NDI (corrected dPar), bilateral, +HPC volume ===&#x27;)
+h = pd.read_csv(HPC); v = pd.read_csv(VOL)
+a0 = pd.read_csv(BIL + &#x27;vta_anthipp__NDI__analysis.csv&#x27;)[[&#x27;Subject&#x27;, &#x27;ICV&#x27;, &#x27;absolute_motion&#x27;, &#x27;maternal_age&#x27;]]
+d = a0.merge(Y, on=&#x27;Subject&#x27;).merge(h[[&#x27;Subject&#x27;, &#x27;L_HPC_NDI&#x27;, &#x27;R_HPC_NDI&#x27;]], on=&#x27;Subject&#x27;) \
+      .merge(v[[&#x27;Subject&#x27;, &#x27;L_HPC_vol_mm3&#x27;, &#x27;R_HPC_vol_mm3&#x27;]], on=&#x27;Subject&#x27;, how=&#x27;left&#x27;)
+d[&#x27;NDI&#x27;] = d[[&#x27;L_HPC_NDI&#x27;, &#x27;R_HPC_NDI&#x27;]].mean(axis=1)
+d[&#x27;HPCvol&#x27;] = d[[&#x27;L_HPC_vol_mm3&#x27;, &#x27;R_HPC_vol_mm3&#x27;]].sum(axis=1)
+print(f&quot;  {&#x27;outcome&#x27;:24s} {&#x27;n&#x27;:&gt;3s} {&#x27;beta&#x27;:&gt;8s} {&#x27;p&#x27;:&gt;8s}&quot;)
+for lbl, o in OUTCOMES:
+    x = d[[&#x27;NDI&#x27;, &#x27;ICV&#x27;, &#x27;absolute_motion&#x27;, &#x27;maternal_age&#x27;, &#x27;HPCvol&#x27;, o]].dropna().copy()
+    for c in x.columns: x[c] = z(x[c])
+    m = smf.ols(f&#x27;{o} ~ NDI + ICV + absolute_motion + maternal_age + HPCvol&#x27;, x).fit()
+    rows.append(dict(analysis=&#x27;hpc_gm_ndi&#x27;, metric=&#x27;NDI&#x27;, segment=&#x27;ROI&#x27;, outcome=lbl,
+                     n=int(m.nobs), interaction_p=np.nan, main_b=m.params[&#x27;NDI&#x27;], main_p=m.pvalues[&#x27;NDI&#x27;]))
+    print(f&quot;  {lbl:24s} {int(m.nobs):3d} {m.params[&#x27;NDI&#x27;]:+8.3f} {m.pvalues[&#x27;NDI&#x27;]:8.4f}&quot;
+          f&quot;{&#x27; *&#x27; if m.pvalues[&#x27;NDI&#x27;] &lt; .05 else &#x27;&#x27;}&quot;)
+
+print(&#x27;\n=== 5. HVLT: collapsed whole-tract NDI, each subregion count entered separately ===&#x27;)
+a, p, nodes = load(&#x27;NDI&#x27;)
+D = pd.DataFrame({&#x27;Subject&#x27;: a[&#x27;Subject&#x27;],
+                  &#x27;WHOLE&#x27;: (a[nodes].values.mean(1) + p[nodes].values.mean(1)) / 2,
+                  &#x27;ICV&#x27;: a[&#x27;ICV&#x27;], &#x27;mot&#x27;: a[&#x27;absolute_motion&#x27;], &#x27;age&#x27;: a[&#x27;maternal_age&#x27;],
+                  &#x27;len&#x27;: (a[&#x27;Mean_tckstats&#x27;] + p[&#x27;Mean_tckstats&#x27;]) / 2,
+                  &#x27;cnt_a&#x27;: a[&#x27;Count_tckstats&#x27;], &#x27;cnt_p&#x27;: p[&#x27;Count_tckstats&#x27;]}).merge(Y, on=&#x27;Subject&#x27;)
+for o, lbl in [(&#x27;hvlt_trial1&#x27;, &#x27;HVLT trial 1&#x27;), (&#x27;hvlt_totalrecall&#x27;, &#x27;HVLT total recall&#x27;),
+               (&#x27;hvlt_delayedrecall&#x27;, &#x27;HVLT delayed recall&#x27;)]:
+    x = D[[&#x27;WHOLE&#x27;, &#x27;ICV&#x27;, &#x27;len&#x27;, &#x27;cnt_a&#x27;, &#x27;cnt_p&#x27;, &#x27;mot&#x27;, &#x27;age&#x27;, o]].dropna().copy()
+    for c in x.columns: x[c] = z(x[c])
+    m = smf.ols(f&#x27;{o} ~ WHOLE + ICV + len + cnt_a + cnt_p + mot + age&#x27;, x).fit()
+    rows.append(dict(analysis=&#x27;hvlt&#x27;, metric=&#x27;NDI&#x27;, segment=&#x27;Whole&#x27;, outcome=lbl,
+                     n=int(m.nobs), interaction_p=np.nan, main_b=m.params[&#x27;WHOLE&#x27;], main_p=m.pvalues[&#x27;WHOLE&#x27;]))
+    print(f&quot;  {lbl:24s} {int(m.nobs):3d} {m.params[&#x27;WHOLE&#x27;]:+8.3f} {m.pvalues[&#x27;WHOLE&#x27;]:8.4f}&quot;
+          f&quot;{&#x27; *&#x27; if m.pvalues[&#x27;WHOLE&#x27;] &lt; .05 else &#x27;&#x27;}&quot;)
+hv = D[[&#x27;hvlt_trial1&#x27;, &#x27;SOCIAL_dprime_loglinear&#x27;]].dropna()
+print(f&quot;  r(HVLT trial 1, RAFT social d′) = {pearsonr(hv.iloc[:, 0], hv.iloc[:, 1])[0]:+.3f}  (n={len(hv)})&quot;)
+
+pd.DataFrame(rows).to_csv(OUT, index=False)
+print(f&quot;\n-&gt; wrote {OUT}&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Whole-tract and quartile mixed models with both subregions and a subregion term; the same whole-tract model for ODI, FWF and FA; hippocampal gray-matter NDI; HVLT. Every table in this page's model sections comes from this script.</p><div class="lead-lbl">Produces</div><p class="res">data.check/final_models_summary.csv</p></div></details></div></div>
+
+  <h2>How we narrowed</h2>
+  <h3>Two subregions to one pathway</h3>
+  <p>The memory × subregion interaction is droppable for every outcome on the whole-tract average and in 18 of 20 quartile tests; the two exceptions, d′ and misattribution at Q2, do not survive correction across the four. The node-wise clusters sit before the bundles separate, so the anterior and posterior labels are not describing different tissue there. The distinction would have earned its keep only if significant nodes had landed past the divergence, closer to the hippocampus. They did not. The pathway is one bilateral VTA→hippocampus tract.</p>
+  <h3>Four metrics to NDI</h3>
+  <table class="dtable"><thead><tr><th>Main-effect p</th><th>NDI</th><th>ODI</th><th>FWF</th><th>FA</th></tr></thead><tbody><tr><td>Social positive FA bias</td><td class="sig">.025 *</td><td class="sig">.043 *</td><td class="sig">.029 *</td><td class="sig">.018 *</td></tr><tr><td>Social d′</td><td class="sig">.019 *</td><td>.691</td><td>.923</td><td>.058</td></tr><tr><td>Social misattribution</td><td class="sig">.046 *</td><td>.667</td><td>.990</td><td>.060</td></tr><tr><td>Monetary positive FA bias</td><td>.934</td><td>.230</td><td>.509</td><td>.088</td></tr><tr><td>Monetary d′</td><td>.120</td><td>.474</td><td>.088</td><td>.392</td></tr><tr><td>Monetary misattribution</td><td>.069</td><td>.354</td><td class="sig">.041 *</td><td>.254</td></tr></tbody></table>
+  <p>NDI is the only metric carrying all three social effects while leaving every monetary outcome null. FA tracks it and serves as the supplement for traditional-DTI readers. FWF adds only the bias effect plus a control-domain hit (monetary misattribution, p = .041) and is dropped. ODI's bias effect runs in the same direction as NDI rather than opposite, which is atypical for the pair; it is reported with that caveat or left out.</p>
+  <h3>Node-wise to whole tract</h3>
+  <p>Contrasting the VTA-end quartile against the hippocampus-end quartile, with mean and difference entered together, is null for all three social outcomes (difference p = .44, .45, .95) while the mean carries the effect. The signal is diffuse along the tract. Cluster-extent thresholding is built to find focal runs, and with per-node t near 2.0 along the whole length it has no headroom here. Node-wise results are descriptive; the whole-tract model is the inferential unit.</p>
+
+  <h2>What we report</h2>
+  <p>One bilateral VTA→hippocampus pathway, NDI, whole-tract model with a subregion term. Higher neurite density predicts better discrimination of who gave the feedback, fewer misattributions, and less positivity skew in false memories. All three monetary counterparts are null; monetary misattribution runs the opposite way. No subregional claim. The quartiles show the bias effect is uniform along the tract; they are not a localization claim.</p>
+
+  <h2>Hippocampus and HVLT</h2>
+  <p>Hippocampal gray-matter NDI, refit at the gray-matter parallel diffusivity and regressed on each outcome with ICV, hippocampal volume, motion and maternal age. Standardized β. Hippocampal volume on its own predicts none of them.</p>
+  <table class="dtable"><thead><tr><th>Outcome</th><th>β</th><th>p</th></tr></thead><tbody><tr><td>Social positive FA bias</td><td>-0.303</td><td class="sig">.044 *</td></tr><tr><td>Social d′</td><td>+0.314</td><td class="sig">.036 *</td></tr><tr><td>Social misattribution</td><td>-0.276</td><td>.064</td></tr><tr><td>Monetary positive FA bias</td><td>-0.021</td><td>.885</td></tr><tr><td>Monetary d′</td><td>-0.147</td><td>.312</td></tr><tr><td>Monetary misattribution</td><td>+0.142</td><td>.337</td></tr></tbody></table>
+  <div class="step"><div class="stephead"><span class="cmd">run_noddi_gm.py</span><span class="pkg">AMICO</span></div><div class="drawers"><details class="drawer"><summary>Script</summary><div class="drawerbody"><pre><span class="c">#!/usr/bin/env python3</span>
+<span class="c"># ============================================================</span>
+<span class="c"># NODDI refit for GRAY MATTER (hippocampus) — corrected dPar</span>
+<span class="c"># ============================================================</span>
+<span class="c"># NODDI in gray matter needs a lower intrinsic parallel diffusivity than white matter;</span>
+<span class="c"># the white-matter default over-estimates it and distorts NDI in gray-matter tissue.</span>
+<span class="c">#</span>
+<span class="c"># Our Step-29 fit used AMICO&#x27;s default dPar = 1.7e-3 (the WHITE-matter value),</span>
+<span class="c"># so hippocampal (gray matter) NDI/ODI/FWF from that fit are not valid.</span>
+<span class="c">#</span>
+<span class="c"># This refits with dPar = 1.1e-3 (standard GM intrinsic parallel diffusivity)</span>
+<span class="c"># and restricts the fit to the hippocampus ROI, so it runs in seconds/subject</span>
+<span class="c"># instead of refitting the whole brain.</span>
+<span class="c">#</span>
+<span class="c"># Usage: python3 run_noddi_gm.py &lt;subject_id&gt;</span>
+<span class="c"># ============================================================</span>
+import os, sys, time
 from pathlib import Path
 
-fa_dir = Path(&quot;/Users/dannyzweben/Desktop/SDN/DTI/data.check/step27_fa&quot;)
-nd_dir = Path(&quot;/Users/dannyzweben/Desktop/SDN/DTI/data.check/step30_noddi&quot;)
-out_dir = Path(&quot;/Users/dannyzweben/Desktop/SDN/DTI/data.check/mid50_summary&quot;)
-out_dir.mkdir(exist_ok=True, parents=True)
+nb_threads = int(os.environ.get(&quot;NODDI_NTHREADS&quot;, &quot;8&quot;))
+os.environ[&quot;OPENBLAS_NUM_THREADS&quot;] = str(nb_threads)
+os.environ[&quot;OMP_NUM_THREADS&quot;] = str(nb_threads)
 
-<span class="c"># Mid 50 nodes (Ranesh&#x27;s request)</span>
-mid_nodes = list(range(25, 75))  # nodes 25..74 inclusive
+import amico, numpy as np, nibabel as nib
 
-<span class="c"># === Load and process per-tract averages ===</span>
-results = {}  # results[(tract_label, metric)] = pd.Series indexed by Subject
-metrics_per_tract = {}  # for combining FA + NODDI per tract
+DPAR_GM = 1.1E-3      # &lt;-- the one number: lowered from the 1.7e-3 WM default
+DISO    = 3.0E-3
+B0_THR  = 100
 
-for tract in [&quot;l_vta_l_hipp&quot;, &quot;r_vta_r_hipp&quot;, &quot;anterior_l_vta_l_hipp&quot;, &quot;anterior_r_vta_r_hipp&quot;]:
-<span class="c">    # FA</span>
-    fa = pd.read_csv(fa_dir / f&quot;{tract}_fa_nodewise_all_subjects.csv&quot;)
-    fa_mid = fa[fa[&quot;Node&quot;].isin(mid_nodes)].groupby(&quot;Subject&quot;)[&quot;FA&quot;].mean()
-    results[(tract, &quot;FA&quot;)] = fa_mid
+bedpostx_root = Path(&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/BEDPOSTX&quot;)
+csd_root      = Path(&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/CSD&quot;)
+gm_root       = Path(&quot;/data/projects/STUDIES/IMPACT/DTI/derivatives/NODDI_GM&quot;)
+gm_root.mkdir(parents=True, exist_ok=True)
 
-<span class="c">    # NODDI</span>
-    nd = pd.read_csv(nd_dir / f&quot;{tract}_noddi_nodewise_all_subjects.csv&quot;)
-    nd_mid = nd[nd[&quot;Node&quot;].isin(mid_nodes)].groupby(&quot;Subject&quot;)[[&quot;NDI&quot;, &quot;ODI&quot;, &quot;FWF&quot;]].mean()
-    for col in [&quot;NDI&quot;, &quot;ODI&quot;, &quot;FWF&quot;]:
-        results[(tract, col)] = nd_mid[col]
+setup_dir = gm_root / &quot;amico&quot;
+if not setup_dir.exists():
+    cwd = os.getcwd(); os.chdir(str(gm_root)); amico.setup(); os.chdir(cwd)
 
-<span class="c"># === Build a wide table: rows=Subject, cols=tract_metric ===</span>
-wide = pd.DataFrame()
-for (tract, metric), series in results.items():
-    wide[f&quot;{tract}__{metric}&quot;] = series
-wide.to_csv(out_dir / &quot;mid50_averages_per_subject.csv&quot;)
-print(f&quot;Wide table saved: {out_dir / &#x27;mid50_averages_per_subject.csv&#x27;}  shape={wide.shape}\n&quot;)
+subj = sys.argv[1]
+t0 = time.time()
 
-<span class="c"># === L vs R correlations ===</span>
-def lr_pair(tract_pair, metric):
-    l_col = f&quot;{tract_pair[0]}__{metric}&quot;
-    r_col = f&quot;{tract_pair[1]}__{metric}&quot;
-    s = wide[[l_col, r_col]].dropna()
-    return s.iloc[:, 0].corr(s.iloc[:, 1]), len(s)
+si = bedpostx_root / subj / &quot;bedpostx_input&quot;
+dwi, bvals, bvecs = si/&quot;data.nii.gz&quot;, si/&quot;bvals&quot;, si/&quot;bvecs&quot;
+Lroi = csd_root/subj/&quot;rois&quot;/&quot;left_HPC_diff.nii.gz&quot;
+Rroi = csd_root/subj/&quot;rois&quot;/&quot;right_HPC_diff.nii.gz&quot;
+for f in [dwi,bvals,bvecs,Lroi,Rroi]:
+    if not f.exists():
+        print(f&quot;!!! [{subj}] MISSING {f}&quot;); sys.exit(1)
 
-posterior = (&quot;l_vta_l_hipp&quot;, &quot;r_vta_r_hipp&quot;)
-anterior = (&quot;anterior_l_vta_l_hipp&quot;, &quot;anterior_r_vta_r_hipp&quot;)
+out = gm_root / f&quot;sub-{subj}&quot;; out.mkdir(exist_ok=True)
 
-print(&quot;=&quot; * 72)
-print(&quot;L vs R correlations (mid 50 nodes, nodes 25-74)&quot;)
-print(&quot;=&quot; * 72)
-print(f&quot;{&#x27;Tract&#x27;:&lt;22} {&#x27;Metric&#x27;:&lt;6} {&#x27;L vs R r&#x27;:&gt;10}  {&#x27;n&#x27;:&gt;4}&quot;)
-print(&quot;-&quot; * 72)
-for label, pair in [(&quot;Posterior VTA→HPC&quot;, posterior), (&quot;Anterior VTA→HPC&quot;, anterior)]:
-    for metric in [&quot;FA&quot;, &quot;NDI&quot;, &quot;ODI&quot;, &quot;FWF&quot;]:
-        r, n = lr_pair(pair, metric)
-        print(f&quot;{label:&lt;22} {metric:&lt;6} {r:&gt;10.3f}  {n:&gt;4}&quot;)
-    print()
+<span class="c"># hippocampus-only mask (L + R union) -&gt; fit only these voxels</span>
+li, ri = nib.load(str(Lroi)), nib.load(str(Rroi))
+hm = ((li.get_fdata()&gt;0)|(ri.get_fdata()&gt;0)).astype(np.uint8)
+mask_path = out/&quot;hpc_mask.nii.gz&quot;
+nib.save(nib.Nifti1Image(hm, li.affine, li.header), str(mask_path))
+print(f&quot;[{subj}] hippocampus mask voxels: {int(hm.sum())}&quot;)
 
-<span class="c"># === Save correlation table ===</span>
-rows = []
-for label, pair in [(&quot;Posterior VTA→HPC&quot;, posterior), (&quot;Anterior VTA→HPC&quot;, anterior)]:
-    for metric in [&quot;FA&quot;, &quot;NDI&quot;, &quot;ODI&quot;, &quot;FWF&quot;]:
-        r, n = lr_pair(pair, metric)
-        rows.append({&quot;Tract_Pair&quot;: label, &quot;Metric&quot;: metric, &quot;L_vs_R_r&quot;: round(r, 3), &quot;n&quot;: n})
-pd.DataFrame(rows).to_csv(out_dir / &quot;lr_correlations_mid50.csv&quot;, index=False)
-print(f&quot;\nCorr table saved: {out_dir / &#x27;lr_correlations_mid50.csv&#x27;}&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>Average each metric over the mid-tract nodes (25 to 74) and correlate left vs. right hemisphere, per subject.</p><div class="lead-lbl">Produces</div><p class="res">The L / R correlation table above.</p></div></details></div></div>
+scheme = out/f&quot;sub-{subj}_scheme.scheme&quot;
+amico.util.fsl2scheme(str(bvals), str(bvecs), str(scheme), bStep=200)
 
+ae = amico.Evaluation(str(gm_root), f&quot;sub-{subj}&quot;, str(out))
+ae.set_config(&#x27;nthreads&#x27;, nb_threads)
+ae.set_config(&#x27;BLAS_nthreads&#x27;, 1)
+ae.set_config(&#x27;doSaveModulatedMaps&#x27;, True)
+ae.set_config(&#x27;doComputeRMSE&#x27;, True)
+ae.load_data(str(dwi), str(scheme), str(mask_path), b0_thr=B0_THR)
+
+ae.set_model(&quot;NODDI&quot;)
+<span class="c"># THE FIX: lower the intrinsic parallel diffusivity for gray matter</span>
+ae.model.set(DPAR_GM, DISO, ae.model.IC_VFs, ae.model.IC_ODs, False)
+print(f&quot;[{subj}] dPar set to {ae.model.dPar} (WM default is 0.0017)&quot;)
+
+ae.generate_kernels(regenerate=True)
+ae.load_kernels()
+ae.fit()
+ae.save_results(save_dir_avg=True)
+
+print(f&quot;[OK] [{subj}] GM NODDI done in {(time.time()-t0)/60:.1f} min&quot;)
+print(f&quot;SUBJ_DONE:{subj}&quot;)</pre></div></details><details class="drawer"><summary>Outputs</summary><div class="drawerbody"><p>NODDI refit inside the hippocampal ROI at the gray-matter intrinsic parallel diffusivity, 1.1e-3 mm²/s, instead of the white-matter default of 1.7e-3.</p><div class="lead-lbl">Produces</div><p class="res">Bilateral hippocampal NDI, ODI, FWF per subject (Impact-Analyses/hpc_density_gm.csv).</p></div></details></div></div>
+  <p>HVLT under the collapsed whole-tract specification with each subregion's streamline count entered separately. HVLT trial 1 and RAFT social d′ correlate at −.05, so this is a separate finding rather than convergent validation.</p>
+  <table class="dtable"><thead><tr><th>HVLT</th><th>b</th><th>p</th><th>n</th></tr></thead><tbody><tr><td>HVLT trial 1</td><td>+0.851</td><td class="sig">.025 *</td><td>42</td></tr><tr><td>HVLT total recall</td><td>+0.648</td><td>.096</td><td>42</td></tr><tr><td>HVLT delayed recall</td><td>+0.356</td><td>.351</td><td>42</td></tr></tbody></table>
 </div>
 </body></html>
